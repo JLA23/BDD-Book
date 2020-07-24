@@ -3,10 +3,23 @@
     <head>
         <meta charset="UTF-8">
         <title>{% block title %}Welcome!{% endblock %}</title>
-        {% block stylesheets %}{% endblock %}
+        {% block stylesheets %}
+            {{ encore_entry_link_tags('app') }}
+        {% endblock %}
     </head>
     <body>
-        {% block body %}Bonjour{% endblock %}
-        {% block javascripts %}{% endblock %}
+        {% block body %}
+            <nav class="navbar navbar-light bg-light">
+                <a class="navbar-brand">Navbar</a>
+                <form class="form-inline">
+                    <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
+                    <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
+                </form>
+            </nav>
+            Bonjour
+            <input type="password" class="form-control" id="exampleInputPassword1" placeholder="Password">{% endblock %}
+        {% block javascripts %}
+            {{ encore_entry_script_tags('app') }}
+        {% endblock %}
     </body>
 </html>
