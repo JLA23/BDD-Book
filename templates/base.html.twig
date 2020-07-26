@@ -2,22 +2,23 @@
 <html>
     <head>
         <meta charset="UTF-8">
-        <title>{% block title %}Welcome!{% endblock %}</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{% block title %}BDD-Books{% endblock %}</title>
         {% block stylesheets %}
             {{ encore_entry_link_tags('app') }}
         {% endblock %}
     </head>
     <body>
+        <nav class="navbar navbar-light bg-light">
+            <a class="navbar-brand">BDD-Books</a>
+            <!--{% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+                <a class="btn btn-outline-primary btn-xs mr-2" href="{{ path('app_logout') }}">{{ 'Déconnexion' }}</a>
+            {% else %}
+                <a class="btn btn-outline-primary btn-xs mr-2" href="{{ path('app_login') }}">{{ 'Connexion' }}</a>
+            {% endif %}-->
+        </nav>
         {% block body %}
-            <nav class="navbar navbar-light bg-light">
-                <a class="navbar-brand">Navbar</a>
-                <form class="form-inline">
-                    <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
-                    <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
-                </form>
-            </nav>
-            Bonjour
-            <input type="password" class="form-control" id="exampleInputPassword1" placeholder="Password">{% endblock %}
+        {% endblock %}
         {% block javascripts %}
             {{ encore_entry_script_tags('app') }}
         {% endblock %}

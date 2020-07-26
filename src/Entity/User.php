@@ -44,6 +44,21 @@ class User implements UserInterface
      */
     private $logo;
 
+    /**
+     * @ORM\Column(type="string", length=255)
+     */
+    private $name;
+
+    /**
+     * @ORM\Column(type="string", length=255)
+     */
+    private $lastname;
+
+    /**
+     * @ORM\Column(type="string", length=255)
+     */
+    private $idAccess;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -137,6 +152,42 @@ class User implements UserInterface
     public function setLogo(?string $logo): self
     {
         $this->logo = $logo;
+
+        return $this;
+    }
+
+    public function getName(): ?string
+    {
+        return $this->name;
+    }
+
+    public function setName(string $name): self
+    {
+        $this->name = $name;
+
+        return $this;
+    }
+
+    public function getLastname(): ?string
+    {
+        return $this->lastname;
+    }
+
+    public function setLastname(string $lastname): self
+    {
+        $this->lastname = $lastname;
+
+        return $this;
+    }
+
+    public function getIdAccess(): ?string
+    {
+        return $this->idAccess;
+    }
+
+    public function setIdAccess(string $idAccess): self
+    {
+        $this->idAccess = $idAccess;
 
         return $this;
     }

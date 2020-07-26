@@ -44,16 +44,9 @@ class Livre
     /**
      * @var string
      *
-     * @ORM\Column(name="isbn10", type="string", length=255, nullable=true)
+     * @ORM\Column(name="isbn", type="string", length=255, nullable=true)
      */
-    private $isbn10;
-
-    /**
-     * @var string
-     *
-     * @ORM\Column(name="isbn13", type="string", length=255, nullable=true)
-     */
-    private $isbn13;
+    private $isbn;
 
     /**
      * @var int
@@ -251,51 +244,27 @@ class Livre
     }
 
     /**
-     * Set isbn9
+     * Set isbn
      *
-     * @param string $isbn10
+     * @param string $isbn
      *
      * @return Livre
      */
-    public function setIsbn10($isbn10)
+    public function setIsbn($isbn)
     {
-        $this->isbn10 = $isbn10;
+        $this->isbn1= $isbn;
 
         return $this;
     }
 
     /**
-     * Get isbn10
+     * Get isbn
      *
      * @return string
      */
-    public function getIsbn10()
+    public function getIsbn()
     {
-        return $this->isbn10;
-    }
-
-    /**
-     * Set isbn13
-     *
-     * @param string $isbn13
-     *
-     * @return Livre
-     */
-    public function setIsbn13($isbn13)
-    {
-        $this->isbn13 = $isbn13;
-
-        return $this;
-    }
-
-    /**
-     * Get isbn13
-     *
-     * @return string
-     */
-    public function getIsbn13()
-    {
-        return $this->isbn13;
+        return $this->isbn;
     }
 
     /**
