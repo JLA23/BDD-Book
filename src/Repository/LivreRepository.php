@@ -10,4 +10,13 @@ namespace App\Repository;
  */
 class LivreRepository extends \Doctrine\ORM\EntityRepository
 {
+    public function getLivreByInfos($name, $isbn){
+        return $this->createQueryBuilder('l')
+            ->where('UPPER(l.titre) = :name')
+            ->orWhere('UPPER(l.isbn) = :isbn')
+            ->setParameter(':name', $name)
+            ->setParameter(':isbn', $isbn)
+            ->distinct('l.Particularite')
+            ->getQuery()->getOneOrNullResult();
+    }
 }

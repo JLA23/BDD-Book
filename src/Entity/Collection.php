@@ -5,12 +5,12 @@ namespace App\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * Format
+ * Collection
  *
- * @ORM\Table(name="format")
- * @ORM\Entity(repositoryClass="App\Repository\FormatRepository")
+ * @ORM\Table(name="collection")
+ * @ORM\Entity(repositoryClass="App\Repository\CollectionRepository")
  */
-class Format
+class Collection
 {
     /**
      * @var int
@@ -24,7 +24,7 @@ class Format
     /**
      * @var string
      *
-     * @ORM\Column(name="nom", type="string", length=255)
+     * @ORM\Column(name="nom", type="text")
      */
     private $nom;
 
@@ -44,7 +44,7 @@ class Format
      *
      * @param string $nom
      *
-     * @return Format
+     * @return Collection
      */
     public function setNom($nom)
     {

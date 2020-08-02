@@ -10,4 +10,10 @@ namespace App\Repository;
  */
 class CategoryRepository extends \Doctrine\ORM\EntityRepository
 {
+    public function getCategoryByName($name){
+        return $this->createQueryBuilder('c')
+            ->where('UPPER(c.nom) = :name')
+            ->setParameter(':name', strtoupper($name))
+            ->getQuery()->getOneOrNullResult();
+    }
 }

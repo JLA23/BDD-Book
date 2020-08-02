@@ -30,16 +30,16 @@ class Livre
     private $titre;
 
     /**
-     * @ORM\ManyToOne(targetEntity="App\Entity\Format")
-     * @ORM\JoinColumn(name="format_id", referencedColumnName="id", nullable=true)
-     */
-    private $format;
-
-    /**
      * @ORM\ManyToOne(targetEntity="App\Entity\Category")
      * @ORM\JoinColumn(name="category_id", referencedColumnName="id", nullable=true)
      */
     private $category;
+
+    /**
+     * @ORM\ManyToOne(targetEntity="App\Entity\Collection")
+     * @ORM\JoinColumn(name="collection_id", referencedColumnName="id", nullable=true)
+     */
+    private $collection;
 
     /**
      * @var string
@@ -196,30 +196,6 @@ class Livre
     }
 
     /**
-     * Set format
-     *
-     * @param Format $format
-     *
-     * @return Livre
-     */
-    public function setFormat($format)
-    {
-        $this->format = $format;
-
-        return $this;
-    }
-
-    /**
-     * Get format
-     *
-     * @return Format
-     */
-    public function getFormat()
-    {
-        return $this->format;
-    }
-
-    /**
      * Set category
      *
      * @param Category $category
@@ -242,6 +218,31 @@ class Livre
     {
         return $this->category;
     }
+
+    /**
+     * Set collection
+     *
+     * @param Collection $collection
+     *
+     * @return Livre
+     */
+    public function setCollection($collection)
+    {
+        $this->collection = $collection;
+
+        return $this;
+    }
+
+    /**
+     * Get collection
+     *
+     * @return Collection
+     */
+    public function getCollection()
+    {
+        return $this->collection;
+    }
+
 
     /**
      * Set isbn

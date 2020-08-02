@@ -10,4 +10,10 @@ namespace App\Repository;
  */
 class AuteurRepository extends \Doctrine\ORM\EntityRepository
 {
+    public function getAuteurByName($nom){
+        return $this->createQueryBuilder('a')
+            ->where('UPPER(a.nom) = :name')
+            ->setParameter(':name', strtoupper($nom))
+            ->getQuery()->getOneOrNullResult();
+    }
 }
