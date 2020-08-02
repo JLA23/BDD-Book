@@ -253,7 +253,7 @@ class Livre
      */
     public function setIsbn($isbn)
     {
-        $this->isbn1= $isbn;
+        $this->isbn= $isbn;
 
         return $this;
     }

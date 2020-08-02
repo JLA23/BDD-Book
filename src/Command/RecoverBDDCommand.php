@@ -116,6 +116,7 @@ class RecoverBDDCommand extends Command
             foreach  ($result as $row) {
                 if(!empty($row['Particularite'])) {
                     $livre = $em->getRepository('App:Livre')->getLivreByInfos($row['Particularite'], $row['Classeur']);
+                    //echo $row['Particularite'] . " " . $row['Classeur'] . "\n";
                     if(!$livre){
                         $livre = new Livre();
                         $livre->setTitre($row['Particularite']);
