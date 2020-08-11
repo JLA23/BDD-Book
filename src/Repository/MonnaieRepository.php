@@ -10,4 +10,5 @@ namespace App\Repository;
  */
 class MonnaieRepository extends \Doctrine\ORM\EntityRepository
 {
+
 }
