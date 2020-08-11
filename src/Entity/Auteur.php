@@ -28,6 +28,13 @@ class Auteur
      */
     private $nom;
 
+    /**
+     * @var string
+     *
+     * @ORM\Column(name="prenom", type="string", length=255, nullable=true)
+     */
+    private $prenom;
+
 
     /**
      * Get id
@@ -62,5 +69,30 @@ class Auteur
     {
         return $this->nom;
     }
+
+    /**
+     * Set prenom
+     *
+     * @param string $prenom
+     *
+     * @return Auteur
+     */
+    public function setPrenom($prenom)
+    {
+        $this->prenom = $prenom;
+
+        return $this;
+    }
+
+    /**
+     * Get prenom
+     *
+     * @return string
+     */
+    public function getPrenom()
+    {
+        return $this->prenom;
+    }
+
 }
 
