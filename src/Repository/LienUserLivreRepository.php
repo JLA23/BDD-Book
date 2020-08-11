@@ -18,22 +18,4 @@ class LienUserLivreRepository extends \Doctrine\ORM\EntityRepository
             ->orderBy('l.titre', 'ASC')
             ->getQuery()->getResult();
     }
-
-    public function getLienByUserAndLivre($user, $livre, $seq){
-        return $this->createQueryBuilder('lul')
-            ->where('lul.user = :user')
-            ->andWhere('lul.livre = :livre')
-            ->andWhere('lul.seq = :seq')
-            ->setParameter(':user', $user)
-            ->setParameter(':livre', $livre)
-            ->setParameter(':seq', $seq)
-            ->getQuery()->getOneOrNullResult();
-    }
-
-    public function getListeUserByLivre($livre){
-        return $this->createQueryBuilder('lul')
-            ->where('lul.livre = :livre')
-            ->setParameter(':livre', $livre)
-            ->getQuery()->getResult();
-    }
 }

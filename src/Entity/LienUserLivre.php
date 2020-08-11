@@ -34,7 +34,7 @@ class LienUserLivre
     private $livre;
 
     /**
-     * @var int
+     * @var string
      *
      * @ORM\Column(name="note", type="integer", nullable=true)
      */
@@ -66,21 +66,6 @@ class LienUserLivre
      * @ORM\Column(name="commentaire", type="text", nullable=true)
      */
     private $commentaire;
-
-    /**
-     * @var string
-     *
-     * @ORM\Column(name="particularite", type="text", nullable=true)
-     */
-    private $particularite;
-
-    /**
-     * @var int
-     *
-     * @ORM\Column(name="seq_access", type="integer", nullable=true)
-     */
-    private $seq;
-
 
 
     /**
@@ -144,7 +129,7 @@ class LienUserLivre
     /**
      * Set note
      *
-     * @param int $note
+     * @param string $note
      *
      * @return LienUserLivre
      */
@@ -158,7 +143,7 @@ class LienUserLivre
     /**
      * Get note
      *
-     * @return int
+     * @return string
      */
     public function getNote()
     {
@@ -259,54 +244,6 @@ class LienUserLivre
     public function getCommentaire()
     {
         return $this->commentaire;
-    }
-
-    /**
-     * Set particularite
-     *
-     * @param string $particularite
-     *
-     * @return LienUserLivre
-     */
-    public function setParticularite($particularite)
-    {
-        $this->particularite = $particularite;
-
-        return $this;
-    }
-
-    /**
-     * Get particularite
-     *
-     * @return string
-     */
-    public function getParticularite()
-    {
-        return $this->particularite;
-    }
-
-    /**
-     * Set seq
-     *
-     * @param int $seq
-     *
-     * @return LienUserLivre
-     */
-    public function setSeq($seq)
-    {
-        $this->seq = $seq;
-
-        return $this;
-    }
-
-    /**
-     * Get seq
-     *
-     * @return int
-     */
-    public function getSeq()
-    {
-        return $this->seq;
     }
 }
 
