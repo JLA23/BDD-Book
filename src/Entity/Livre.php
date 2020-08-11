@@ -640,7 +640,7 @@ class Livre
      *
      * @return Livre
      */
-    public function addUser(LienAuteurLivre $user)
+    public function addUser(LienUserLivre $user)
     {
         $this->listeUser[] = $user;
 
@@ -670,7 +670,7 @@ class Livre
     /**
      * Set listeUser
      *
-     * @param \Doctrine\Common\Collections\Collection $listeAuteur
+     * @param \Doctrine\Common\Collections\Collection $listeUser
      *
      * @return Livre
      */

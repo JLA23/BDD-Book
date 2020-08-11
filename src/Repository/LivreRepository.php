@@ -10,13 +10,20 @@ namespace App\Repository;
  */
 class LivreRepository extends \Doctrine\ORM\EntityRepository
 {
-    public function getLivreByInfos($name, $isbn){
-        return $this->createQueryBuilder('l')
+    public function getLivreByInfos($name, $isbn, $edition_id){
+        $req = $this->createQueryBuilder('l')
             ->where('UPPER(l.titre) = :name')
-            ->orWhere('l.isbn = :isbn')
+            ->andWhere('l.edition_id = :edition_id')
             ->setParameter(':name', $name)
-            ->setParameter(':isbn', $isbn)
             ->distinct('l.Particularite')
-            ->getQuery()->getOneOrNullResult();
+            ->setParameter(':edition_id', $edition_id);
+
+            if ($isbn){
+                $req->orWhere('l.isbn = :isbn')
+                    ->setParameter(':isbn', $isbn);
+            }
+
+
+        return $req->getQuery()->getOneOrNullResult();
     }
 }

@@ -10,4 +10,19 @@ namespace App\Repository;
  */
 class LienAuteurLivreRepository extends \Doctrine\ORM\EntityRepository
 {
+    public function getLienByAuteurAndLivre($auteur, $livre){
+        return $this->createQueryBuilder('lal')
+            ->where('lal.auteur = :auteur')
+            ->andWhere('lal.livre = :livre')
+            ->setParameter(':auteur', $auteur)
+            ->setParameter(':livre', $livre)
+            ->getQuery()->getResult();
+    }
+
+    public function getListeAuteur($livre){
+        return $this->createQueryBuilder('lal')
+            ->andWhere('lal.livre = :livre')
+            ->setParameter(':livre', $livre)
+            ->getQuery()->getResult();
+    }
 }
