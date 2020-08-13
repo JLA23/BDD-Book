@@ -13,10 +13,8 @@ class IndexController extends AbstractController
      */
     public function index()
     {
-
         $em = $this->getDoctrine()->getManager();
         $users = $em->getRepository(User::class)->findAll();
-        dump($users);
         return $this->render('pages/index.html.twig', ['users' => $users]) ;
     }
 }

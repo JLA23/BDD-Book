@@ -104,12 +104,14 @@ class RecoverBDDCommand extends Command
             if(!empty($row['Pays'])) {
                 $auteurs = explode(',', $row['Pays']);
                 foreach ($auteurs as $aut){
-                    $auteur = $em->getRepository('App:Auteur')->getAuteurByName($aut);
-                    if (!$auteur) {
-                        $auteur = new Auteur();
-                        $auteur->setNom($aut);
-                        $em->persist($auteur);
-                        $em->flush();
+                    if($aut && trim($aut) <> "") {
+                        $auteur = $em->getRepository('App:Auteur')->getAuteurByName(trim($aut));
+                        if (!$auteur) {
+                            $auteur = new Auteur();
+                            $auteur->setNom($aut);
+                            $em->persist($auteur);
+                            $em->flush();
+                        }
                     }
                 }
             }
@@ -123,12 +125,12 @@ class RecoverBDDCommand extends Command
             foreach  ($result as $row) {
                 if(!empty($row['Particularite'])) {
                     $edition = $em->getRepository('App:Edition')->getEditionByName($row['Categorie']);
-                    $edition_id = null;
+                    /**$edition_id = null;
                     if ($edition) {
                         $edition_id = $edition->getId();
-                    }
+                    }*/
 
-                    $livre = $em->getRepository('App:Livre')->getLivreByInfos($row['Particularite'], $row['Classeur'], $edition_id);
+                    $livre = $em->getRepository('App:Livre')->getLivreByInfos($row['Particularite'], $row['Classeur'], $edition);
                     if(!$livre){
                         $livre = new Livre();
                         $livre->setTitre($row['Particularite']);
@@ -189,11 +191,27 @@ class RecoverBDDCommand extends Command
                     $em->flush();
 
                     $auteurs = explode(',', $row['Pays']);
+                    /**if($row['Seq'] == '820'){
+                        echo $row['Particularite'] . " - " .$row['Pays'] . "\n";
+                    }*/
                     foreach ($auteurs as $aut){
-                        $auteur = $em->getRepository('App:Auteur')->getAuteurByName($aut);
-                        if ($auteur) {
-                            $lienAuteurLivre = $em->getRepository('App:LienAuteurLivre')->getLienByAuteurAndLivre($auteur, $livre);
-                            if(!$lienAuteurLivre) {
+                        if($aut && trim($aut) <> "") {
+                            $auteur = $em->getRepository('App:Auteur')->getAuteurByName(trim($aut));
+                            if ($auteur) {
+                                $lienAuteurLivre = $em->getRepository('App:LienAuteurLivre')->getLienByAuteurAndLivre($auteur, $livre);
+                                if (!$lienAuteurLivre) {
+                                    $lienAuteurLivre = new LienAuteurLivre();
+                                    $lienAuteurLivre->setLivre($livre);
+                                    $lienAuteurLivre->setAuteur($auteur);
+
+                                    $em->persist($lienAuteurLivre);
+                                    $em->flush();
+                                }
+                            } else {
+                                $auteur = new Auteur();
+                                $auteur->setNom($aut);
+                                $em->persist($auteur);
+                                $em->flush();
                                 $lienAuteurLivre = new LienAuteurLivre();
                                 $lienAuteurLivre->setLivre($livre);
                                 $lienAuteurLivre->setAuteur($auteur);
@@ -205,7 +223,14 @@ class RecoverBDDCommand extends Command
                     }
                     $listeAuteursBDD = $em->getRepository('App:LienAuteurLivre')->getListeAuteur($livre);
                     foreach ($listeAuteursBDD as $la){
-                        if(!in_array(strtoupper($la->getAuteur()->getNom()), array_change_key_case($auteurs, CASE_UPPER))){
+                        $trouve = false;
+                        foreach ($auteurs as $a) {
+                            if (strtoupper($la->getAuteur()->getNom()) == strtoupper($a)) {
+                               $trouve = true;
+                               break;
+                            }
+                        }
+                        if(!$trouve){
                             $em->remove($la);
                             $em->flush();
                         }
@@ -249,11 +274,11 @@ class RecoverBDDCommand extends Command
                 if (!empty($row['Particularite'])) {
 
                     $edition = $em->getRepository('App:Edition')->getEditionByName($row['Categorie']);
-                    $edition_id = null;
+                    /**$edition_id = null;
                     if ($edition) {
                         $edition_id = $edition->getId();
-                    }
-                    $livre = $em->getRepository('App:Livre')->getLivreByInfos($row['Particularite'], $row['Classeur'], $edition_id);
+                    }*/
+                    $livre = $em->getRepository('App:Livre')->getLivreByInfos($row['Particularite'], $row['Classeur'], $edition);
                     if ($livre) {
                         $listeLienUserLivre = $em->getRepository('App:LienUserLivre')->getListeUserByLivre($livre);
                         foreach ($listeLienUserLivre as $lul){
@@ -280,6 +305,15 @@ class RecoverBDDCommand extends Command
                 }
             }
         }
+
+        $listeAuteurs = $em->getRepository('App:Auteur')->findAll();
+        foreach ($listeAuteurs as $a){
+            if($em->getRepository('App:LienAuteurLivre')->getCountLien($a) == 0){
+                $em->remove($a);
+                $em->flush();
+            }
+        }
+
         $pdo = null;
 
         return Command::SUCCESS;

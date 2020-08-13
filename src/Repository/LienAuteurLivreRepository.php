@@ -21,8 +21,18 @@ class LienAuteurLivreRepository extends \Doctrine\ORM\EntityRepository
 
     public function getListeAuteur($livre){
         return $this->createQueryBuilder('lal')
-            ->andWhere('lal.livre = :livre')
+            ->Where('lal.livre = :livre')
             ->setParameter(':livre', $livre)
             ->getQuery()->getResult();
     }
+
+    public function getCountLien($auteur){
+        $qb = $this->createQueryBuilder('lal');
+        return $qb->select('count(lal.id)')
+            ->Where('lal.auteur = :auteur')
+            ->setParameter(':auteur', $auteur)
+            ->getQuery()->getSingleScalarResult();
+    }
+
+
 }

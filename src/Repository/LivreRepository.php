@@ -13,7 +13,7 @@ class LivreRepository extends \Doctrine\ORM\EntityRepository
     public function getLivreByInfos($name, $isbn, $edition_id){
         $req = $this->createQueryBuilder('l')
             ->where('UPPER(l.titre) = :name')
-            ->andWhere('l.edition_id = :edition_id')
+            ->andWhere('l.edition = :edition_id')
             ->setParameter(':name', $name)
             ->distinct('l.Particularite')
             ->setParameter(':edition_id', $edition_id);

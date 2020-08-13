@@ -1,0 +1,38 @@
+<div>
+    <table id="tableLivre" class="table table-bordered" width="100%" cellspacing="0">
+        <thead>
+        <th>Couverture</th>
+        <th>Titre</th>
+        <th>Auteur</th>
+        <th>Maison d'édition</th>
+        <th>ISBN 13</th>
+        <th>Prix</th>
+        </thead>
+        <tbody>
+        {% for livre in livres %}
+            <tr>
+                <td style="text-align: center"><a target="_blank" href="">{% if livre.id in images|keys %}<img alt="Embedded Image" width="100" src="data:image/png;base64,{{ images[livre.id] }}" />{% endif %}</a></td>
+                <th>{{ livre.titre }}</th>
+                <td>
+                    {% set nb = 0 %}
+                    {% for auteur in livre.listeAuteur %}
+                        {% if nb > 0 %}, {% endif %}{{ auteur.auteur.nom }}
+                        {% set nb = nb + 1 %}
+                    {% endfor %}
+                </td>
+                <td>
+                    {% if livre.edition %}
+                        {{ livre.edition.nom }}
+                    {% endif %}
+                </td>
+                <td>{% if livre.isbn %}{{ livre.isbn }}{% endif %}
+                </td>
+                <td>{{ livre.prixBase }} €</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <div class="pagination">
+        {{ knp_pagination_render(livres) }}
+    </div>
+</div>
