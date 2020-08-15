@@ -10,8 +10,8 @@ Encore
     // directory where compiled assets will be stored
     .setOutputPath('public/build/')
     .copyFiles({
-                from: './assets/images',
-                to: './images/[path][name].[ext]'})
+        from: './assets/images',
+        to: './images/[path][name].[ext]'})
     // public path used by the web server to access the output path
     .setPublicPath('/build')
     // only needed for CDN's or sub-directory deploy
@@ -27,6 +27,7 @@ Encore
      * and one CSS file (e.g. app.css) if your JavaScript imports CSS.
      */
     .addEntry('app', './assets/js/app.js')
+    .addStyleEntry('appstyle', './assets/scss/app.scss')
     //.addEntry('page1', './assets/js/page1.js')
     //.addEntry('page2', './assets/js/page2.js')
 
@@ -46,6 +47,15 @@ Encore
      */
     .cleanupOutputBeforeBuild()
     .enableBuildNotifications()
+    // enables Sass/SCSS support
+    .enableSassLoader((options) => {
+        options.sourceMap = true;
+        options.sassOptions = {
+            outputStyle: options.outputStyle,
+            sourceComments: !Encore.isProduction(),
+        };
+        delete options.outputStyle;
+    }, {})
     .enableSourceMaps(!Encore.isProduction())
     // enables hashed filenames (e.g. app.abc123.css)
     .enableVersioning(Encore.isProduction())
@@ -55,9 +65,12 @@ Encore
         config.useBuiltIns = 'usage';
         config.corejs = 3;
     })
+    .autoProvideVariables({
+    $: 'jquery',
+    jQuery: 'jquery',
+    'window.jQuery': 'jquery',
+    })
 
-    // enables Sass/SCSS support
-    .enableSassLoader()
 
     // uncomment if you use TypeScript
     //.enableTypeScriptLoader()
@@ -75,3 +88,4 @@ Encore
 ;
 
 module.exports = Encore.getWebpackConfig();
+

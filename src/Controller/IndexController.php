@@ -9,12 +9,20 @@ use App\Entity\User;
 class IndexController extends AbstractController
 {
     /**
+     * @Route("/listeUser", name="listeUser")
+     */
+    public function listeUser()
+    {
+        $em = $this->getDoctrine()->getManager();
+        $users = $em->getRepository(User::class)->findAll();
+        return $this->render('pages/listUser.html.twig', ['users' => $users]) ;
+    }
+
+    /**
      * @Route("/", name="index")
      */
     public function index()
     {
-        $em = $this->getDoctrine()->getManager();
-        $users = $em->getRepository(User::class)->findAll();
-        return $this->render('pages/index.html.twig', ['users' => $users]) ;
+        return $this->render('pages/index.html.twig') ;
     }
 }

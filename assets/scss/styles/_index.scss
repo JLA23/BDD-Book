@@ -19,3 +19,45 @@
     height: 250px;
   }
 }
+
+.navbar {
+  position:fixed;
+  width: 100%;
+}
+
+#bodyContain{
+  padding-top: 4%;
+}
+
+#acceuilSite{
+  padding-top: 5%;
+  justify-content: center;
+  margin-right: 10%;
+  margin-left: 10%;
+  h2{
+    size: 25px;
+    text-align: center;
+    padding-bottom: 2%;
+  }
+
+  #cameraButton{
+    position: absolute;
+    top: 0;
+    border-radius: 5px;
+    right: 18px;
+    z-index: 2;
+    border: none;
+    height: 38px;
+    cursor: pointer;
+    transform: translateX(2px);
+  }
+
+  #divSearchButton{
+    padding-top: 2%;
+  }
+
+}
+
+.row{
+  padding-bottom: 3%;
+}

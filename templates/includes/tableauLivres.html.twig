@@ -1,8 +1,10 @@
-<div>
+<div id="tableBook">
+    {% include 'includes/filtreLettreAuteur.html.twig' with {'current' : '0'}%}
+
     <table id="tableLivre" class="table table-bordered" width="100%" cellspacing="0">
         <thead>
         <th>Couverture</th>
-        <th>Titre</th>
+        <th>{{ knp_pagination_sortable(livres, 'Titre', 'l.titre', {'title': ("Order ascending")|trans }) }}</th>
         <th>Auteur</th>
         <th>Maison d'édition</th>
         <th>ISBN 13</th>
@@ -34,5 +36,7 @@
     </table>
     <div class="pagination">
         {{ knp_pagination_render(livres) }}
+
+
     </div>
 </div>

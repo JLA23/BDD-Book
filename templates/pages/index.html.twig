@@ -1,25 +1,37 @@
 {% extends 'base.html.twig' %}
 
 {% block body %}
-    <div id="list_user">
-        <h2>Bibliothèque des Utilisateurs</h2>
-        <div class="row" id="users">
-            {% for user in users %}
-                <div id='div-btn-user' class="col-lg-3 col-md-6 col-sm-12">
-                    <button id='btn-user' class="btn btn-light center-btn" >
-                        <div>
-                            {% if user.logo is null %}
-                                <img class="logo" src="{{ asset('build/images/user.jpeg') }}" >
-                            {% else %}
-                                <img class="logo" src="{{ asset('images_upload/users/' ~ user.logo) }}" >
-                            {% endif %}
+    <div id="acceuilSite">
+        <div id="titleSite">
+            <h2>BDD-Books</h2>
+        </div>
+        <div class="row">
+            <div class="col-sm-12 col-md-12">
+                <form action="{{ path('searchBook')}}" class="form-horizontal">
+                    <div class="form-group">
+                        <div class="col-sm-12 col-md-12">
+                            <input class='form-control' name='value' title="Search" type="text" id="search"/>
+                            <button id="cameraButton" class="btn btn-success" type="button"><i class="fas fa-camera"></i></button>
+                            <div id="divSearchButton" class="text-center">
+                                <button id="searchButton" type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Rechercher</button>
+                                <button id="searchAvance" type="button" class="btn btn-danger"><i class="fas fa-search"></i> Recherche avancée</button>
+                            </div>
                         </div>
-                        <div>
-                            <strong>{{ user.name }} {{ user.lastname }}</strong>
-                        </div>
-                    </button>
-                </div>
-            {% endfor %}
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-sm-12 col-md-4 text-center">
+                <a id="listeBook" href="{{ path('listesLivres')}}" type="button" class="btn btn-primary">Afficher tout les livres</a>
+            </div>
+            <div class="col-sm-12 col-md-4 text-center">
+                <a id="listUser" href="{{ path('listeUser')}}" type="button" class="btn btn-primary">Afficher les bibliothèques des utilisateurs</a>
+            </div>
+            <div class="col-sm-12 col-md-4 text-center">
+                <button id="listAuteur" type="button" class="btn btn-primary">Afficher la liste des auteurs</button>
+            </div>
         </div>
     </div>
 {% endblock %}

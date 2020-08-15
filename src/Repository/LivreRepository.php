@@ -23,4 +23,107 @@ class LivreRepository extends \Doctrine\ORM\EntityRepository
         }
         return $req->getQuery()->getOneOrNullResult();
     }
+
+    public function getSearchLivre($search){
+        $arguments = explode(' ', $search);
+
+        $sql ="
+        SELECT DISTINCT l.id, l.titre
+        FROM livre l
+        LEFT JOIN edition e ON e.id = l.edition_id
+        LEFT JOIN collection c on c.id = l.collection_id
+        WHERE ((";
+
+        $i = 0;
+        foreach ($arguments as $a){
+            if($i > 0){
+                $sql .= "OR ";
+            }
+            $sql .= "l.titre LIKE '%".strtoupper($a)."%' ";
+            $i++;
+        }
+
+
+        $sql .= ") OR (";
+        $i = 0;
+        foreach ($arguments as $a){
+            if($i > 0){
+                $sql .= "AND ";
+            }
+            $sql .= "l.isbn LIKE '%".strtoupper($a)."%' ";
+            $i++;
+        }
+
+        $sql .= ") OR (";
+        $i = 0;
+        foreach ($arguments as $a){
+            if($i > 0){
+                $sql .= "AND ";
+            }
+            $sql .= "e.nom LIKE '%".strtoupper($a)."%' ";
+            $i++;
+        }
+
+        $sql .= ")) OR l.id in (SELECT   lal.livre_id
+                                FROM	lien_auteur_livre lal
+                                INNER JOIN auteur a on lal.auteur_id = a.id
+                                WHERE (";
+        $i = 0;
+        foreach ($arguments as $a){
+            if($i > 0){
+                $sql .= " OR ";
+            }
+            $sql .= "a.nom LIKE '%".strtoupper($a)."%' ";
+            $i++;
+        }
+
+        $sql .= "))
+         OR l.id in (SELECT lul.livre_id
+                     FROM	lien_user_livre lul
+                     WHERE (";
+        $i = 0;
+        foreach ($arguments as $a){
+            if($i > 0){
+                $sql .= "AND ";
+            }
+            $sql .= "lul.commentaire LIKE '%".strtoupper($a)."%' ";
+            $i++;
+        }
+
+        $sql .= ") OR (";
+        $i = 0;
+        foreach ($arguments as $a){
+            if($i > 0){
+                $sql .= "AND ";
+            }
+            $sql .= "lul.particularite LIKE '%".strtoupper($a)."%' ";
+            $i++;
+        }
+
+        $sql .= ")) ORDER BY l.titre ASC";
+
+
+        $conn = $this->getEntityManager()->getConnection();
+        $stmt = $conn->prepare($sql);
+        $stmt->execute();
+        $res = $stmt->fetchAll();
+        if(count($res) == 0){
+            return false;
+        }
+        $tab = array();
+        foreach ($res as $values){
+            $tab[] = $values['id'];
+        }
+
+       $req = $this->createQueryBuilder('l');
+       $req->add('where', $req->expr()->in('l.id', ':my_array'))
+           ->setParameter('my_array', $tab)
+           ->orderBy('l.titre', 'ASC');
+
+
+       return $req->getQuery()->getResult();
+
+
+    }
+
 }
