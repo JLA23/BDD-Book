@@ -18,11 +18,7 @@ class LivresController extends AbstractController
         $em = $this->getDoctrine()->getManager();
         $listeLivre = $em->getRepository(Livre::class)->findBy([],['titre' => 'asc']);
         $images = array();
-        foreach ($listeLivre as $livres) {
-            if($livres && $livres->getImage()) {
-                $images[$livres->getId()] = base64_encode(stream_get_contents($livres->getImage()));
-            }
-        }
+
 
         $livres = $paginator->paginate(
             $listeLivre, // Requête contenant les données à paginer (ici nos articles)
@@ -34,6 +30,11 @@ class LivresController extends AbstractController
             'style' => 'bottom',
             'span_class' => 'whatever',
         ]);
+        foreach ($livres->getItems() as $livre) {
+            if($livre && $livre->getImage()) {
+                $images[$livre->getId()] = base64_encode(stream_get_contents($livre->getImage()));
+            }
+        }
         return $this->render('pages/listelivre.html.twig', ['livres' => $livres, 'images'=> $images]) ;
 
     }
@@ -51,12 +52,6 @@ class LivresController extends AbstractController
             $listeLivre = $em->getRepository(Livre::class)->getSearchLivre($search);
             $images = array();
             if(count($listeLivre) > 0) {
-                foreach ($listeLivre as $livres) {
-                    if ($livres && $livres->getImage()) {
-                        $images[$livres->getId()] = base64_encode(stream_get_contents($livres->getImage()));
-                    }
-                }
-
                 $livres = $paginator->paginate(
                     $listeLivre, // Requête contenant les données à paginer (ici nos articles)
                     $request->query->getInt('page', 1),
@@ -67,6 +62,12 @@ class LivresController extends AbstractController
                     'style' => 'bottom',
                     'span_class' => 'whatever',
                 ]);
+                
+                foreach ($livres->getItems() as $livre) {
+		 	if($livre && $livre->getImage()) {
+		        	$images[$livre->getId()] = base64_encode(stream_get_contents($livre->getImage()));
+			}
+        	}
                 return $this->render('pages/listelivre.html.twig', ['livres' => $livres, 'images'=> $images]) ;
             }
 
