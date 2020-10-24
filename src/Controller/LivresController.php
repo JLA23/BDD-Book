@@ -27,7 +27,7 @@ class LivresController extends AbstractController
         $livres = $paginator->paginate(
             $listeLivre, // Requête contenant les données à paginer (ici nos articles)
             $request->query->getInt('page', 1),
-            100
+            25
         );
         $livres->setCustomParameters([
             'align' => 'center', # center|right (for template: twitter_bootstrap_v4_pagination)
