@@ -24,6 +24,29 @@ class LivreRepository extends \Doctrine\ORM\EntityRepository
         return $req->getQuery()->getOneOrNullResult();
     }
 
+    public function getAllLivres(){
+        $sql ="
+        SELECT DISTINCT l.id, l.titre
+        FROM livre l
+        Order By l.titre ASC
+        ";
+
+        $conn = $this->getEntityManager()->getConnection();
+        $stmt = $conn->prepare($sql);
+        $stmt->execute();
+        $res = $stmt->fetchAll();
+        if(count($res) == 0){
+            return false;
+        }
+        $tab = array();
+        foreach ($res as $values){
+            $tab[] = $values['id'];
+        }
+
+        return $tab;
+
+    }
+
     public function getSearchLivre($search){
         $arguments = explode(' ', $search);
 
@@ -115,13 +138,15 @@ class LivreRepository extends \Doctrine\ORM\EntityRepository
             $tab[] = $values['id'];
         }
 
-       $req = $this->createQueryBuilder('l');
+        return $tab;
+
+       /*$req = $this->createQueryBuilder('l');
        $req->add('where', $req->expr()->in('l.id', ':my_array'))
            ->setParameter('my_array', $tab)
            ->orderBy('l.titre', 'ASC');
 
 
-       return $req->getQuery()->getResult();
+       return $req->getQuery()->getResult();*/
 
 
     }

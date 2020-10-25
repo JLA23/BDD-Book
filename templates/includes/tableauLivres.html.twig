@@ -11,7 +11,7 @@
         <th>Prix</th>
         </thead>
         <tbody>
-        {% for livre in livres %}
+        {% for livre in llivres %}
             <tr>
                 <td style="text-align: center"><a target="_blank" href="">{% if livre.id in images|keys %}<img alt="Embedded Image" width="100" src="data:image/png;base64,{{ images[livre.id] }}" />{% endif %}</a></td>
                 <th>{{ livre.titre }}</th>
