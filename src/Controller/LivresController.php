@@ -19,8 +19,6 @@ class LivresController extends AbstractController
 
         $listeLivreId = $em->getRepository(Livre::class)->getAllLivres();
 
-
-        $listeLivre = $em->getRepository(Livre::class)->findBy([],['titre' => 'asc']);
         $images = array();
 
 
