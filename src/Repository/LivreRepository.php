@@ -24,12 +24,18 @@ class LivreRepository extends \Doctrine\ORM\EntityRepository
         return $req->getQuery()->getOneOrNullResult();
     }
 
-    public function getAllLivres(){
+    public function getAllLivres($colonne, $sort){
         $sql ="
-        SELECT DISTINCT l.id, l.titre
+        SELECT l.id, l.titre
         FROM livre l
-        Order By l.titre ASC
         ";
+
+        if($colonne == null) {
+            $sql .= " Order By l.titre ASC";
+        }
+        else{
+            $sql .= " Order By ".$colonne." ".$sort;
+        }
 
         $conn = $this->getEntityManager()->getConnection();
         $stmt = $conn->prepare($sql);
@@ -42,12 +48,10 @@ class LivreRepository extends \Doctrine\ORM\EntityRepository
         foreach ($res as $values){
             $tab[] = $values['id'];
         }
-
         return $tab;
-
     }
 
-    public function getSearchLivre($search){
+    public function getSearchLivre($search, $colonne, $sort){
         $arguments = explode(' ', $search);
 
         $sql ="
@@ -123,7 +127,12 @@ class LivreRepository extends \Doctrine\ORM\EntityRepository
             $i++;
         }
 
-        $sql .= ")) ORDER BY l.titre ASC";
+        if($colonne == null) {
+            $sql .= ")) Order By l.titre ASC";
+        }
+        else{
+            $sql .= ")) Order By ".$colonne." ".$sort;
+        }
 
 
         $conn = $this->getEntityManager()->getConnection();
@@ -140,15 +149,20 @@ class LivreRepository extends \Doctrine\ORM\EntityRepository
 
         return $tab;
 
-       /*$req = $this->createQueryBuilder('l');
-       $req->add('where', $req->expr()->in('l.id', ':my_array'))
-           ->setParameter('my_array', $tab)
-           ->orderBy('l.titre', 'ASC');
+    }
 
+    function getLivresByID($arrayId, $colonne, $sort){
+        $req = $this->createQueryBuilder('l');
+        $req->add('where', $req->expr()->in('l.id', ':my_array'))
+            ->setParameter('my_array', $arrayId);
+        if($colonne == null) {
+            $req->orderBy('l.titre', 'ASC');
+        }
+        else{
+            $req->orderBy($colonne, $sort);
+        }
 
-       return $req->getQuery()->getResult();*/
-
-
+        return $req->getQuery()->getResult();
     }
 
 }

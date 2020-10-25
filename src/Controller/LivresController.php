@@ -17,31 +17,28 @@ class LivresController extends AbstractController
     {
         $em = $this->getDoctrine()->getManager();
 
-        $listeLivreId = $em->getRepository(Livre::class)->getAllLivres();
-
+        $listeLivreId = $em->getRepository(Livre::class)->getAllLivres($request->get('sort'), $request->get('order'));
         $images = array();
-
-
-        $livres = $paginator->paginate(
-            $listeLivreId, // Requête contenant les données à paginer (ici nos articles)
+        $page = $paginator->paginate(
+            $listeLivreId,
             $request->query->getInt('page', 1),
-            15
+            100
         );
-        $livres->setCustomParameters([
+        $page->setCustomParameters([
             'align' => 'center', # center|right (for template: twitter_bootstrap_v4_pagination)
             'style' => 'bottom',
             'span_class' => 'whatever',
         ]);
 
-        $listeLivre = array();
-        foreach ($livres->getItems() as $livreid) {
-            $livre = $em->getRepository(Livre::class)->findOneBy(['id' => $livreid]);
+        $listeLivre = $em->getRepository(Livre::class)->getLivresByID($page->getItems(), $request->get('sort'), $request->get('order'));
+
+       foreach ($listeLivre as $livre) {
             if ($livre && $livre->getImage()) {
-                $listeLivre[$livre->getId()] = $livre;
                 $images[$livre->getId()] = base64_encode(stream_get_contents($livre->getImage()));
             }
         }
-        return $this->render('pages/listelivre.html.twig', ['livres' => $livres, 'llivres' => $listeLivre, 'images'=> $images]) ;
+
+        return $this->render('pages/listelivre.html.twig', ['pagination' => $page, 'Listelivres' => $listeLivre, 'images'=> $images]) ;
 
     }
 
@@ -55,33 +52,32 @@ class LivresController extends AbstractController
 
         if($request->query->has('value')){
             $search = $request->get('value');
-            $listeLivreID = $em->getRepository(Livre::class)->getSearchLivre($search);
+            $listeLivreID = $em->getRepository(Livre::class)->getSearchLivre($search, $request->get('sort'), $request->get('order'));
             $images = array();
             if(count($listeLivreID) > 0) {
-                $livres = $paginator->paginate(
+                $page = $paginator->paginate(
                     $listeLivreID, // Requête contenant les données à paginer (ici nos articles)
                     $request->query->getInt('page', 1),
-                    15
+                    100
                 );
-                $livres->setCustomParameters([
+                $page->setCustomParameters([
                     'align' => 'center', # center|right (for template: twitter_bootstrap_v4_pagination)
                     'style' => 'bottom',
                     'span_class' => 'whatever',
                 ]);
 
-                $listeLivre = array();
-                foreach ($livres->getItems() as $livreid) {
-                    $livre = $em->getRepository(Livre::class)->findOneBy(['id' => $livreid]);
+                $listeLivre = $em->getRepository(Livre::class)->getLivresByID($page->getItems(), $request->get('sort'), $request->get('order'));
+
+                foreach ($listeLivre as $livre) {
                     if ($livre && $livre->getImage()) {
-                        $listeLivre[$livre->getId()] = $livre;
                         $images[$livre->getId()] = base64_encode(stream_get_contents($livre->getImage()));
                     }
                 }
-                return $this->render('pages/listelivre.html.twig', ['livres' => $livres, 'llivres' => $listeLivre, 'images'=> $images]) ;
+
+                return $this->render('pages/listelivre.html.twig', ['pagination' => $page, 'Listelivres' => $listeLivre, 'images'=> $images]) ;
             }
 
         }
-
         return $this->redirectToRoute('index2');
 
     }
