@@ -54,7 +54,8 @@ class LivresController extends AbstractController
             $search = $request->get('value');
             $listeLivreID = $em->getRepository(Livre::class)->getSearchLivre($search, $request->get('sort'), $request->get('order'));
             $images = array();
-            if(count($listeLivreID) > 0) {
+            dump($listeLivreID);
+            if($listeLivreID && count($listeLivreID) > 0) {
                 $page = $paginator->paginate(
                     $listeLivreID, // Requête contenant les données à paginer (ici nos articles)
                     $request->query->getInt('page', 1),
@@ -78,7 +79,8 @@ class LivresController extends AbstractController
             }
 
         }
-        return $this->redirectToRoute('index2');
+        $this->addFlash('warning', 'Aucun résultat pour votre recherche');
+        return $this->redirectToRoute('index');
 
     }
 }

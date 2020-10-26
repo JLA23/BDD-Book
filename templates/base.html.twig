@@ -17,8 +17,14 @@
                 <a class="btn btn-outline-primary btn-xs mr-2" href="{{ path('app_login') }}">{{ 'Connexion' }}</a>
             {% endif %}-->
         </nav>
+        {% for message in app.flashes('warning') %}
+            <div class="alert alert-success">
+                {{ message }}
+            </div>
+        {% endfor %}
         <div id="bodyContain">
         {% block body %}
+
         {% endblock %}
         </div>
         {% block javascripts %}

@@ -1,5 +1,5 @@
 <div id="tableBook">
-    {% include 'includes/filtreLettreAuteur.html.twig' with {'current' : '0'}%}
+    <!--{% include 'includes/filtreLettreAuteur.html.twig' with {'current' : '0'}%}-->
     {% set queryParams = app.request.query.all %}
     {% set order = app.request.query.get('order') | default('') %}
     {% if order != '' and order == 'asc' %}
