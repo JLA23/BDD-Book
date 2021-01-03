@@ -6,7 +6,7 @@
         <div class="row" id="users">
             {% for user in users %}
                 <div id='div-btn-user' class="col-lg-3 col-md-6 col-sm-12">
-                    <button id='btn-user' class="btn btn-light center-btn" >
+                    <a type="button" id='btn-user' class="btn btn-light center-btn" href="{{ path('listelivreUser', {id : user.id}) }}">
                         <div>
                             {% if user.logo is null %}
                                 <img class="logo" src="{{ asset('build/images/user.jpeg') }}" >
@@ -17,7 +17,7 @@
                         <div>
                             <strong>{{ user.name }} {{ user.lastname }}</strong>
                         </div>
-                    </button>
+                    </a>
                 </div>
             {% endfor %}
         </div>

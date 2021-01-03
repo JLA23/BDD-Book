@@ -10,6 +10,28 @@
 
 }
 
+@media only screen and (max-device-width: 900px){
+  #tableBook {
+    padding-left: 1%;
+    padding-right: 1%;
+    padding-top: 2%;
+    padding-bottom: 2%;
+
+    tr th:nth-child(3), tr td:nth-child(3),
+    tr th:nth-child(4), tr td:nth-child(4),
+    tr th:nth-child(5), tr td:nth-child(5),
+    tr th:nth-child(6), tr td:nth-child(6),
+    {
+      display: none;
+    }
+
+    tbody>tr{
+      height: 200px;
+    }
+
+  }
+}
+
 .pagination {
   display: -ms-flexbox;
   flex-wrap: wrap;

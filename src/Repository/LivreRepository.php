@@ -165,4 +165,32 @@ class LivreRepository extends \Doctrine\ORM\EntityRepository
         return $req->getQuery()->getResult();
     }
 
+    public function getAllLivresByUser($user, $colonne, $sort){
+        $sql ="
+        SELECT  l.id, l.titre
+        FROM    livre l, lien_user_livre lul
+        WHERE   l.id = lul.livre_id
+        AND     lul.user_id = " . $user . " ";
+
+        if($colonne == null) {
+            $sql .= " Order By l.titre ASC";
+        }
+        else{
+            $sql .= " Order By ".$colonne." ".$sort;
+        }
+
+        $conn = $this->getEntityManager()->getConnection();
+        $stmt = $conn->prepare($sql);
+        $stmt->execute();
+        $res = $stmt->fetchAll();
+        if(count($res) == 0){
+            return false;
+        }
+        $tab = array();
+        foreach ($res as $values){
+            $tab[] = $values['id'];
+        }
+        return $tab;
+    }
+
 }
