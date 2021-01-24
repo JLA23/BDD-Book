@@ -165,7 +165,7 @@ class LivreRepository extends \Doctrine\ORM\EntityRepository
 
         }
         else {
-            $arguments = explode(' ', trim(str_replace(['"', '\'', ',', ';', ':', '!', '.', '?', '*', '_', '-', '+', '/', '\\', '[', ']'], " ",$search)));
+            $arguments = explode(' ', trim(str_replace(['"', '\'', ',', ';', ':', '!', '.', '?', '*', '_', '+', '/', '\\', '[', ']'], " ",$search)));
 
             $sql = "
             SELECT DISTINCT l.id, l.titre
