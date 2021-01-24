@@ -52,7 +52,7 @@ class LivresController extends AbstractController
 
         if($request->query->has('value')){
             $search = $request->get('value');
-            $listeLivreID = $em->getRepository(Livre::class)->getSearchLivre($search, $request->get('sort'), $request->get('order'));
+            $listeLivreID = $em->getRepository(Livre::class)->getSearchLivre2($search, $request->get('sort'), $request->get('order'));
             $images = array();
             dump($listeLivreID);
             if($listeLivreID && count($listeLivreID) > 0) {

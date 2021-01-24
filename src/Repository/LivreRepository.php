@@ -151,6 +151,60 @@ class LivreRepository extends \Doctrine\ORM\EntityRepository
 
     }
 
+    public function getSearchLivre2($search, $colonne, $sort){
+
+        if(is_numeric(trim($search)) && strlen(trim($search)) == 13){
+            $sql = "
+            SELECT DISTINCT l.id, l.titre
+            FROM livre l
+            WHERE ((";
+
+
+            $sql .= "l.isbn LIKE '%".strtoupper(trim($search))."%' ";
+
+
+        }
+        else {
+            $arguments = explode(' ', trim(str_replace(['"', '\'', ',', ';', ':', '!', '.', '?', '*', '_', '-', '+', '/', '\\', '[', ']'], " ",$search)));
+
+            $sql = "
+            SELECT DISTINCT l.id, l.titre
+            FROM livre l
+            WHERE ((";
+
+            $i = 0;
+            foreach ($arguments as $a) {
+                if ($i > 0) {
+                    $sql .= "AND ";
+                }
+                $sql .= "l.titre LIKE '%" . strtoupper($a) . "%' ";
+                $i++;
+            }
+        }
+
+        if ($colonne == null) {
+            $sql .= ")) Order By l.titre ASC";
+        } else {
+            $sql .= ")) Order By " . $colonne . " " . $sort;
+        }
+
+
+        $conn = $this->getEntityManager()->getConnection();
+        $stmt = $conn->prepare($sql);
+        $stmt->execute();
+        $res = $stmt->fetchAll();
+        if(count($res) == 0){
+            return false;
+        }
+        $tab = array();
+        foreach ($res as $values){
+            $tab[] = $values['id'];
+        }
+
+        return $tab;
+
+    }
+
     function getLivresByID($arrayId, $colonne, $sort){
         $req = $this->createQueryBuilder('l');
         $req->add('where', $req->expr()->in('l.id', ':my_array'))
