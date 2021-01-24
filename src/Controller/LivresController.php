@@ -54,7 +54,6 @@ class LivresController extends AbstractController
             $search = $request->get('value');
             $listeLivreID = $em->getRepository(Livre::class)->getSearchLivre2($search, $request->get('sort'), $request->get('order'));
             $images = array();
-            dump($listeLivreID);
             if($listeLivreID && count($listeLivreID) > 0) {
                 $page = $paginator->paginate(
                     $listeLivreID, // Requête contenant les données à paginer (ici nos articles)
