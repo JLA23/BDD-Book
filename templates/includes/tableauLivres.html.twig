@@ -29,7 +29,14 @@
         {% for livre in Listelivres %}
             <tr>
                 <td style="text-align: center"><a target="_blank" href="">{% if livre.id in images|keys %}<img alt="Embedded Image" width="100" src="data:image/png;base64,{{ images[livre.id] }}" />{% endif %}</a></td>
-                <th>{{ livre.titre }}</th>
+                <td>
+                    <strong>{{ livre.titre }}</strong>
+                    {% if mobile %}
+                        <br>{% if livre.edition %}<br>Edition : {{livre.edition.nom }}{% endif %}
+                        {% if livre.isbn %}<br>ISBN : {{ livre.isbn }}{% endif %}
+                        <br>PRIX : {{ livre.prixBase | format_currency('EUR')}}
+                    {% endif %}
+                </td>
                 <td>
                     {% set nb = 0 %}
                     {% for auteur in livre.listeAuteur %}

@@ -15,6 +15,7 @@ class LivresController extends AbstractController
      */
     public function listesLivres(Request $request, PaginatorInterface $paginator)
     {
+        $detect = new \Mobile_Detect;
         $em = $this->getDoctrine()->getManager();
 
         $listeLivreId = $em->getRepository(Livre::class)->getAllLivres($request->get('user'),$request->get('sort'), $request->get('order'));
@@ -38,7 +39,7 @@ class LivresController extends AbstractController
             }
         }
 
-        return $this->render('pages/listelivre.html.twig', ['pagination' => $page, 'Listelivres' => $listeLivre, 'images'=> $images]) ;
+        return $this->render('pages/listelivre.html.twig', ['pagination' => $page, 'Listelivres' => $listeLivre, 'images'=> $images, 'mobile' => $detect->isMobile()]) ;
 
     }
 
@@ -49,6 +50,7 @@ class LivresController extends AbstractController
     public function searchBook(Request $request, PaginatorInterface $paginator)
     {
         $em = $this->getDoctrine()->getManager();
+        $detect = new \Mobile_Detect;
 
         if($request->query->has('value')){
             $search = $request->get('value');
@@ -74,7 +76,7 @@ class LivresController extends AbstractController
                     }
                 }
 
-                return $this->render('pages/listelivre.html.twig', ['pagination' => $page, 'Listelivres' => $listeLivre, 'images'=> $images]) ;
+                return $this->render('pages/listelivre.html.twig', ['pagination' => $page, 'Listelivres' => $listeLivre, 'images'=> $images, 'mobile' => $detect->isMobile()]) ;
             }
 
         }
@@ -89,6 +91,7 @@ class LivresController extends AbstractController
     public function listesLivresbyUser(string $id, Request $request, PaginatorInterface $paginator)
     {
         $em = $this->getDoctrine()->getManager();
+        $detect = new \Mobile_Detect;
 
         $listeLivreId = $em->getRepository(Livre::class)->getAllLivresByUser($id, $request->get('sort'), $request->get('order'));
         $images = array();
@@ -111,7 +114,7 @@ class LivresController extends AbstractController
             }
         }
 
-        return $this->render('pages/listelivre.html.twig', ['pagination' => $page, 'Listelivres' => $listeLivre, 'images'=> $images]) ;
+        return $this->render('pages/listelivre.html.twig', ['pagination' => $page, 'Listelivres' => $listeLivre, 'images'=> $images, 'mobile' => $detect->isMobile()]) ;
 
     }
 }
