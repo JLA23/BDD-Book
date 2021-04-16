@@ -7,6 +7,6 @@ knp_paginator:
     distinct: true                 # ensure distinct results, useful when ORM queries are using GROUP BY statements
     page_out_of_range: ignore      # if page number exceeds the last page. Options: 'fix'(return last page); 'throwException'
   template:
-    pagination: '@KnpPaginator/Pagination/twitter_bootstrap_v4_pagination.html.twig'    # sliding pagination controls template
+    pagination: 'twitter_bootstrap_v4_pagination.html.twig'    # sliding pagination controls template
     sortable: '@KnpPaginator/Pagination/twitter_bootstrap_v4_font_awesome_sortable_link.html.twig' # sort link template
     filtration: '@KnpPaginator/Pagination/twitter_bootstrap_v4_filtration.html.twig' # sort link template
