@@ -12,7 +12,16 @@
         <nav class="navbar navbar-light bg-light">
             <a class="navbar-brand" href="{{ path('index')}}">BDD-Books</a>
             {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
-                <a class="btn btn-outline-primary btn-xs mr-2" href="{{ path('app_logout') }}">{{ 'Déconnexion' }}</a>
+                    <div class="dropdown">
+                        <a class="" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown">
+                            <i id="circleUser" class="fas fa-user-circle"></i>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownMenuLink">
+                            <a class="dropdown-item" href="#">Menu Kiosque</a>
+                            <hr>
+                            <a class="dropdown-item" href="{{ path('app_logout') }}">{{ 'Déconnexion' }}</a>
+                        </div>
+                    </div>
             {% else %}
                 <a class="btn btn-outline-primary btn-xs mr-2" href="{{ path('app_login') }}">{{ 'Connexion' }}</a>
             {% endif %}

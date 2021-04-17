@@ -18,11 +18,25 @@ class LivreRepository extends \Doctrine\ORM\EntityRepository
             ->distinct('l.Particularite')
             ->setParameter(':edition_id', $edition_id);
         if ($isbn){
-            $req->orWhere('l.isbn = :isbn')
+            $req->andWhere('(l.isbn = :isbn or l.isbn is null)')
                 ->setParameter(':isbn', $isbn);
         }
         return $req->getQuery()->getOneOrNullResult();
     }
+
+    public function getLivreBySeq($seq, $user){
+        $sql = "SELECT * 
+         FROM   livre
+         WHERE  id = (SELECT livre FROM LienUserLivre WHERE seq = ".$seq." AND user = " . $user. ")";
+
+        $conn = $this->getEntityManager()->getConnection();
+        $stmt = $conn->prepare($sql);
+        $stmt->execute();
+        $res = $stmt->fetch();
+
+        return $res;
+    }
+
 
     public function getAllLivres($colonne, $sort){
         $sql ="

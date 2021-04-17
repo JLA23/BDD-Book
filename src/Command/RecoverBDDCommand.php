@@ -125,12 +125,10 @@ class RecoverBDDCommand extends Command
             foreach  ($result as $row) {
                 if(!empty($row['Particularite'])) {
                     $edition = $em->getRepository('App:Edition')->getEditionByName($row['Categorie']);
-                    /**$edition_id = null;
-                    if ($edition) {
-                        $edition_id = $edition->getId();
-                    }*/
-
-                    $livre = $em->getRepository('App:Livre')->getLivreByInfos($row['Particularite'], $row['Classeur'], $edition);
+                    $livre = $em->getRepository('App:Livre')->getLivreBySeq($row['Seq'], $user);
+                    if(!$livre){
+                        $livre = $em->getRepository('App:Livre')->getLivreByInfos($row['Particularite'], $row['Classeur'], $edition);
+                    }
                     if(!$livre){
                         $livre = new Livre();
                         $livre->setTitre($row['Particularite']);
@@ -146,7 +144,6 @@ class RecoverBDDCommand extends Command
                         if($monnaie){
                             $livre->setMonnaie($monnaie);
                         }
-
                         if($edition){
                             $livre->setEdition($edition);
                         }
