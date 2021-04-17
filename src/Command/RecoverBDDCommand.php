@@ -125,8 +125,12 @@ class RecoverBDDCommand extends Command
             foreach  ($result as $row) {
                 if(!empty($row['Particularite'])) {
                     $edition = $em->getRepository('App:Edition')->getEditionByName($row['Categorie']);
-                    $livre = $em->getRepository('App:Livre')->getLivreBySeq($row['Seq'], $user);
-                    if(!$livre){
+                    $lul = $em->getRepository('App:LienUserLivre')->getLivreByUserAndSeq($user, $row['Seq']);
+                    //$livre = $em->getRepository('App:Livre')->getLivreBySeq($row['Seq'], $user);
+                    if ($lul) {
+                        $livre = $lul->getLivre();
+                    }
+                    else {
                         $livre = $em->getRepository('App:Livre')->getLivreByInfos($row['Particularite'], $row['Classeur'], $edition);
                     }
                     if(!$livre){

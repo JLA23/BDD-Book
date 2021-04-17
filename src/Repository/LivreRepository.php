@@ -25,9 +25,7 @@ class LivreRepository extends \Doctrine\ORM\EntityRepository
     }
 
     public function getLivreBySeq($seq, $user){
-        $sql = "SELECT * 
-         FROM   livre
-         WHERE  id = (SELECT livre FROM LienUserLivre WHERE seq = ".$seq." AND user_id = " . $user->getId(). ")";
+        $sql = "SELECT livre_id FROM lien_user_livre WHERE seq = ".$seq." AND user_id = " . $user->getId();
 
         $conn = $this->getEntityManager()->getConnection();
         $stmt = $conn->prepare($sql);
