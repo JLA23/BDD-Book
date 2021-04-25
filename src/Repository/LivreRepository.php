@@ -11,17 +11,35 @@ namespace App\Repository;
 class LivreRepository extends \Doctrine\ORM\EntityRepository
 {
     public function getLivreByInfos($name, $isbn, $edition_id){
-        $req = $this->createQueryBuilder('l')
+        /*$req = $this->createQueryBuilder('l')
             ->where('UPPER(l.titre) = :name')
             ->andWhere('l.edition = :edition_id')
             ->setParameter(':name', $name)
-            ->distinct('l.Particularite')
+            ->distinct('l.titre')
             ->setParameter(':edition_id', $edition_id);
         if ($isbn){
             $req->andWhere('(l.isbn = :isbn or l.isbn is null)')
                 ->setParameter(':isbn', $isbn);
+        }*/
+        $entityManager = $this->getEntityManager();
+
+        if ($isbn) {
+            $requete = 'SELECT l
+            FROM App\Entity\Livre l
+            WHERE (l.isbn = :isbn)
+            OR (l.edition = :edition_id AND UPPER(l.titre) = UPPER(:name))';
+            $query = $entityManager->createQuery($requete)->setParameter(':isbn', $isbn)
+                ->setParameter(':edition_id', $edition_id)->setParameter(':name', $name);
         }
-        return $req->getQuery()->getOneOrNullResult();
+        else {
+            $requete = 'SELECT l
+            FROM App\Entity\Livre l
+            WHERE l.edition = :edition_id AND UPPER(l.titre) = UPPER(:name)';
+            $query = $entityManager->createQuery($requete)
+                ->setParameter(':edition_id', $edition_id)->setParameter(':name', $name);
+        }
+        return $query->getOneOrNullResult();
+
     }
 
     public function getLivreBySeq($seq, $user){
