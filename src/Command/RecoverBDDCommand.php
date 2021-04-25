@@ -141,7 +141,7 @@ class RecoverBDDCommand extends Command
                         $livre->setImage($row['Avers']);
                         $livre->setPrixBase(floatval($row['Valeur estimée']));
                         $livre->setPages($row['Diametre']);
-                        $livre->setIsbn($row['Classeur']);
+                        $livre->setIsbn(trim($row['Classeur']));
                         $livre->setAmazon($row['Poid']);
                         $livre->setResume($row['Notes']);
 
@@ -329,7 +329,7 @@ class RecoverBDDCommand extends Command
         $livre->setImage($row['Avers']);
         $livre->setPrixBase(floatval($row['Valeur estimée']));
         $livre->setPages($row['Diametre']);
-        $livre->setIsbn($row['Classeur']);
+        $livre->setIsbn(trim($row['Classeur']));
         $livre->setAmazon($row['Poid']);
         $livre->setResume($row['Notes']);
 
