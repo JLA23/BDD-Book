@@ -26,9 +26,9 @@ class LivreRepository extends \Doctrine\ORM\EntityRepository
         if ($isbn) {
             $requete = 'SELECT l
             FROM App\Entity\Livre l
-            WHERE (l.isbn = :isbn)
+            WHERE (trim(l.isbn) = :isbn)
             OR (l.edition = :edition_id AND UPPER(l.titre) = UPPER(:name))';
-            $query = $entityManager->createQuery($requete)->setParameter(':isbn', $isbn)
+            $query = $entityManager->createQuery($requete)->setParameter(':isbn', trim($isbn))
                 ->setParameter(':edition_id', $edition_id)->setParameter(':name', $name);
         }
         else {
