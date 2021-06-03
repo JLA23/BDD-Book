@@ -245,7 +245,7 @@ class KioskCollec
      *
      * @return KioskCollec
      */
-    public function setUpdateUser( $updateUser)
+    public function setUpdateUser($updateUser)
     {
         $this->updateUser = $updateUser;
 
