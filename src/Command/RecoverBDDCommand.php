@@ -51,6 +51,7 @@ class RecoverBDDCommand extends Command
         $username = "serveur";
         $password = "Ejmpa@16091992";
 
+        $em = $this->container->get('doctrine')->getManager();
         $pdo = new \PDO('mysql:host='.$servername.';dbname=DatabaseBook', $username, $password, array(\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION));
 
         $sql = "SELECT * FROM Traitement";
@@ -74,11 +75,12 @@ class RecoverBDDCommand extends Command
 
         $sql = "SELECT * FROM Categorie";
         foreach  ($pdo->query($sql) as $row) {
-            $cat = str_replace("\r", "\n", '', );
-            if (str_contains($cat, ';'){
-            $catE = explode(';', $cat);
-            $cat = $catE[0];
-        }
+            $cat = str_replace("\r",'', $row['Categorie'] );
+            $cat = str_replace("\n", '', $row['Categorie'] );
+            if (str_contains($cat, ';')){
+                $catE = explode(';', $cat);
+                $cat = $catE[0];
+            }
             $cat = trim($cat);
             if(!empty($cat)) {
                 $edition = $em->getRepository('App:Edition')->getEditionByName($cat);
@@ -359,4 +361,3 @@ class RecoverBDDCommand extends Command
         $em->flush();
     }
 }
-$em = $this->container->get('doctrine')->getManager();
