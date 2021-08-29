@@ -40,18 +40,17 @@ class RecoverBDDCommand extends Command
         $this
             ->setName('RecoverBDD')
             ->setDescription('...');
-            //->addArgument('user', InputArgument::REQUIRED, 'Argument user id')
-            //->addArgument('file', InputArgument::REQUIRED, 'Argument fichier CSV')
-            //->addOption('option', null, InputOption::VALUE_NONE, 'Option description');
+        //->addArgument('user', InputArgument::REQUIRED, 'Argument user id')
+        //->addArgument('file', InputArgument::REQUIRED, 'Argument fichier CSV')
+        //->addOption('option', null, InputOption::VALUE_NONE, 'Option description');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $servername = "localhost";
-        $username = "eric";
-        $password = "root";
+        $servername = "192.168.5.10:3307";
+        $username = "serveur";
+        $password = "Ejmpa@16091992";
 
-        $em = $this->container->get('doctrine')->getManager();
         $pdo = new \PDO('mysql:host='.$servername.';dbname=DatabaseBook', $username, $password, array(\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION));
 
         $sql = "SELECT * FROM Traitement";
@@ -75,11 +74,17 @@ class RecoverBDDCommand extends Command
 
         $sql = "SELECT * FROM Categorie";
         foreach  ($pdo->query($sql) as $row) {
-            if(!empty($row['Categorie'])) {
-                $edition = $em->getRepository('App:Edition')->getEditionByName($row['Categorie']);
+            $cat = str_replace("\r", "\n", '', );
+            if (str_contains($cat, ';'){
+            $catE = explode(';', $cat);
+            $cat = $catE[0];
+        }
+            $cat = trim($cat);
+            if(!empty($cat)) {
+                $edition = $em->getRepository('App:Edition')->getEditionByName($cat);
                 if (!$edition) {
                     $edition = new Edition();
-                    $edition->setNom($row['Categorie']);
+                    $edition->setNom($cat);
                     $em->persist($edition);
                     $em->flush();
                 }
@@ -129,6 +134,9 @@ class RecoverBDDCommand extends Command
                     //$livre = $em->getRepository('App:Livre')->getLivreBySeq($row['Seq'], $user);
                     if ($lul) {
                         $livre = $lul->getLivre();
+                        if (($livre->getTitre() != $row['Particularite']) and ($livre->getIsbn != $row['Classeur'])){
+                            $livre = $em->getRepository('App:Livre')->getLivreByInfos($row['Particularite'], $row['Classeur'], $edition);
+                        }
                     }
                     else {
                         $livre = $em->getRepository('App:Livre')->getLivreByInfos($row['Particularite'], $row['Classeur'], $edition);
@@ -193,7 +201,7 @@ class RecoverBDDCommand extends Command
 
                     $auteurs = explode(',', $row['Pays']);
                     /**if($row['Seq'] == '820'){
-                        echo $row['Particularite'] . " - " .$row['Pays'] . "\n";
+                    echo $row['Particularite'] . " - " .$row['Pays'] . "\n";
                     }*/
                     foreach ($auteurs as $aut){
                         if($aut && trim($aut) <> "") {
@@ -227,8 +235,8 @@ class RecoverBDDCommand extends Command
                         $trouve = false;
                         foreach ($auteurs as $a) {
                             if (strtoupper($la->getAuteur()->getNom()) == strtoupper($a)) {
-                               $trouve = true;
-                               break;
+                                $trouve = true;
+                                break;
                             }
                         }
                         if(!$trouve){
@@ -277,7 +285,7 @@ class RecoverBDDCommand extends Command
                     $edition = $em->getRepository('App:Edition')->getEditionByName($row['Categorie']);
                     /**$edition_id = null;
                     if ($edition) {
-                        $edition_id = $edition->getId();
+                    $edition_id = $edition->getId();
                     }*/
                     $livre = $em->getRepository('App:Livre')->getLivreByInfos($row['Particularite'], $row['Classeur'], $edition);
                     if ($livre) {
@@ -351,3 +359,4 @@ class RecoverBDDCommand extends Command
         $em->flush();
     }
 }
+$em = $this->container->get('doctrine')->getManager();
