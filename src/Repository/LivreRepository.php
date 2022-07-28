@@ -181,7 +181,7 @@ class LivreRepository extends \Doctrine\ORM\EntityRepository
 
     }
 
-    public function getSearchLivre2($search, $colonne, $sort){
+    public function getSearchLivre2($search, $user=null, $colonne, $sort){
 
         if(is_numeric(trim($search)) && strlen(trim($search)) == 13){
             $sql = "
@@ -199,8 +199,9 @@ class LivreRepository extends \Doctrine\ORM\EntityRepository
 
             $sql = "
             SELECT DISTINCT l.id, l.titre
-            FROM livre l
-            WHERE ((";
+            FROM livre l, lien_user_livre lul
+            WHERE lul.livre_id = l.id 
+            AND ((";
 
             $i = 0;
             foreach ($arguments as $a) {
@@ -212,10 +213,16 @@ class LivreRepository extends \Doctrine\ORM\EntityRepository
             }
         }
 
+        $sql .= ")) ";
+
+        if($user){
+            $sql .= "AND lul.user_id = '" . $user . "' ";
+        }
+
         if ($colonne == null) {
-            $sql .= ")) Order By l.titre ASC";
+            $sql .= "Order By l.titre ASC";
         } else {
-            $sql .= ")) Order By " . $colonne . " " . $sort;
+            $sql .= "Order By " . $colonne . " " . $sort;
         }
 
 

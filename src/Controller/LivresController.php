@@ -33,7 +33,7 @@ class LivresController extends AbstractController
 
         $listeLivre = $em->getRepository(Livre::class)->getLivresByID($page->getItems(), $request->get('sort'), $request->get('order'));
 
-       foreach ($listeLivre as $livre) {
+        foreach ($listeLivre as $livre) {
             if ($livre && $livre->getImage()) {
                 $images[$livre->getId()] = base64_encode(stream_get_contents($livre->getImage()));
             }
@@ -54,7 +54,11 @@ class LivresController extends AbstractController
 
         if($request->query->has('value')){
             $search = $request->get('value');
-            $listeLivreID = $em->getRepository(Livre::class)->getSearchLivre2($search, $request->get('sort'), $request->get('order'));
+            $user = $request->get('user');
+            if ($user == '0'){
+                $user = null;
+            }
+            $listeLivreID = $em->getRepository(Livre::class)->getSearchLivre2($search, $user, $request->get('sort'), $request->get('order'));
             $images = array();
             if($listeLivreID && count($listeLivreID) > 0) {
                 $page = $paginator->paginate(
