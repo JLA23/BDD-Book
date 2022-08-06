@@ -331,9 +331,9 @@ class RecoverBDDV2Command extends Command
     }
 
     public function comparaisonLivre($row, Livre $livre, $em){
-        if(strlen($row['Particularite']) > strlen($livre->getTitre())) {
+        //if(strlen($row['Particularite']) > strlen($livre->getTitre())) {
             $livre->setTitre($row['Particularite']);
-        }
+        //}
         $livre->setTome($row['Page']);
         $livre->setAnnee($row['Année']);
         $livre->setImage($row['Avers']);
