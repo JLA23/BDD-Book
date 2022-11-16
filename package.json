@@ -1,7 +1,7 @@
 {
     "devDependencies": {
         "@fortawesome/fontawesome-free": "^5.14.0",
-        "@symfony/webpack-encore": "^0.30.0",
+        "@symfony/webpack-encore": "^4.1.1",
         "autoprefixer": "^9.8.6",
         "bootstrap": "^4.6.0",
         "core-js": "^3.10.1",
