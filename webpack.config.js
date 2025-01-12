@@ -27,6 +27,7 @@ Encore
      * and one CSS file (e.g. app.css) if your JavaScript imports CSS.
      */
     .addEntry('app', './assets/js/app.js')
+    .addEntry('jquery', '/node_modules/jquery/dist/jquery.min.js')
     .addStyleEntry('appstyle', './assets/scss/app.scss')
     //.addEntry('page1', './assets/js/page1.js')
     //.addEntry('page2', './assets/js/page2.js')
@@ -66,9 +67,9 @@ Encore
         config.corejs = 3;
     })
     .autoProvideVariables({
-    $: 'jquery',
-    jQuery: 'jquery',
-    'window.jQuery': 'jquery',
+        $: 'jquery',
+        jQuery: 'jquery',
+        'window.jQuery': 'jquery',
     })
 
 
@@ -80,7 +81,7 @@ Encore
     //.enableIntegrityHashes(Encore.isProduction())
 
     // uncomment if you're having problems with a jQuery plugin
-    //.autoProvidejQuery()
+    .autoProvidejQuery()
 
     // uncomment if you use API Platform Admin (composer req api-admin)
     //.enableReactPreset()
@@ -88,4 +89,5 @@ Encore
 ;
 
 module.exports = Encore.getWebpackConfig();
+
 

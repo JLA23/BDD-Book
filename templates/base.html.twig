@@ -6,8 +6,8 @@
         <title>{% block title %}BDD-Books{% endblock %}</title>
         {% block stylesheets %}
             {{ encore_entry_link_tags('app') }}
+            {{ encore_entry_script_tags('jquery') }}
         {% endblock %}
-        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" type="text/javascript"></script>
     </head>
     <body>
         <nav class="navbar navbar-light bg-light">
@@ -39,6 +39,7 @@
         </div>
         {% block javascripts %}
             {{ encore_entry_script_tags('app') }}
+            {{ encore_entry_script_tags('jquery') }}
         {% endblock %}
     </body>
 </html>

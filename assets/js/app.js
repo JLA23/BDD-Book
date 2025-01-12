@@ -7,10 +7,11 @@
 
 // any CSS you import will output into a single css file (app.css in this case)
 import '../scss/app.scss';
-var $ = require('jquery');
+import jquery from 'jquery';
+ 
+global.$ = global.jQuery = $;
 
 require('bootstrap');
-require('jquery');
 require('@fortawesome/fontawesome-free/css/all.min.css');
 require('@fortawesome/fontawesome-free/js/all.js');
 
