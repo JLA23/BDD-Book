@@ -580,6 +580,10 @@ class Livre
         return $this->image;
     }
 
+    public function getImage64(){
+        return base64_encode(stream_get_contents($this->image));
+    }
+
     /**
      * Add Auteur
      *

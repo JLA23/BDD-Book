@@ -1,0 +1,112 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<div id="titleLivre">
+    <h2>{{ livre.titre }}</h2>
+</div>
+
+<div class="container">
+  <div class="row">
+    <div class="col-sm">
+        <img id='img-{{ livre.id }}' class="cover" alt="{{ livre.titre }}" width="60%" src="data:image/png;base64,{{ livre.getImage64 }}" />
+    </div>
+    <div class="col-sm">
+        <table class='detail-infos'>
+            <tbody>
+                <tr>
+                    <th>Titre : </th>
+                    <td>{{ livre.titre }}</td>
+                </tr>
+                <tr>
+                    <th>Auteur(s) : </th>
+                    <td>{% set nb = 0 %}
+                    {% for auteur in livre.listeAuteur %}
+                        {% if nb > 0 %}, {% endif %}{{ auteur.auteur.nom }}
+                        {% set nb = nb + 1 %}
+                    {% endfor %}</td>
+                </tr>
+                <tr>
+                    <th>Maison d'édition : </th>
+                    <td> {% if livre.edition %}
+                        {{ livre.edition.nom }}
+                    {% endif %}</td>
+                </tr>
+                <tr>
+                    <th>Prix : </th>
+                    <td>{{ livre.prixBase|number_format(2) }} {{ livre.monnaie.symbole }}</td>
+                </tr>
+                <tr>
+                    <th>ISBN : </th>
+                    <td> {% if livre.isbn %}{{ livre.isbn }}{% endif %}</td>
+                </tr>
+                {% if livre.annee %}
+                <tr>
+                    <th>Année : </th>
+                    <td> {{ livre.annee }}</td>
+                </tr>
+                {% endif %}
+                {% if livre.collection %}
+                <tr>
+                    <th>Collection : </th>
+                    <td> {{ livre.collection.nom }}</td>
+                </tr>
+                {% endif %}
+                {% if livre.category %}
+                <tr>
+                    <th>Catègorie : </th>
+                    <td> {{ livre.category.nom }}</td>
+                </tr>
+                {% endif %}
+                {% if livre.pages and livre.pages > 0 %}
+                <tr>
+                    <th>Pages : </th>
+                    <td> {{ livre.pages }}</td>
+                </tr>
+                {% endif %}
+                {% if livre.tome and livre.tome > 0 %}
+                <tr>
+                    <th>Tome : </th>
+                    <td> {{ livre.tome }}</td>
+                </tr>
+                {% endif %}
+                {% if livre.amazon %}
+                <tr>
+                    <th>URL : </th>
+                    <td> <a href="{{ livre.amazon }}" target="_blank"> Cliquez ici</a></td>
+                </tr>
+                {% endif %}
+                <tr></tr>
+                {% if livre.resume %}
+                <tr>
+                    <td colspan="2">
+                        <strong>Synopsis :</strong></br>
+                        {{ livre.resume }}
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+  </div>
+  <div class="row">
+         <table class='details_listuser table'>
+           <thead class="thead-dark">
+                <tr>
+                    <th scope="col">Utilisateur</th>
+                    <th scope="col">Date d'acquisiton</th>
+                    <th scope="col">Commentaire</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for lienuserLivre in livre.listeUser %}
+            <tr>
+                <td>{{lienuserLivre.user.name}} {{lienuserLivre.user.lastName}}</td>
+                <td>{{lienuserLivre.dateAchat}}</td>
+                <td>{{lienuserLivre.commentaire}}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+  </div>
+</div>
+
+{% endblock %}

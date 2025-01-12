@@ -43,6 +43,22 @@ class LivresController extends AbstractController
 
     }
 
+    /**
+ * @Route("/livre/{id}", name="livreDetail")
+ */
+public function livreDetail(string $id, Request $request)
+{
+    $detect = new \Mobile_Detect;
+    $em = $this->getDoctrine()->getManager();
+
+    $livre = $em->getRepository(Livre::class)->findOneById($id);
+
+    return $this->render('pages/livreDetail.html.twig', ['livre' => $livre, 'mobile' => $detect->isMobile()]) ;
+
+}
+
+
+
 
     /**
      * @Route("/recherche", name="searchBook")
