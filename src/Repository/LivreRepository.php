@@ -47,8 +47,8 @@ class LivreRepository extends \Doctrine\ORM\EntityRepository
 
         $conn = $this->getEntityManager()->getConnection();
         $stmt = $conn->prepare($sql);
-        $stmt->execute();
-        $res = $stmt->fetch();
+        //$stmt->execute();
+        $res = $stmt->executeQuery()->fetchAllAssociative();
 
         return $res;
     }
@@ -69,8 +69,8 @@ class LivreRepository extends \Doctrine\ORM\EntityRepository
 
         $conn = $this->getEntityManager()->getConnection();
         $stmt = $conn->prepare($sql);
-        $stmt->execute();
-        $res = $stmt->fetchAll();
+        //$stmt->execute();
+        $res = $stmt->executeQuery()->fetchAllAssociative();
         if(count($res) == 0){
             return false;
         }
@@ -167,8 +167,8 @@ class LivreRepository extends \Doctrine\ORM\EntityRepository
 
         $conn = $this->getEntityManager()->getConnection();
         $stmt = $conn->prepare($sql);
-        $stmt->execute();
-        $res = $stmt->fetchAll();
+        // $stmt->execute();
+        $res = $stmt->executeQuery()->fetchAllAssociative();
         if(count($res) == 0){
             return false;
         }
@@ -181,7 +181,7 @@ class LivreRepository extends \Doctrine\ORM\EntityRepository
 
     }
 
-    public function getSearchLivre2($search, $user=null, $colonne, $sort){
+    public function getSearchLivre2($search, $colonne, $sort, $user=null){
 
         if(is_numeric(trim($search)) && strlen(trim($search)) == 13){
             $sql = "
@@ -228,8 +228,8 @@ class LivreRepository extends \Doctrine\ORM\EntityRepository
 
         $conn = $this->getEntityManager()->getConnection();
         $stmt = $conn->prepare($sql);
-        $stmt->execute();
-        $res = $stmt->fetchAll();
+        //$stmt->execute();
+        $res = $stmt->executeQuery()->fetchAllAssociative();
         if(count($res) == 0){
             return false;
         }
@@ -273,7 +273,7 @@ class LivreRepository extends \Doctrine\ORM\EntityRepository
         $conn = $this->getEntityManager()->getConnection();
         $stmt = $conn->prepare($sql);
         $stmt->execute();
-        $res = $stmt->fetchAll();
+        $res = $stmt->executeQuery()->fetchAllAssociative();
         if(count($res) == 0){
             return false;
         }

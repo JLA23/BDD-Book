@@ -261,7 +261,7 @@ class RecoverBDDCommand extends Command
                 $stmt = $pdo->prepare($sql);
                 $stmt->bindparam(1, $row['Particularite'],  \PDO::PARAM_STR);
                 $stmt->execute();
-                $result = $stmt->fetchAll();
+                $result = $stmt->fetchAllAssociative();
                 if(empty($result)){
                     $l = $ll->getLivre();
                     $em->remove($ll);
