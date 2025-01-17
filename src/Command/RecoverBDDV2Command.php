@@ -40,19 +40,16 @@ class RecoverBDDV2Command extends Command
         $this
             ->setName('RecoverBDD_V2')
             ->setDescription('...');
-        //->addArgument('user', InputArgument::REQUIRED, 'Argument user id')
-        //->addArgument('file', InputArgument::REQUIRED, 'Argument fichier CSV')
-        //->addOption('option', null, InputOption::VALUE_NONE, 'Option description');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $servername = "192.168.5.10:3307";
-        $username = "serveur";
-        $password = "Ejmpa@16091992";
+        $servername = $_ENV['IP_BDD_TEMP'];
+        $username = $_ENV['USER_BDD_TEMP'];
+        $password = $_ENV['PWD_BDD_TEMP'];
 
         $em = $this->container->get('doctrine')->getManager();
-        $pdo = new \PDO('mysql:host='.$servername.';dbname=DatabaseBook', $username, $password, array(\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION));
+        $pdo = new \PDO('mysql:host='.$servername.';dbname='.$_ENV['NAME_BDD_TEMP'], $username, $password, array(\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION));
 
         $sql = "SELECT * FROM Traitement";
         $stmt = $pdo->prepare($sql);
@@ -63,7 +60,7 @@ class RecoverBDDV2Command extends Command
         $sql = "SELECT * FROM Matiere";
         foreach  ($pdo->query($sql) as $row) {
             if(!empty($row['Matiere'])) {
-                $categorie = $em->getRepository('App:Category')->getCategoryByName($row['Matiere']);
+                $categorie = $em->getRepository(\App\Entity\Category::class)->getCategoryByName($row['Matiere']);
                 if (!$categorie) {
                     $categorie = new Category();
                     $categorie->setNom($row['Matiere']);
@@ -83,7 +80,7 @@ class RecoverBDDV2Command extends Command
             }
             $cat = trim($cat);
             if(!empty($cat)) {
-                $edition = $em->getRepository('App:Edition')->getEditionByName($cat);
+                $edition = $em->getRepository(\App\Entity\Edition::class)->getEditionByName($cat);
                 if (!$edition) {
                     $edition = new Edition();
                     $edition->setNom($cat);
@@ -96,7 +93,7 @@ class RecoverBDDV2Command extends Command
         $sql = "SELECT * FROM Etat";
         foreach  ($pdo->query($sql) as $row) {
             if(!empty($row['Etat'])) {
-                $collection = $em->getRepository('App:Collection')->getCollectionByName($row['Etat']);
+                $collection = $em->getRepository(\App\Entity\Collection::class)->getCollectionByName($row['Etat']);
                 if (!$collection) {
                     $collection = new Collection();
                     $collection->setNom($row['Etat']);
@@ -112,7 +109,7 @@ class RecoverBDDV2Command extends Command
                 $auteurs = explode(',', $row['Pays']);
                 foreach ($auteurs as $aut){
                     if($aut && trim($aut) <> "") {
-                        $auteur = $em->getRepository('App:Auteur')->getAuteurByName(trim($aut));
+                        $auteur = $em->getRepository(\App\Entity\Auteur::class)->getAuteurByName(trim($aut));
                         if (!$auteur) {
                             $auteur = new Auteur();
                             $auteur->setNom($aut);
@@ -123,25 +120,25 @@ class RecoverBDDV2Command extends Command
                 }
             }
         }
-        $monnaie = $em->getRepository('App:Monnaie')->findOneById(1);
-        $users = $em->getRepository('App:User')->findAll();
+        $monnaie = $em->getRepository(\App\Entity\Monnaie::class)->findOneById(1);
+        $users = $em->getRepository(\App\Entity\User::class)->findAll();
 
         foreach ($users as $user){
             $sql = 'SELECT * FROM Monnaie WHERE Traite = 0 AND COL_TYPE = "'.$user->getIdAccess().'"';
             $result = $pdo->query($sql);
             foreach  ($result as $row) {
                 if(!empty($row['Particularite'])) {
-                    $edition = $em->getRepository('App:Edition')->getEditionByName($row['Categorie']);
-                    $lul = $em->getRepository('App:LienUserLivre')->getLivreByUserAndSeq($user, $row['Seq']);
+                    $edition = $em->getRepository(\App\Entity\Edition::class)->getEditionByName($row['Categorie']);
+                    $lul = $em->getRepository(\App\Entity\LienUserLivre::class)->getLivreByUserAndSeq($user, $row['Seq']);
                     //$livre = $em->getRepository('App:Livre')->getLivreBySeq($row['Seq'], $user);
                     if ($lul) {
                         $livre = $lul->getLivre();
                         if (($livre->getTitre() != $row['Particularite']) and ($livre->getIsbn != $row['Classeur'])){
-                            $livre = $em->getRepository('App:Livre')->getLivreByInfos($row['Particularite'], $row['Classeur'], $edition);
+                            $livre = $em->getRepository(\App\Entity\Livre::class)->getLivreByInfos($row['Particularite'], $row['Classeur'], $edition);
                         }
                     }
                     else {
-                        $livre = $em->getRepository('App:Livre')->getLivreByInfos($row['Particularite'], $row['Classeur'], $edition);
+                        $livre = $em->getRepository(\App\Entity\Livre::class)->getLivreByInfos($row['Particularite'], $row['Classeur'], $edition);
                     }
                     if(!$livre){
                         $livre = new Livre();
@@ -162,12 +159,12 @@ class RecoverBDDV2Command extends Command
                             $livre->setEdition($edition);
                         }
 
-                        $category = $em->getRepository('App:Category')->getCategoryByName($row['Matière']);
+                        $category = $em->getRepository(\App\Entity\Category::class)->getCategoryByName($row['Matière']);
                         if($category){
                             $livre->setCategory($category);
                         }
 
-                        $collection = $em->getRepository('App:Collection')->getCollectionByName($row['Etat']);
+                        $collection = $em->getRepository(\App\Entity\Collection::class)->getCollectionByName($row['Etat']);
                         if($collection){
                             $livre->setCollection($collection);
                         }
@@ -178,7 +175,7 @@ class RecoverBDDV2Command extends Command
                         $this->comparaisonLivre($row, $livre, $em);
                     }
 
-                    $lienLivreUser = $em->getRepository('App:LienUserLivre')->getLienByUserAndLivre($user, $livre, intval($row['Seq']));
+                    $lienLivreUser = $em->getRepository(\App\Entity\LienUserLivre::class)->getLienByUserAndLivre($user, $livre, intval($row['Seq']));
 
                     if (!$lienLivreUser){
                         $lienLivreUser = new LienUserLivre();
@@ -207,9 +204,9 @@ class RecoverBDDV2Command extends Command
                     }*/
                     foreach ($auteurs as $aut){
                         if($aut && trim($aut) <> "") {
-                            $auteur = $em->getRepository('App:Auteur')->getAuteurByName(trim($aut));
+                            $auteur = $em->getRepository(\App\Entity\Auteur::class)->getAuteurByName(trim($aut));
                             if ($auteur) {
-                                $lienAuteurLivre = $em->getRepository('App:LienAuteurLivre')->getLienByAuteurAndLivre($auteur, $livre);
+                                $lienAuteurLivre = $em->getRepository(\App\Entity\LienAuteurLivre::class)->getLienByAuteurAndLivre($auteur, $livre);
                                 if (!$lienAuteurLivre) {
                                     $lienAuteurLivre = new LienAuteurLivre();
                                     $lienAuteurLivre->setLivre($livre);
@@ -232,7 +229,7 @@ class RecoverBDDV2Command extends Command
                             }
                         }
                     }
-                    $listeAuteursBDD = $em->getRepository('App:LienAuteurLivre')->getListeAuteur($livre);
+                    $listeAuteursBDD = $em->getRepository(\App\Entity\LienAuteurLivre::class)->getListeAuteur($livre);
                     foreach ($listeAuteursBDD as $la){
                         $trouve = false;
                         foreach ($auteurs as $a) {
@@ -284,23 +281,23 @@ class RecoverBDDV2Command extends Command
             foreach  ($result as $row) {
                 if (!empty($row['Particularite'])) {
 
-                    $edition = $em->getRepository('App:Edition')->getEditionByName($row['Categorie']);
+                    $edition = $em->getRepository(\App\Entity\Edition::class)->getEditionByName($row['Categorie']);
                     /**$edition_id = null;
                     if ($edition) {
                     $edition_id = $edition->getId();
                     }*/
-                    $livre = $em->getRepository('App:Livre')->getLivreByInfos($row['Particularite'], $row['Classeur'], $edition);
+                    $livre = $em->getRepository(\App\Entity\Livre::class)->getLivreByInfos($row['Particularite'], $row['Classeur'], $edition);
                     if ($livre) {
-                        $listeLienUserLivre = $em->getRepository('App:LienUserLivre')->getListeUserByLivre($livre);
+                        $listeLienUserLivre = $em->getRepository(\App\Entity\LienUserLivre::class)->getListeUserByLivre($livre);
                         foreach ($listeLienUserLivre as $lul){
                             if($lul->getUser()->getId() == $user->getId()){
                                 $em->remove($lul);
                                 $em->flush();
                             }
                         }
-                        $listeLienUserLivre = $em->getRepository('App:LienUserLivre')->getListeUserByLivre($livre);
+                        $listeLienUserLivre = $em->getRepository(\App\Entity\LienUserLivre::class)->getListeUserByLivre($livre);
                         if (count($listeLienUserLivre) == 0){
-                            $listeAuteursBDD = $em->getRepository('App:LienAuteurLivre')->getListeAuteur($livre);
+                            $listeAuteursBDD = $em->getRepository(\App\Entity\LienAuteurLivre::class)->getListeAuteur($livre);
                             foreach ($listeAuteursBDD as $la){
                                 $em->remove($la);
                                 $em->flush();
@@ -317,9 +314,9 @@ class RecoverBDDV2Command extends Command
             }
         }
 
-        $listeAuteurs = $em->getRepository('App:Auteur')->findAll();
+        $listeAuteurs = $em->getRepository(\App\Entity\Auteur::class)->findAll();
         foreach ($listeAuteurs as $a){
-            if($em->getRepository('App:LienAuteurLivre')->getCountLien($a) == 0){
+            if($em->getRepository(\App\Entity\LienAuteurLivre::class)->getCountLien($a) == 0){
                 $em->remove($a);
                 $em->flush();
             }
@@ -343,17 +340,17 @@ class RecoverBDDV2Command extends Command
         $livre->setAmazon($row['Poid']);
         $livre->setResume($row['Notes']);
 
-        $edition = $em->getRepository('App:Edition')->getEditionByName($row['Categorie']);
+        $edition = $em->getRepository(\App\Entity\Edition::class)->getEditionByName($row['Categorie']);
         if($edition){
             $livre->setEdition($edition);
         }
 
-        $category = $em->getRepository('App:Category')->getCategoryByName($row['Matière']);
+        $category = $em->getRepository(\App\Entity\Category::class)->getCategoryByName($row['Matière']);
         if($category){
             $livre->setCategory($category);
         }
 
-        $collection = $em->getRepository('App:Collection')->getCollectionByName($row['Etat']);
+        $collection = $em->getRepository(\App\Entity\Collection::class)->getCollectionByName($row['Etat']);
         if($collection){
             $livre->setCollection($collection);
         }
