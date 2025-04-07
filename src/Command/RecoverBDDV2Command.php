@@ -252,7 +252,7 @@ class RecoverBDDV2Command extends Command
                 $stmt->bindparam(1, $row['Particularite'],  \PDO::PARAM_STR);
                 $stmt->execute();
             }
-            $output->writeln('result : '.count($$compteur));
+            $output->writeln('result : '.$compteur);
             $output->writeln('user : '.$user);
 
 
