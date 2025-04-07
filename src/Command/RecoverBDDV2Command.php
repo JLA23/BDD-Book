@@ -253,7 +253,7 @@ class RecoverBDDV2Command extends Command
                 $stmt->execute();
             }
             $output->writeln('result : '.$compteur);
-            $output->writeln('user : '.$user);
+            $output->writeln('user : '.$user->getUsername());
 
 
 
