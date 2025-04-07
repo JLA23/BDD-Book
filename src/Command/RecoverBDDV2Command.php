@@ -126,6 +126,7 @@ class RecoverBDDV2Command extends Command
         foreach ($users as $user){
             $sql = 'SELECT * FROM Monnaie WHERE Traite = 0 AND COL_TYPE = "'.$user->getIdAccess().'"';
             $result = $pdo->query($sql);
+            $output->writeln('result : '.count($result));
             foreach  ($result as $row) {
                 if(!empty($row['Particularite'])) {
                     $edition = $em->getRepository(\App\Entity\Edition::class)->getEditionByName($row['Categorie']);
