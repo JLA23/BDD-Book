@@ -126,8 +126,9 @@ class RecoverBDDV2Command extends Command
         foreach ($users as $user){
             $sql = 'SELECT * FROM Monnaie WHERE Traite = 0 AND COL_TYPE = "'.$user->getIdAccess().'"';
             $result = $pdo->query($sql);
-            $output->writeln('result : '.count($result));
+            $compteur = 0;
             foreach  ($result as $row) {
+                $compteur ++;
                 if(!empty($row['Particularite'])) {
                     $edition = $em->getRepository(\App\Entity\Edition::class)->getEditionByName($row['Categorie']);
                     $lul = $em->getRepository(\App\Entity\LienUserLivre::class)->getLivreByUserAndSeq($user, $row['Seq']);
@@ -251,6 +252,10 @@ class RecoverBDDV2Command extends Command
                 $stmt->bindparam(1, $row['Particularite'],  \PDO::PARAM_STR);
                 $stmt->execute();
             }
+            $output->writeln('result : '.count($$compteur));
+            $output->writeln('user : '.$user);
+
+
 
             //Suppression des livres enlever de la liste
             /*$listeLivresBDD = $em->getRepository('App:LienUserLivre')->getLivreByUser($user);
