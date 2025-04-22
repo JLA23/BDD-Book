@@ -135,7 +135,7 @@ class RecoverBDDV2Command extends Command
                     //$livre = $em->getRepository('App:Livre')->getLivreBySeq($row['Seq'], $user);
                     if ($lul) {
                         $livre = $lul->getLivre();
-                        if (($livre->getTitre() != $row['Particularite']) and ($livre->getIsbn != $row['Classeur'])){
+                        if (($livre->getTitre() != $row['Particularite']) and ($livre->getIsbn() != $row['Classeur'])){
                             $livre = $em->getRepository(\App\Entity\Livre::class)->getLivreByInfos($row['Particularite'], $row['Classeur'], $edition);
                         }
                     }
