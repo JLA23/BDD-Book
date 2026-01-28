@@ -191,4 +191,35 @@ class User implements UserInterface
 
         return $this;
     }
+
+    /**
+     * Retourne les initiales de l'utilisateur (première lettre du prénom + première lettre du nom)
+     */
+    public function getInitiales(): string
+    {
+        $initiales = '';
+        if ($this->name) {
+            $initiales .= strtoupper(mb_substr($this->name, 0, 1));
+        }
+        if ($this->lastname) {
+            $initiales .= strtoupper(mb_substr($this->lastname, 0, 1));
+        }
+        return $initiales ?: '?';
+    }
+
+    /**
+     * Vérifie si l'utilisateur a une image de profil
+     */
+    public function hasAvatar(): bool
+    {
+        return !empty($this->logo);
+    }
+
+    /**
+     * Retourne le nom complet de l'utilisateur
+     */
+    public function getFullName(): string
+    {
+        return trim($this->name . ' ' . $this->lastname);
+    }
 }

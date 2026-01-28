@@ -47,4 +47,18 @@ class KioskNumRepository extends ServiceEntityRepository
         ;
     }
     */
+
+    public function searchByMagazineOrNum(string $search): array
+    {
+        return $this->createQueryBuilder('n')
+            ->join('n.kioskCollec', 'k')
+            ->where('LOWER(k.nom) LIKE LOWER(:search)')
+            ->orWhere('CAST(n.num AS string) LIKE :search')
+            ->orWhere('LOWER(n.description) LIKE LOWER(:search)')
+            ->setParameter('search', '%' . $search . '%')
+            ->orderBy('k.nom', 'ASC')
+            ->addOrderBy('n.num', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
 }

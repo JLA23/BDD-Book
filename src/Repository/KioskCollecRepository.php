@@ -2,7 +2,7 @@
 
 namespace App\Repository;
 
-use App\Entity\KIOSKCOLLEC;
+use App\Entity\KioskCollec;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -16,7 +16,7 @@ class KioskCollecRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
     {
-        parent::__construct($registry, KIOSKCOLLEC::class);
+        parent::__construct($registry, KioskCollec::class);
     }
 
     // /**
@@ -47,4 +47,15 @@ class KioskCollecRepository extends ServiceEntityRepository
         ;
     }
     */
+
+    public function searchByName(string $search): array
+    {
+        return $this->createQueryBuilder('k')
+            ->where('LOWER(k.nom) LIKE LOWER(:search)')
+            ->orWhere('LOWER(k.editeur) LIKE LOWER(:search)')
+            ->setParameter('search', '%' . $search . '%')
+            ->orderBy('k.nom', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
 }

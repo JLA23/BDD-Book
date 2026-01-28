@@ -1,0 +1,180 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Ajouter plusieurs numéros - {{ magazine.nom }}{% endblock %}
+
+{% block body %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ path('magazines_list') }}">Magazines</a></li>
+            <li class="breadcrumb-item"><a href="{{ path('magazine_detail', {id: magazine.id}) }}">{{ magazine.nom }}</a></li>
+            <li class="breadcrumb-item active">Ajouter plusieurs numéros</li>
+        </ol>
+    </nav>
+
+    <h1>Ajouter plusieurs numéros - {{ magazine.nom }}</h1>
+    <p class="text-muted">Remplissez les informations pour chaque numéro que vous souhaitez ajouter. Seul le champ "Numéro" est obligatoire.</p>
+
+    <form method="post" id="numerosForm">
+        <div id="numeros-container">
+            <div class="card mb-3 numero-item" data-index="0">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Numéro <span class="numero-index">1</span></span>
+                    <button type="button" class="btn btn-sm btn-danger remove-numero" style="display: none;">
+                        <i class="fas fa-times"></i> Supprimer
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-2">
+                            <div class="form-group">
+                                <label>Numéro *</label>
+                                <input type="number" name="numeros[0][num]" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label>Date de parution</label>
+                                <input type="date" name="numeros[0][dateParution]" class="form-control">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label>Code EAN</label>
+                                <input type="text" name="numeros[0][EAN]" class="form-control">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group">
+                                <label>Prix</label>
+                                <input type="number" step="0.01" name="numeros[0][prix]" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Résumé</label>
+                                <textarea name="numeros[0][description]" class="form-control" rows="2"></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Commentaire</label>
+                                <textarea name="numeros[0][commentaire]" class="form-control" rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <button type="button" id="add-numero" class="btn btn-success">
+                <i class="fas fa-plus"></i> Ajouter un autre numéro
+            </button>
+        </div>
+
+        <hr>
+
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-save"></i> Enregistrer tous les numéros
+            </button>
+            <a href="{{ path('magazine_detail', {id: magazine.id}) }}" class="btn btn-secondary btn-lg">
+                Annuler
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+    $(document).ready(function() {
+        var index = 1;
+        
+        $('#add-numero').on('click', function() {
+            var template = `
+                <div class="card mb-3 numero-item" data-index="${index}">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Numéro <span class="numero-index">${index + 1}</span></span>
+                        <button type="button" class="btn btn-sm btn-danger remove-numero">
+                            <i class="fas fa-times"></i> Supprimer
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-2">
+                                <div class="form-group">
+                                    <label>Numéro *</label>
+                                    <input type="number" name="numeros[${index}][num]" class="form-control" required>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Date de parution</label>
+                                    <input type="date" name="numeros[${index}][dateParution]" class="form-control">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Code EAN</label>
+                                    <input type="text" name="numeros[${index}][EAN]" class="form-control">
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group">
+                                    <label>Prix</label>
+                                    <input type="number" step="0.01" name="numeros[${index}][prix]" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Résumé</label>
+                                    <textarea name="numeros[${index}][description]" class="form-control" rows="2"></textarea>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Commentaire</label>
+                                    <textarea name="numeros[${index}][commentaire]" class="form-control" rows="2"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            $('#numeros-container').append(template);
+            index++;
+            
+            updateRemoveButtons();
+        });
+        
+        $(document).on('click', '.remove-numero', function() {
+            $(this).closest('.numero-item').remove();
+            updateRemoveButtons();
+            updateIndexes();
+        });
+        
+        function updateRemoveButtons() {
+            var items = $('.numero-item');
+            if (items.length > 1) {
+                $('.remove-numero').show();
+            } else {
+                $('.remove-numero').hide();
+            }
+        }
+        
+        function updateIndexes() {
+            $('.numero-item').each(function(i) {
+                $(this).find('.numero-index').text(i + 1);
+            });
+        }
+    });
+    </script>
+{% endblock %}

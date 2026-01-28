@@ -2,6 +2,8 @@
 
 namespace App\Repository;
 
+use App\Entity\Auteur;
+
 /**
  * AuteurRepository
  *
@@ -15,5 +17,109 @@ class AuteurRepository extends \Doctrine\ORM\EntityRepository
             ->where('UPPER(a.nom) = :name')
             ->setParameter(':name', strtoupper($nom))
             ->getQuery()->getOneOrNullResult();
+    }
+
+    /**
+     * Normalise un nom pour la comparaison (minuscules, sans accents, trié par mots)
+     */
+    private function normalizeForComparison(string $nom): string
+    {
+        $nom = trim(strtolower($nom));
+        $nom = Auteur::removeAccents($nom);
+        $parts = preg_split('/\s+/', $nom);
+        sort($parts);
+        return implode(' ', $parts);
+    }
+
+    /**
+     * Recherche un auteur de manière intelligente en comparant les mots du nom
+     * Gère les inversions type "Morrison Grant" vs "Grant Morrison"
+     */
+    public function findAuteurIntelligent(string $nomComplet): ?Auteur
+    {
+        $nomComplet = trim($nomComplet);
+        
+        // Recherche exacte d'abord
+        $auteur = $this->getAuteurByName($nomComplet);
+        if ($auteur) {
+            return $auteur;
+        }
+        
+        // Normaliser le nom recherché
+        $normalizedSearch = $this->normalizeForComparison($nomComplet);
+        
+        // Récupérer tous les auteurs et comparer
+        $auteurs = $this->findAll();
+        foreach ($auteurs as $auteur) {
+            $normalizedAuteur = $this->normalizeForComparison($auteur->getNom());
+            if ($normalizedSearch === $normalizedAuteur) {
+                return $auteur;
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * Récupère tous les auteurs triés par nom
+     */
+    public function findAllOrderedByNom(): array
+    {
+        return $this->createQueryBuilder('a')
+            ->orderBy('a.nom', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Récupère les auteurs groupés par initiale (sans accent)
+     */
+    public function findAllGroupedByInitiale(): array
+    {
+        $auteurs = $this->findAllOrderedByNom();
+        $grouped = [];
+        
+        foreach ($auteurs as $auteur) {
+            $initiale = $auteur->getInitiale();
+            if (!isset($grouped[$initiale])) {
+                $grouped[$initiale] = [];
+            }
+            $grouped[$initiale][] = $auteur;
+        }
+        
+        ksort($grouped);
+        return $grouped;
+    }
+
+    /**
+     * Récupère toutes les initiales disponibles (sans accent)
+     */
+    public function findAllInitiales(): array
+    {
+        $auteurs = $this->findAll();
+        $initiales = [];
+        
+        foreach ($auteurs as $auteur) {
+            $initiale = $auteur->getInitiale();
+            if (!in_array($initiale, $initiales)) {
+                $initiales[] = $initiale;
+            }
+        }
+        
+        sort($initiales);
+        return $initiales;
+    }
+
+    /**
+     * Recherche les auteurs par terme de recherche
+     */
+    public function searchAuteurs(string $term): array
+    {
+        return $this->createQueryBuilder('a')
+            ->where('UPPER(a.nom) LIKE :term')
+            ->setParameter(':term', '%' . strtoupper($term) . '%')
+            ->orderBy('a.nom', 'ASC')
+            ->getQuery()
+            ->getResult();
     }
 }

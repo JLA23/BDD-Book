@@ -1,0 +1,231 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Mon Profil{% endblock %}
+
+{% block body %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ path('index') }}">Accueil</a></li>
+                    <li class="breadcrumb-item active">Mon profil</li>
+                </ol>
+            </nav>
+
+            {% for message in app.flashes('success') %}
+                <div class="alert alert-success alert-dismissible fade show">
+                    <i class="fas fa-check-circle mr-2"></i>{{ message }}
+                    <button type="button" class="close" data-dismiss="alert">&times;</button>
+                </div>
+            {% endfor %}
+
+            <div class="card">
+                <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <h4 class="mb-0 text-white">
+                        <i class="fas fa-user-cog mr-2"></i>Mon profil
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-3 text-center">
+                            <div class="user-avatar-large mx-auto mb-3" id="avatarContainer">
+                                {% if user.hasAvatar and user.logo %}
+                                    <img src="{{ asset('uploads/avatars/' ~ user.logo) }}" alt="Avatar" class="user-avatar-img" id="avatarImg">
+                                {% else %}
+                                    <span class="user-avatar-initials-large" id="avatarInitials">{{ user.initiales }}</span>
+                                {% endif %}
+                            </div>
+                            <h5>{{ user.fullName }}</h5>
+                            <p class="text-muted small">{{ user.email }}</p>
+                            
+                            <!-- Upload d'avatar -->
+                            <div class="mt-2">
+                                <label for="avatarUpload" class="btn btn-sm btn-outline-primary mb-1">
+                                    <i class="fas fa-camera"></i> Changer la photo
+                                </label>
+                                <input type="file" id="avatarUpload" accept="image/*" style="display: none;">
+                                {% if user.hasAvatar %}
+                                <button type="button" id="removeAvatarBtn" class="btn btn-sm btn-outline-danger">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                            <div id="avatarMessage" class="small mt-1"></div>
+                        </div>
+                        <div class="col-md-9">
+                            {{ form_start(form, {'attr': {'class': 'profile-form'}}) }}
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        {{ form_label(form.name) }}
+                                        {{ form_widget(form.name) }}
+                                        {{ form_errors(form.name) }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        {{ form_label(form.lastname) }}
+                                        {{ form_widget(form.lastname) }}
+                                        {{ form_errors(form.lastname) }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                {{ form_label(form.username) }}
+                                {{ form_widget(form.username) }}
+                                {{ form_errors(form.username) }}
+                            </div>
+
+                            <div class="form-group">
+                                {{ form_label(form.email) }}
+                                {{ form_widget(form.email) }}
+                                {{ form_errors(form.email) }}
+                            </div>
+
+                            <hr class="my-4">
+                            <h5 class="mb-3"><i class="fas fa-lock mr-2"></i>Changer le mot de passe</h5>
+                            <p class="text-muted small">Laissez vide pour conserver votre mot de passe actuel.</p>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        {{ form_label(form.plainPassword.first) }}
+                                        {{ form_widget(form.plainPassword.first) }}
+                                        {{ form_errors(form.plainPassword.first) }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        {{ form_label(form.plainPassword.second) }}
+                                        {{ form_widget(form.plainPassword.second) }}
+                                        {{ form_errors(form.plainPassword.second) }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr class="my-4">
+
+                            <div class="d-flex justify-content-between">
+                                <a href="{{ path('index') }}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-arrow-left mr-1"></i>Retour
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save mr-1"></i>Enregistrer les modifications
+                                </button>
+                            </div>
+
+                            {{ form_end(form) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.user-avatar-large {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 4px solid rgba(102, 126, 234, 0.3);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    overflow: hidden;
+}
+.user-avatar-initials-large {
+    color: white;
+    font-weight: bold;
+    font-size: 36px;
+    text-transform: uppercase;
+}
+.user-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+</style>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+$(document).ready(function() {
+    $('#avatarUpload').on('change', function() {
+        var file = this.files[0];
+        if (!file) return;
+        
+        // Vérifier le type
+        if (!file.type.match('image.*')) {
+            $('#avatarMessage').html('<span class="text-danger">Fichier non valide</span>');
+            return;
+        }
+        
+        // Vérifier la taille (max 2MB)
+        if (file.size > 2 * 1024 * 1024) {
+            $('#avatarMessage').html('<span class="text-danger">Image trop grande (max 2MB)</span>');
+            return;
+        }
+        
+        var formData = new FormData();
+        formData.append('avatar', file);
+        
+        $('#avatarMessage').html('<span class="text-info"><i class="fas fa-spinner fa-spin"></i> Upload...</span>');
+        
+        $.ajax({
+            url: '{{ path("profile_upload_avatar") }}',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    $('#avatarMessage').html('<span class="text-success"><i class="fas fa-check"></i> ' + response.message + '</span>');
+                    // Mettre à jour l'avatar
+                    $('#avatarContainer').html('<img src="' + response.avatarUrl + '" alt="Avatar" class="user-avatar-img" id="avatarImg">');
+                    // Ajouter le bouton supprimer s'il n'existe pas
+                    if ($('#removeAvatarBtn').length === 0) {
+                        $('label[for="avatarUpload"]').after(' <button type="button" id="removeAvatarBtn" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>');
+                    }
+                } else {
+                    $('#avatarMessage').html('<span class="text-danger">' + response.message + '</span>');
+                }
+            },
+            error: function() {
+                $('#avatarMessage').html('<span class="text-danger">Erreur lors de l\'upload</span>');
+            }
+        });
+    });
+    
+    $(document).on('click', '#removeAvatarBtn', function() {
+        if (!confirm('Supprimer votre photo de profil ?')) return;
+        
+        $('#avatarMessage').html('<span class="text-info"><i class="fas fa-spinner fa-spin"></i> Suppression...</span>');
+        
+        $.ajax({
+            url: '{{ path("profile_remove_avatar") }}',
+            type: 'POST',
+            success: function(response) {
+                if (response.success) {
+                    $('#avatarMessage').html('<span class="text-success"><i class="fas fa-check"></i> ' + response.message + '</span>');
+                    // Remettre les initiales
+                    $('#avatarContainer').html('<span class="user-avatar-initials-large" id="avatarInitials">' + response.initiales + '</span>');
+                    $('#removeAvatarBtn').remove();
+                } else {
+                    $('#avatarMessage').html('<span class="text-danger">' + response.message + '</span>');
+                }
+            },
+            error: function() {
+                $('#avatarMessage').html('<span class="text-danger">Erreur lors de la suppression</span>');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

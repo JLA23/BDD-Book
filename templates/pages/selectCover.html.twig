@@ -1,0 +1,100 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Sélectionner une couverture - {{ livre.titre }}{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-4">
+    <!-- Bouton retour -->
+    <div class="mb-3">
+        <a href="{{ path('livreDetail', {'id': livre.id}) }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> Retour au livre
+        </a>
+    </div>
+
+    <!-- En-tête -->
+    <div class="card mb-4">
+        <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <h4 class="mb-0 text-white">
+                <i class="fas fa-images"></i> Sélectionner une couverture
+            </h4>
+        </div>
+        <div class="card-body">
+            <h5>{{ livre.titre }}</h5>
+            <p class="text-muted mb-0">
+                <i class="fas fa-barcode"></i> ISBN : {{ isbn }}
+                {% if images|length > 0 %}
+                    <span class="badge badge-success ml-2">{{ images|length }} image(s) trouvée(s)</span>
+                {% else %}
+                    <span class="badge badge-warning ml-2">Aucune image trouvée</span>
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    {% if images|length > 0 %}
+        <!-- Grille d'images -->
+        <div class="row">
+            {% for image in images %}
+            <div class="col-6 col-md-4 col-lg-3 mb-4">
+                <div class="card h-100 cover-card shadow-sm">
+                    <div class="cover-image-wrapper text-center p-3" style="background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);">
+                        <img src="{{ image.url }}" 
+                             alt="Couverture {{ image.source }}" 
+                             class="img-fluid"
+                             style="max-height: 350px; object-fit: contain;"
+                             onerror="this.parentElement.innerHTML='<div class=\'text-muted py-5\'><i class=\'fas fa-exclamation-triangle fa-3x\'></i><p class=\'mt-2\'>Image non disponible</p></div>'">
+                    </div>
+                    <div class="card-body text-center">
+                        <div class="mb-2">
+                            <span class="badge badge-primary">{{ image.source }}</span>
+                            <span class="badge badge-secondary">{{ image.quality }}</span>
+                        </div>
+                        <form method="post" action="{{ path('livre_update_cover_url', {'id': livre.id}) }}">
+                            <input type="hidden" name="imageUrl" value="{{ image.url }}">
+                            <button type="submit" class="btn btn-success btn-block" onclick="return confirm('Utiliser cette image comme couverture ?')">
+                                <i class="fas fa-check"></i> Utiliser cette image
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <!-- Aucune image trouvée -->
+        <div class="alert alert-warning">
+            <h5 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Aucune image trouvée</h5>
+            <p class="mb-2">Aucune image de couverture n'a été trouvée pour ce livre (ISBN: {{ isbn }}).</p>
+            <hr>
+            <p class="mb-0">
+                <strong>Sources consultées :</strong> BDGuest, Fnac, Decitre, ExcaliburComics, Amazon, Google Books, Open Library
+            </p>
+        </div>
+        
+        <div class="text-center mt-4">
+            <a href="{{ path('livreDetail', {'id': livre.id}) }}" class="btn btn-primary">
+                <i class="fas fa-arrow-left"></i> Retour au livre
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    .cover-card {
+        transition: all 0.3s;
+        border: 2px solid transparent;
+    }
+    .cover-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
+        border-color: #667eea;
+    }
+    .cover-image-wrapper {
+        min-height: 350px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.25rem 0.25rem 0 0;
+    }
+</style>
+{% endblock %}

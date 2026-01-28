@@ -1,0 +1,51 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Ajouter un propriétaire - {{ magazine.nom }} N°{{ numero.num }}{% endblock %}
+
+{% block body %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ path('magazines_list') }}">Magazines</a></li>
+            <li class="breadcrumb-item"><a href="{{ path('magazine_detail', {id: magazine.id}) }}">{{ magazine.nom }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ path('numero_detail', {id: numero.id}) }}">N°{{ numero.num }}</a></li>
+            <li class="breadcrumb-item active">Ajouter un propriétaire</li>
+        </ol>
+    </nav>
+
+    <h1>Ajouter un propriétaire</h1>
+    <p class="lead">{{ magazine.nom }} - Numéro {{ numero.num }}</p>
+
+    <form method="post" class="mt-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="form-group">
+                    <label for="user_id">Utilisateur</label>
+                    <select name="user_id" id="user_id" class="form-control" required>
+                        <option value="">-- Sélectionner un utilisateur --</option>
+                        {% for user in users %}
+                            <option value="{{ user.id }}">
+                                {{ user.name }} {{ user.lastname }} ({{ user.username }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="commentaire">Commentaire (optionnel)</label>
+                    <textarea name="commentaire" id="commentaire" class="form-control" rows="3" 
+                              placeholder="Ex: État neuf, acheté en kiosque..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group mt-3">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-user-plus"></i> Ajouter le propriétaire
+            </button>
+            <a href="{{ path('numero_detail', {id: numero.id}) }}" class="btn btn-secondary">
+                Annuler
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

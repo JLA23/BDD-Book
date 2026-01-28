@@ -148,6 +148,13 @@ class Livre
      */
     private $image;
 
+    /**
+     * @var string|null
+     *
+     * @ORM\Column(name="image_2", type="string", length=255, nullable=true)
+     */
+    private $image2;
+
 
 
     /**
@@ -585,6 +592,25 @@ class Livre
     }
 
     /**
+     * Get best image URL or base64 encoded blob
+     * Priority: image2 (downloaded file) > image (blob)
+     *
+     * @return string|null Returns URL if available, otherwise base64 encoded blob
+     */
+    public function getBestImage(): ?string
+    {
+        if (!empty($this->image2)) {
+            return '/uploads/covers/' . $this->image2;
+        }
+
+        if (!empty($this->image)) {
+            return 'data:image/jpeg;base64,' . base64_encode(stream_get_contents($this->image));
+        }
+
+        return null;
+    }
+
+    /**
      * Add Auteur
      *
      * @param \App\Entity\LienAuteurLivre $auteur
@@ -687,6 +713,29 @@ class Livre
         foreach ($listeUser as $c)
             $this->addUser($c);
 
+        return $this;
+    }
+
+    /**
+     * Get image2
+     *
+     * @return string|null
+     */
+    public function getImage2(): ?string
+    {
+        return $this->image2;
+    }
+
+    /**
+     * Set image2
+     *
+     * @param string|null $image2
+     *
+     * @return Livre
+     */
+    public function setImage2(?string $image2): self
+    {
+        $this->image2 = $image2;
         return $this;
     }
 }

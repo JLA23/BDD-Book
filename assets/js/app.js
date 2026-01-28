@@ -7,7 +7,7 @@
 
 // any CSS you import will output into a single css file (app.css in this case)
 import '../scss/app.scss';
-import jquery from 'jquery';
+import $ from 'jquery';
  
 global.$ = global.jQuery = $;
 

@@ -1,0 +1,85 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{% if edit %}Modifier{% else %}Nouveau{% endif %} Magazine{% endblock %}
+
+{% block body %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ path('magazines_list') }}">Magazines</a></li>
+            {% if edit %}
+                <li class="breadcrumb-item"><a href="{{ path('magazine_detail', {id: magazine.id}) }}">{{ magazine.nom }}</a></li>
+                <li class="breadcrumb-item active">Modifier</li>
+            {% else %}
+                <li class="breadcrumb-item active">Nouveau magazine</li>
+            {% endif %}
+        </ol>
+    </nav>
+
+    <h1>{% if edit %}Modifier le magazine{% else %}Nouveau magazine{% endif %}</h1>
+
+    {{ form_start(form, {'attr': {'class': 'mt-4', 'enctype': 'multipart/form-data'}}) }}
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header">Informations générales</div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            {{ form_row(form.nom) }}
+                        </div>
+                        <div class="form-group">
+                            {{ form_row(form.editeur) }}
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form_row(form.debpub) }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form_row(form.findeb) }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form_row(form.nbnum) }}
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mt-4">
+                                    {{ form_row(form.statut) }}
+                                </div>
+                            </div>
+                        </div>
+                        {{ form_row(form.commentaire) }}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-header">Image</div>
+                    <div class="card-body">
+                        {% if edit and currentImage is defined and currentImage %}
+                            <div class="mb-3 text-center">
+                                <img src="data:image/jpeg;base64,{{ currentImage }}" 
+                                     class="img-fluid rounded" 
+                                     alt="Image actuelle"
+                                     style="max-height: 200px;">
+                                <p class="small text-muted mt-2">Image actuelle</p>
+                            </div>
+                        {% endif %}
+                        {{ form_row(form.imageFile) }}
+                        <small class="text-muted">Formats acceptés : JPEG, PNG, GIF, WEBP. Max 5 Mo.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> {% if edit %}Enregistrer les modifications{% else %}Créer le magazine{% endif %}
+            </button>
+            <a href="{{ edit ? path('magazine_detail', {id: magazine.id}) : path('magazines_list') }}" class="btn btn-secondary">
+                Annuler
+            </a>
+        </div>
+    {{ form_end(form) }}
+</div>
+{% endblock %}

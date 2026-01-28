@@ -109,10 +109,11 @@ class RecoverBDDV2Command extends Command
                 $auteurs = explode(',', $row['Pays']);
                 foreach ($auteurs as $aut){
                     if($aut && trim($aut) <> "") {
-                        $auteur = $em->getRepository(\App\Entity\Auteur::class)->getAuteurByName(trim($aut));
+                        $nomAuteur = trim($aut);
+                        $auteur = $em->getRepository(\App\Entity\Auteur::class)->findAuteurIntelligent($nomAuteur);
                         if (!$auteur) {
                             $auteur = new Auteur();
-                            $auteur->setNom($aut);
+                            $auteur->setNom($nomAuteur);
                             $em->persist($auteur);
                             $em->flush();
                         }
@@ -201,31 +202,21 @@ class RecoverBDDV2Command extends Command
                     $em->flush();
 
                     $auteurs = explode(',', $row['Pays']);
-                    /**if($row['Seq'] == '820'){
-                    echo $row['Particularite'] . " - " .$row['Pays'] . "\n";
-                    }*/
                     foreach ($auteurs as $aut){
                         if($aut && trim($aut) <> "") {
-                            $auteur = $em->getRepository(\App\Entity\Auteur::class)->getAuteurByName(trim($aut));
-                            if ($auteur) {
-                                $lienAuteurLivre = $em->getRepository(\App\Entity\LienAuteurLivre::class)->getLienByAuteurAndLivre($auteur, $livre);
-                                if (!$lienAuteurLivre) {
-                                    $lienAuteurLivre = new LienAuteurLivre();
-                                    $lienAuteurLivre->setLivre($livre);
-                                    $lienAuteurLivre->setAuteur($auteur);
-
-                                    $em->persist($lienAuteurLivre);
-                                    $em->flush();
-                                }
-                            } else {
+                            $nomAuteur = trim($aut);
+                            $auteur = $em->getRepository(\App\Entity\Auteur::class)->findAuteurIntelligent($nomAuteur);
+                            if (!$auteur) {
                                 $auteur = new Auteur();
-                                $auteur->setNom($aut);
+                                $auteur->setNom($nomAuteur);
                                 $em->persist($auteur);
                                 $em->flush();
+                            }
+                            $lienAuteurLivre = $em->getRepository(\App\Entity\LienAuteurLivre::class)->getLienByAuteurAndLivre($auteur, $livre);
+                            if (!$lienAuteurLivre) {
                                 $lienAuteurLivre = new LienAuteurLivre();
                                 $lienAuteurLivre->setLivre($livre);
                                 $lienAuteurLivre->setAuteur($auteur);
-
                                 $em->persist($lienAuteurLivre);
                                 $em->flush();
                             }

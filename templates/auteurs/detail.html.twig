@@ -1,0 +1,120 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ auteur.nomComplet }} - BDD-Books{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-4">
+    <!-- En-tête -->
+    <div class="card mb-4">
+        <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 text-white">
+                    <i class="fas fa-user"></i> {{ auteur.nomComplet }}
+                </h5>
+                <a href="{{ path('liste_auteurs') }}" class="btn btn-light btn-sm">
+                    <i class="fas fa-arrow-left"></i> Retour aux auteurs
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="d-flex align-items-center">
+                <div class="mr-4">
+                    <span class="badge" style="font-size: 2rem; width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                        {{ auteur.initiale }}
+                    </span>
+                </div>
+                <div>
+                    <h3 class="mb-1">{{ auteur.nomComplet }}</h3>
+                    <p class="text-muted mb-0">
+                        <i class="fas fa-book"></i> {{ livres|length }} livre(s) dans la bibliothèque
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Liste des livres -->
+    {% if livres|length > 0 %}
+        <!-- Grille de livres (même style que la recherche) -->
+        <div class="row">
+            {% for livre in livres %}
+            <div class="col-6 col-md-4 col-lg-3 col-xl-2 mb-4">
+                <div class="card h-100 livre-card shadow-sm">
+                    <!-- Image -->
+                    <div class="livre-cover-wrapper text-center p-2" style="background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);">
+                        {% if livre.id in images|keys %}
+                            <img class="img-fluid" 
+                                 alt="{{ livre.titre }}" 
+                                 src="data:image/png;base64,{{ images[livre.id] }}"
+                                 style="max-height: 180px; object-fit: contain;" />
+                        {% else %}
+                            <div class="d-flex align-items-center justify-content-center" style="height: 180px;">
+                                <i class="fas fa-book fa-4x text-muted"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Corps de la card -->
+                    <div class="card-body p-2">
+                        <h6 class="card-title mb-1">
+                            <a href="{{ path('livreDetail', {'id': livre.id}) }}" class="text-dark text-decoration-none livre-titre">
+                                {{ livre.titre|length > 40 ? livre.titre|slice(0, 40) ~ '...' : livre.titre }}
+                            </a>
+                        </h6>
+                        
+                        {% if livre.tome and livre.tome > 0 %}
+                            <span class="badge badge-secondary badge-sm mb-1">Tome {{ livre.tome }}</span>
+                        {% endif %}
+                        
+                        <!-- Éditeur -->
+                        {% if livre.edition %}
+                        <p class="card-text small text-muted mb-1">
+                            <i class="fas fa-building"></i> {{ livre.edition.nom|length > 20 ? livre.edition.nom|slice(0, 20) ~ '...' : livre.edition.nom }}
+                        </p>
+                        {% endif %}
+                        
+                        {% if livre.annee %}
+                        <p class="card-text small text-muted mb-1">
+                            <i class="fas fa-calendar"></i> {{ livre.annee }}
+                        </p>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Footer -->
+                    <div class="card-footer bg-white border-top-0 p-2 pt-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge badge-primary">{{ livre.prixBase|number_format(2) }} €</span>
+                            <a href="{{ path('livreDetail', {'id': livre.id}) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> Aucun livre trouvé pour cet auteur.
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    .livre-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: 1px solid #e9ecef;
+    }
+    .livre-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+    }
+    .livre-titre:hover {
+        color: #667eea !important;
+    }
+    .livre-cover-wrapper {
+        border-radius: 0.25rem 0.25rem 0 0;
+        min-height: 180px;
+    }
+</style>
+{% endblock %}

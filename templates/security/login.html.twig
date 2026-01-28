@@ -1,42 +1,178 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Log in!{% endblock %}
+{% block title %}Connexion - BDD-Books{% endblock %}
 
 {% block body %}
-<form method="post">
-    {% if error %}
-        <div class="alert alert-danger">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
-    {% endif %}
-
-    {% if app.user %}
-        <div class="mb-3">
-            You are logged in as {{ app.user.username }}, <a href="{{ path('app_logout') }}">Logout</a>
+<div class="login-page-container">
+    <div class="login-card">
+        <div class="text-center mb-4">
+            <i class="fas fa-book-open login-icon"></i>
+            <h4 class="mt-3 font-weight-bold">Connexion</h4>
+            <p class="text-muted">Accédez à votre bibliothèque</p>
         </div>
-    {% endif %}
+        
+        {% if error %}
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle mr-2"></i>
+                {{ error.messageKey|trans(error.messageData, 'security') }}
+            </div>
+        {% endif %}
 
-    <h1 class="h3 mb-3 font-weight-normal">Please sign in</h1>
-    <label for="inputEmail">Email</label>
-    <input type="email" value="{{ last_username }}" name="email" id="inputEmail" class="form-control" required autofocus>
-    <label for="inputPassword">Password</label>
-    <input type="password" name="password" id="inputPassword" class="form-control" required>
+        {% if app.user %}
+            <div class="alert alert-info">
+                <i class="fas fa-user mr-2"></i>
+                Vous êtes connecté en tant que {{ app.user.username }}, 
+                <a href="{{ path('app_logout') }}">Se déconnecter</a>
+            </div>
+        {% else %}
+            <form method="post">
+                <div class="form-group">
+                    <label for="inputEmail" class="sr-only">Email</label>
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text bg-white border-right-0">
+                                <i class="fas fa-envelope text-muted"></i>
+                            </span>
+                        </div>
+                        <input type="email" 
+                               value="{{ last_username }}" 
+                               name="email" 
+                               id="inputEmail" 
+                               class="form-control border-left-0" 
+                               placeholder="Adresse email"
+                               required 
+                               autofocus>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="inputPassword" class="sr-only">Mot de passe</label>
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text bg-white border-right-0">
+                                <i class="fas fa-lock text-muted"></i>
+                            </span>
+                        </div>
+                        <input type="password" 
+                               name="password" 
+                               id="inputPassword" 
+                               class="form-control border-left-0" 
+                               placeholder="Mot de passe"
+                               required>
+                        <div class="input-group-append">
+                            <button class="btn btn-outline-secondary border-left-0 bg-white toggle-password" type="button">
+                                <i class="fas fa-eye text-muted"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <div class="custom-control custom-checkbox">
+                        <input type="checkbox" class="custom-control-input" id="rememberMe" name="_remember_me">
+                        <label class="custom-control-label text-muted" for="rememberMe">Se souvenir de moi</label>
+                    </div>
+                </div>
 
-    <input type="hidden" name="_csrf_token"
-           value="{{ csrf_token('authenticate') }}"
-    >
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
 
-    {#
-        Uncomment this section and add a remember_me option below your firewall to activate remember me functionality.
-        See https://symfony.com/doc/current/security/remember_me.html
+                <button type="submit" class="btn btn-primary btn-block btn-lg login-btn">
+                    <i class="fas fa-sign-in-alt mr-2"></i>Se connecter
+                </button>
+            </form>
+        {% endif %}
+    </div>
+</div>
 
-        <div class="checkbox mb-3">
-            <label>
-                <input type="checkbox" name="_remember_me"> Remember me
-            </label>
-        </div>
-    #}
+<style>
+.login-page-container {
+    min-height: calc(100vh - 100px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 40px 20px;
+    margin: -20px;
+}
 
-    <button class="btn btn-lg btn-primary" type="submit">
-        Sign in
-    </button>
-</form>
+.login-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2);
+    padding: 40px;
+    width: 100%;
+    max-width: 420px;
+}
+
+.login-icon {
+    font-size: 3rem;
+    color: #667eea;
+}
+
+.login-btn {
+    border-radius: 25px;
+    padding: 12px 20px;
+    font-weight: 600;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.login-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.5);
+}
+
+.login-card .form-control {
+    border-radius: 0;
+    padding: 12px 15px;
+    height: auto;
+}
+
+.login-card .input-group {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.login-card .input-group-text {
+    border-radius: 0;
+}
+
+.login-card .form-control:focus {
+    box-shadow: none;
+    border-color: #667eea;
+}
+
+.login-card .input-group:focus-within {
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+.login-card .input-group:focus-within .input-group-text,
+.login-card .input-group:focus-within .form-control,
+.login-card .input-group:focus-within .btn {
+    border-color: #667eea;
+}
+
+.toggle-password {
+    border-radius: 0 !important;
+}
+</style>
+
+<script>
+$(document).ready(function() {
+    $('.toggle-password').on('click', function() {
+        var passwordInput = $('#inputPassword');
+        var icon = $(this).find('i');
+        
+        if (passwordInput.attr('type') === 'password') {
+            passwordInput.attr('type', 'text');
+            icon.removeClass('fa-eye').addClass('fa-eye-slash');
+        } else {
+            passwordInput.attr('type', 'password');
+            icon.removeClass('fa-eye-slash').addClass('fa-eye');
+        }
+    });
+});
+</script>
 {% endblock %}

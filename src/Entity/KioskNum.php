@@ -44,6 +44,17 @@ class KioskNum
     private $prix;
 
     /**
+     * @ORM\ManyToOne(targetEntity="App\Entity\Monnaie")
+     * @ORM\JoinColumn(name="idMonnaie", referencedColumnName="id", nullable=true)
+     */
+    private $monnaie;
+
+    /**
+     * @ORM\Column(type="date", nullable=true)
+     */
+    private $dateParution;
+
+    /**
      * @ORM\Column(type="text", nullable=true)
      */
     private $commentaire;
@@ -148,6 +159,30 @@ class KioskNum
     public function setPrix(?float $prix): self
     {
         $this->prix = $prix;
+
+        return $this;
+    }
+
+    public function getMonnaie(): ?Monnaie
+    {
+        return $this->monnaie;
+    }
+
+    public function setMonnaie(?Monnaie $monnaie): self
+    {
+        $this->monnaie = $monnaie;
+
+        return $this;
+    }
+
+    public function getDateParution(): ?\DateTimeInterface
+    {
+        return $this->dateParution;
+    }
+
+    public function setDateParution(?\DateTimeInterface $dateParution): self
+    {
+        $this->dateParution = $dateParution;
 
         return $this;
     }

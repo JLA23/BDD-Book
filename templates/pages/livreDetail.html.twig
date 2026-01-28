@@ -1,112 +1,553 @@
 {% extends 'base.html.twig' %}
 
 {% block body %}
-<div id="titleLivre">
-    <h2>{{ livre.titre }}</h2>
-</div>
-
-<div class="container">
-  <div class="row">
-    <div class="col-sm">
-        <img id='img-{{ livre.id }}' class="cover" alt="{{ livre.titre }}" width="60%" src="data:image/png;base64,{{ livre.getImage64 }}" />
+<div class="container-fluid px-4">
+    <!-- Bouton retour -->
+    <div class="mb-3">
+        <a href="javascript:history.back()" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> Retour
+        </a>
     </div>
-    <div class="col-sm">
-        <table class='detail-infos'>
-            <tbody>
-                <tr>
-                    <th>Titre : </th>
-                    <td>{{ livre.titre }}</td>
-                </tr>
-                <tr>
-                    <th>Auteur(s) : </th>
-                    <td>{% set nb = 0 %}
-                    {% for auteur in livre.listeAuteur %}
-                        {% if nb > 0 %}, {% endif %}{{ auteur.auteur.nom }}
-                        {% set nb = nb + 1 %}
-                    {% endfor %}</td>
-                </tr>
-                <tr>
-                    <th>Maison d'édition : </th>
-                    <td> {% if livre.edition %}
-                        {{ livre.edition.nom }}
-                    {% endif %}</td>
-                </tr>
-                <tr>
-                    <th>Prix : </th>
-                    <td>{{ livre.prixBase|number_format(2) }} {{ livre.monnaie.symbole }}</td>
-                </tr>
-                <tr>
-                    <th>ISBN : </th>
-                    <td> {% if livre.isbn %}{{ livre.isbn }}{% endif %}</td>
-                </tr>
-                {% if livre.annee %}
-                <tr>
-                    <th>Année : </th>
-                    <td> {{ livre.annee }}</td>
-                </tr>
-                {% endif %}
-                {% if livre.collection %}
-                <tr>
-                    <th>Collection : </th>
-                    <td> {{ livre.collection.nom }}</td>
-                </tr>
-                {% endif %}
-                {% if livre.category %}
-                <tr>
-                    <th>Catègorie : </th>
-                    <td> {{ livre.category.nom }}</td>
-                </tr>
-                {% endif %}
-                {% if livre.pages and livre.pages > 0 %}
-                <tr>
-                    <th>Pages : </th>
-                    <td> {{ livre.pages }}</td>
-                </tr>
-                {% endif %}
+
+    <!-- Card principale -->
+    <div class="card shadow-sm">
+        <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <h4 class="mb-0 text-white">
+                <i class="fas fa-book"></i> {{ livre.titre }}
                 {% if livre.tome and livre.tome > 0 %}
-                <tr>
-                    <th>Tome : </th>
-                    <td> {{ livre.tome }}</td>
-                </tr>
+                    <span class="badge badge-light ml-2">Tome {{ livre.tome }}</span>
                 {% endif %}
-                {% if livre.amazon %}
-                <tr>
-                    <th>URL : </th>
-                    <td> <a href="{{ livre.amazon }}" target="_blank"> Cliquez ici</a></td>
-                </tr>
-                {% endif %}
-                <tr></tr>
-                {% if livre.resume %}
-                <tr>
-                    <td colspan="2">
-                        <strong>Synopsis :</strong></br>
-                        {{ livre.resume }}
-                    </td>
-                </tr>
-                {% endif %}
-            </tbody>
-        </table>
+            </h4>
+        </div>
+        
+        <div class="card-body">
+            <div class="row">
+                <!-- Colonne Image -->
+                <div class="col-md-4 text-center mb-4">
+                    <div class="livre-cover-container">
+                        <img id='img-{{ livre.id }}' 
+                             class="img-fluid rounded shadow" 
+                             alt="{{ livre.titre }}" 
+                             src="{{ livre.getBestImage }}"
+                             style="max-height: 400px; object-fit: contain;" />
+                    </div>
+                    
+                    {% if is_granted('IS_AUTHENTICATED_FULLY') %}
+                    <div class="mt-3">
+                        {% if livre.isbn %}
+                        <button type="button" id="scrapeCoverBtn" class="btn btn-primary btn-sm mb-2" data-livre-id="{{ livre.id }}">
+                            <i class="fas fa-magic"></i> Scraper des images
+                        </button>
+                        <br>
+                        {% endif %}
+                        
+                        {% if livre.getImage2 %}
+                            <span class="badge badge-info mb-2"><i class="fas fa-link"></i> Image externe</span>
+                            <br>
+                            <button type="button" id="removeCoverUrlBtn" class="btn btn-outline-danger btn-sm">
+                                <i class="fas fa-undo"></i> Image originale
+                            </button>
+                        {% else %}
+                            {% if livre.isbn %}
+                            <button type="button" id="searchCoverBtn" class="btn btn-outline-primary btn-sm" data-livre-id="{{ livre.id }}">
+                                <i class="fas fa-search"></i> Chercher couverture
+                            </button>
+                            {% endif %}
+                            <button type="button" id="manualUrlBtn" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-link"></i> URL manuelle
+                            </button>
+                        {% endif %}
+                        
+                        <div id="coverSearchResult" class="mt-2" style="display: none;">
+                            <div id="coverPreview" class="mb-2"></div>
+                            <button type="button" id="applyCoverBtn" class="btn btn-success btn-sm" style="display: none;">
+                                <i class="fas fa-check"></i> Utiliser
+                            </button>
+                            <span id="coverMessage" class="text-muted"></span>
+                        </div>
+                        
+                        <div id="manualUrlForm" class="mt-3 text-left" style="display: none;">
+                            <p class="small text-muted mb-2">
+                                Rechercher sur : 
+                                {% if livre.amazon %}
+                                <a href="{{ livre.amazon }}" target="_blank" class="badge badge-warning"><i class="fas fa-external-link-alt"></i> Produit</a>
+                                {% endif %}
+                                {% if livre.isbn %}
+                                <a href="https://www.amazon.fr/s?k={{ livre.isbn }}" target="_blank" class="badge badge-secondary">Amazon</a>
+                                <a href="https://www.google.com/search?tbm=isch&q={{ livre.isbn }}+couverture" target="_blank" class="badge badge-success">Google</a>
+                                {% endif %}
+                            </p>
+                            <div class="input-group input-group-sm">
+                                <input type="url" id="manualUrlInput" class="form-control" placeholder="URL de l'image...">
+                                <div class="input-group-append">
+                                    <button type="button" id="previewManualUrlBtn" class="btn btn-primary">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="manualPreview" class="mt-2"></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Colonne Informations -->
+                <div class="col-md-8">
+                    <!-- Auteurs -->
+                    {% if livre.listeAuteur|length > 0 %}
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-2"><i class="fas fa-pen-fancy"></i> Auteur(s)</h6>
+                        <div>
+                            {% for auteur in livre.listeAuteur %}
+                                <a href="{{ path('auteur_detail', {'id': auteur.auteur.id}) }}" class="badge badge-primary mr-1 mb-1" style="font-size: 0.9rem;">
+                                    {{ auteur.auteur.nom }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Infos principales -->
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <div class="info-item mb-3">
+                                <small class="text-muted d-block"><i class="fas fa-building"></i> Éditeur</small>
+                                <strong>{% if livre.edition %}{{ livre.edition.nom }}{% else %}-{% endif %}</strong>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="info-item mb-3">
+                                <small class="text-muted d-block"><i class="fas fa-calendar"></i> Année</small>
+                                <strong>{% if livre.annee %}{{ livre.annee }}{% else %}-{% endif %}</strong>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="info-item mb-3">
+                                <small class="text-muted d-block"><i class="fas fa-barcode"></i> ISBN</small>
+                                <strong>{% if livre.isbn %}{{ livre.isbn }}{% else %}-{% endif %}</strong>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="info-item mb-3">
+                                <small class="text-muted d-block"><i class="fas fa-euro-sign"></i> Prix</small>
+                                <strong>{{ livre.prixBase|number_format(2) }} {% if livre.monnaie %}{{ livre.monnaie.symbole }}{% endif %}</strong>
+                            </div>
+                        </div>
+                        {% if livre.collection %}
+                        <div class="col-sm-6">
+                            <div class="info-item mb-3">
+                                <small class="text-muted d-block"><i class="fas fa-layer-group"></i> Collection</small>
+                                <strong>{{ livre.collection.nom }}</strong>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if livre.category %}
+                        <div class="col-sm-6">
+                            <div class="info-item mb-3">
+                                <small class="text-muted d-block"><i class="fas fa-tag"></i> Catégorie</small>
+                                <strong>{{ livre.category.nom }}</strong>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if livre.pages and livre.pages > 0 %}
+                        <div class="col-sm-6">
+                            <div class="info-item mb-3">
+                                <small class="text-muted d-block"><i class="fas fa-file-alt"></i> Pages</small>
+                                <strong>{{ livre.pages }}</strong>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if livre.amazon %}
+                        <div class="col-sm-6">
+                            <div class="info-item mb-3">
+                                <small class="text-muted d-block"><i class="fas fa-external-link-alt"></i> Lien</small>
+                                <a href="{{ livre.amazon }}" target="_blank" class="btn btn-sm btn-outline-warning">
+                                    <i class="fas fa-shopping-cart"></i> Voir le produit
+                                </a>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Synopsis -->
+                    {% if livre.resume %}
+                    <div class="mt-3">
+                        <h6 class="text-muted mb-2"><i class="fas fa-align-left"></i> Synopsis</h6>
+                        <div class="bg-light p-3 rounded" style="max-height: 200px; overflow-y: auto;">
+                            {{ livre.resume|nl2br }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
-  <div class="row">
-         <table class='details_listuser table'>
-           <thead class="thead-dark">
-                <tr>
-                    <th scope="col">Utilisateur</th>
-                    <th scope="col">Date d'acquisiton</th>
-                    <th scope="col">Commentaire</th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for lienuserLivre in livre.listeUser %}
-            <tr>
-                <td>{{lienuserLivre.user.name}} {{lienuserLivre.user.lastName}}</td>
-                <td>{{lienuserLivre.dateAchat}}</td>
-                <td>{{lienuserLivre.commentaire}}</td>
-            </tr>
-            {% endfor %}
-            </tbody>
-  </div>
+    
+    <!-- Propriétaires -->
+    {% if livre.listeUser|length > 0 %}
+    <div class="card mt-4 shadow-sm">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0"><i class="fas fa-users"></i> Propriétaires ({{ livre.listeUser|length }})</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="thead-light">
+                        <tr>
+                            <th><i class="fas fa-user"></i> Utilisateur</th>
+                            <th><i class="fas fa-calendar-alt"></i> Date d'acquisition</th>
+                            <th><i class="fas fa-comment"></i> Commentaire</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for lienuserLivre in livre.listeUser %}
+                        <tr>
+                            <td>
+                                <strong>{{ lienuserLivre.user.name }} {{ lienuserLivre.user.lastName }}</strong>
+                            </td>
+                            <td>
+                                {% if lienuserLivre.dateAchat %}
+                                    {{ lienuserLivre.dateAchat|date('d/m/Y') }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if lienuserLivre.commentaire %}
+                                    {{ lienuserLivre.commentaire }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
+<!-- Modale de sélection d'images scrapées -->
+<div class="modal fade" id="scrapedImagesModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <h5 class="modal-title text-white">
+                    <i class="fas fa-images"></i> Images trouvées
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="scrapedImagesLoading" class="text-center py-5">
+                    <i class="fas fa-spinner fa-spin fa-3x text-primary"></i>
+                    <p class="mt-3">Recherche en cours sur BDGuest, Fnac, Decitre, Amazon...</p>
+                    <small class="text-muted">Cela peut prendre jusqu'à 2 minutes</small>
+                </div>
+                <div id="scrapedImagesContent" style="display: none;">
+                    <p class="text-muted mb-3">
+                        <i class="fas fa-info-circle"></i> Cliquez sur une image pour la sélectionner
+                    </p>
+                    <div id="scrapedImagesGrid" class="row"></div>
+                </div>
+                <div id="scrapedImagesError" class="alert alert-warning" style="display: none;">
+                    <i class="fas fa-exclamation-triangle"></i> <span id="scrapedImagesErrorMsg"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .info-item {
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 3px solid #667eea;
+    }
+    .livre-cover-container {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        padding: 20px;
+        border-radius: 10px;
+    }
+    .scraped-image-card {
+        cursor: pointer;
+        transition: all 0.3s;
+        border: 3px solid transparent;
+    }
+    .scraped-image-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+    }
+    .scraped-image-card.selected {
+        border-color: #667eea;
+        box-shadow: 0 0 20px rgba(102, 126, 234, 0.5);
+    }
+    .scraped-image-card img {
+        max-height: 300px;
+        object-fit: contain;
+        width: 100%;
+    }
+</style>
+
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    {% if is_granted('IS_AUTHENTICATED_FULLY') and livre.isbn %}
+    <script>
+    $(document).ready(function() {
+        var foundImageUrl = null;
+        var livreId = {{ livre.id }};
+        
+        $('#searchCoverBtn').on('click', function() {
+            var btn = $(this);
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Recherche en cours...');
+            $('#coverSearchResult').show();
+            $('#coverMessage').text('Recherche en cours...');
+            $('#coverPreview').empty();
+            $('#applyCoverBtn').hide();
+            $('#manualUrlForm').hide();
+            
+            $.ajax({
+                url: '/livre/' + livreId + '/rechercher-couverture',
+                method: 'GET',
+                success: function(response) {
+                    btn.prop('disabled', false).html('<i class="fas fa-search"></i> Rechercher automatiquement');
+                    
+                    if (response.success && response.images && response.images.length > 0) {
+                        var html = '<p class="text-success"><i class="fas fa-check-circle"></i> ' + response.message + '</p>';
+                        html += '<div class="row">';
+                        
+                        response.images.forEach(function(img, index) {
+                            html += '<div class="col-4 col-md-3 mb-2">';
+                            html += '<div class="card h-100">';
+                            html += '<img src="' + img.url + '" class="card-img-top img-select-cover" style="height: 120px; object-fit: contain; cursor: pointer;" data-url="' + img.url + '" alt="Option ' + (index+1) + '" onerror="this.parentElement.parentElement.remove()">';
+                            html += '<div class="card-body p-1 text-center"><small class="text-muted">' + img.source + '</small></div>';
+                            html += '</div></div>';
+                        });
+                        
+                        html += '</div>';
+                        html += '<p class="small text-muted mt-2">Cliquez sur une image pour la sélectionner</p>';
+                        
+                        $('#coverPreview').html(html);
+                    } else {
+                        $('#coverMessage').html('<span class="text-warning"><i class="fas fa-exclamation-triangle"></i> ' + (response.message || 'Aucune image trouvée') + '</span>');
+                    }
+                },
+                error: function() {
+                    btn.prop('disabled', false).html('<i class="fas fa-search"></i> Rechercher automatiquement');
+                    $('#coverMessage').html('<span class="text-danger"><i class="fas fa-times-circle"></i> Erreur lors de la recherche</span>');
+                }
+            });
+        });
+        
+        // Sélection d'une image dans la galerie
+        $(document).on('click', '.img-select-cover', function() {
+            $('.img-select-cover').removeClass('border-success').css('border-width', '1px');
+            $(this).addClass('border-success').css('border-width', '3px');
+            foundImageUrl = $(this).data('url');
+            $('#applyCoverBtn').show();
+        });
+        
+        $('#applyCoverBtn').on('click', function() {
+            if (!foundImageUrl) return;
+            
+            var btn = $(this);
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Enregistrement...');
+            
+            $.ajax({
+                url: '/livre/' + livreId + '/mettre-a-jour-couverture',
+                method: 'POST',
+                data: { image_url: foundImageUrl },
+                success: function(response) {
+                    if (response.success) {
+                        $('#img-' + livreId).attr('src', response.imageUrl);
+                        $('#coverSearchResult').html('<span class="text-success"><i class="fas fa-check-circle"></i> ' + response.message + '</span>');
+                        setTimeout(function() { location.reload(); }, 1500);
+                    } else {
+                        btn.prop('disabled', false).html('<i class="fas fa-check"></i> Utiliser cette image');
+                        $('#coverMessage').html('<span class="text-danger">' + response.message + '</span>');
+                    }
+                },
+                error: function() {
+                    btn.prop('disabled', false).html('<i class="fas fa-check"></i> Utiliser cette image');
+                    $('#coverMessage').html('<span class="text-danger">Erreur lors de l\'enregistrement</span>');
+                }
+            });
+        });
+        
+        $('#removeCoverUrlBtn').on('click', function() {
+            if (!confirm('Revenir à l\'image originale stockée en base ?')) return;
+            
+            var btn = $(this);
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Suppression...');
+            
+            $.ajax({
+                url: '/livre/' + livreId + '/supprimer-url-couverture',
+                method: 'POST',
+                success: function(response) {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        btn.prop('disabled', false).html('<i class="fas fa-undo"></i> Revenir à l\'image originale');
+                        alert(response.message);
+                    }
+                },
+                error: function() {
+                    btn.prop('disabled', false).html('<i class="fas fa-undo"></i> Revenir à l\'image originale');
+                    alert('Erreur lors de la suppression');
+                }
+            });
+        });
+        
+        // Saisie manuelle d'URL
+        $('#manualUrlBtn').on('click', function() {
+            $('#manualUrlForm').toggle();
+            $('#coverSearchResult').hide();
+        });
+        
+        $('#previewManualUrlBtn').on('click', function() {
+            var url = $('#manualUrlInput').val().trim();
+            if (!url) {
+                alert('Veuillez saisir une URL');
+                return;
+            }
+            
+            foundImageUrl = url;
+            $('#manualPreview').html(
+                '<img src="' + url + '" class="img-thumbnail" style="max-height: 200px;" alt="Prévisualisation" onerror="this.parentElement.innerHTML=\'<span class=text-danger>Image non accessible</span>\'">' +
+                '<br><button type="button" id="applyManualUrlBtn" class="btn btn-success btn-sm mt-2"><i class="fas fa-check"></i> Utiliser cette image</button>'
+            );
+        });
+        
+        $(document).on('click', '#applyManualUrlBtn', function() {
+            if (!foundImageUrl) return;
+            
+            var btn = $(this);
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Enregistrement...');
+            
+            $.ajax({
+                url: '/livre/' + livreId + '/mettre-a-jour-couverture',
+                method: 'POST',
+                data: { image_url: foundImageUrl },
+                success: function(response) {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        btn.prop('disabled', false).html('<i class="fas fa-check"></i> Utiliser cette image');
+                        alert(response.message);
+                    }
+                },
+                error: function() {
+                    btn.prop('disabled', false).html('<i class="fas fa-check"></i> Utiliser cette image');
+                    alert('Erreur lors de l\'enregistrement');
+                }
+            });
+        });
+        
+        // Scraper des images via Puppeteer
+        $('#scrapeCoverBtn').on('click', function() {
+            var livreId = $(this).data('livre-id');
+            
+            // Ouvrir la modale
+            $('#scrapedImagesModal').modal('show');
+            
+            // Réinitialiser l'état
+            $('#scrapedImagesLoading').show();
+            $('#scrapedImagesContent').hide();
+            $('#scrapedImagesError').hide();
+            $('#scrapedImagesGrid').empty();
+            
+            // Appeler le contrôleur qui va appeler Puppeteer
+            $.ajax({
+                url: '/livre/' + livreId + '/scrape-covers',
+                method: 'GET',
+                dataType: 'json',
+                timeout: 120000, // 2 minutes
+                success: function(response) {
+                    $('#scrapedImagesLoading').hide();
+                    
+                    if (response.images && response.images.length > 0) {
+                        $('#scrapedImagesContent').show();
+                        
+                        // Afficher les images
+                        response.images.forEach(function(image) {
+                            var card = $('<div class="col-md-4 mb-3">' +
+                                '<div class="card scraped-image-card h-100" data-image-url="' + image.url + '">' +
+                                    '<div class="card-body text-center p-2">' +
+                                        '<img src="' + image.url + '" alt="Couverture" class="img-fluid mb-2" style="max-height: 300px; object-fit: contain;">' +
+                                        '<div class="mb-2">' +
+                                            '<span class="badge badge-primary">' + image.source + '</span>' +
+                                            '<span class="badge badge-secondary ml-1">' + image.quality + '</span>' +
+                                        '</div>' +
+                                        '<button class="btn btn-success btn-sm btn-block select-image-btn">Utiliser</button>' +
+                                    '</div>' +
+                                '</div>' +
+                            '</div>');
+                            
+                            $('#scrapedImagesGrid').append(card);
+                        });
+                        
+                        // Gérer la sélection d'image
+                        $('.select-image-btn').on('click', function() {
+                            var imageUrl = $(this).closest('.scraped-image-card').data('image-url');
+                            
+                            if (!confirm('Utiliser cette image comme couverture ?')) {
+                                return;
+                            }
+                            
+                            // Marquer comme sélectionnée
+                            $('.scraped-image-card').removeClass('selected');
+                            $(this).closest('.scraped-image-card').addClass('selected');
+                            $(this).html('<i class="fas fa-spinner fa-spin"></i>').prop('disabled', true);
+                            
+                            // Enregistrer l'URL
+                            $.ajax({
+                                url: '/livre/' + livreId + '/update-cover-url',
+                                method: 'POST',
+                                data: { imageUrl: imageUrl },
+                                dataType: 'json',
+                                success: function(response) {
+                                    if (response.success) {
+                                        $('#scrapedImagesModal').modal('hide');
+                                        location.reload();
+                                    } else {
+                                        alert('Erreur: ' + (response.error || 'Erreur inconnue'));
+                                        $('.select-image-btn').html('Utiliser').prop('disabled', false);
+                                    }
+                                },
+                                error: function(xhr) {
+                                    var errorMsg = 'Erreur lors de l\'enregistrement de l\'image';
+                                    if (xhr.responseJSON && xhr.responseJSON.error) {
+                                        errorMsg = xhr.responseJSON.error;
+                                    }
+                                    alert(errorMsg);
+                                    $('.select-image-btn').html('Utiliser').prop('disabled', false);
+                                }
+                            });
+                        });
+                        
+                    } else {
+                        $('#scrapedImagesError').show();
+                        $('#scrapedImagesErrorMsg').text('Aucune image trouvée sur BDGuest, Fnac, Decitre et Amazon pour l\'ISBN ' + response.isbn);
+                    }
+                },
+                error: function(xhr) {
+                    $('#scrapedImagesLoading').hide();
+                    $('#scrapedImagesError').show();
+                    var errorMsg = 'Erreur lors de la recherche d\'images. Le service Puppeteer est-il démarré ?';
+                    if (xhr.responseJSON && xhr.responseJSON.error) {
+                        errorMsg = xhr.responseJSON.error;
+                    }
+                    $('#scrapedImagesErrorMsg').text(errorMsg);
+                }
+            });
+        });
+    });
+    </script>
+    {% endif %}
 {% endblock %}

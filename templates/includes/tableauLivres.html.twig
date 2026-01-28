@@ -1,5 +1,4 @@
 <div id="tableBook">
-    <!--{% include 'includes/filtreLettreAuteur.html.twig' with {'current' : '0'}%}-->
     {% set queryParams = app.request.query.all %}
     {% set order = app.request.query.get('order') | default('') %}
     {% if order != '' and order == 'asc' %}
@@ -7,64 +6,114 @@
     {% else %}
         {% set order = 'asc' %}
     {% endif %}
-    <table id="tableLivre" class="table table-bordered" width="100%" cellspacing="0">
-        <thead>
-        <th>Couverture</th>
-        <th><a href="{{ path('listesLivres', queryParams|merge({'order': order, 'sort' : 'l.titre'})) }}">Titre
-                {% if app.request.query.get('order') == 'asc' and app.request.query.get('sort') == 'l.titre' %}
-                    <i class="fas fa-sort-up float-right"></i>
-                {% elseif app.request.query.get('order') == 'desc' and app.request.query.get('sort') == 'l.titre' %}
-                    <i class="fas fa-sort-down float-right"></i>
-                {% else %}
-                    <i class="fas fa-sort float-right"></i>
-                {% endif %}
+    
+    <!-- Options de tri -->
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+        <div class="text-muted small">
+            <i class="fas fa-book"></i> {{ Listelivres|length }} livre(s) affiché(s)
+        </div>
+        <div class="btn-group btn-group-sm">
+            <a href="{{ path('listesLivres', queryParams|merge({'order': order, 'sort' : 'l.titre'})) }}" 
+               class="btn {% if app.request.query.get('sort') == 'l.titre' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                <i class="fas fa-sort-alpha-down"></i> Titre
             </a>
-        </th>
-        <th>Auteur</th>
-        <th>Maison d'édition</th>
-        <th>ISBN 13</th>
-        <th>Prix</th>
-        </thead>
-        <tbody>
+        </div>
+    </div>
+    
+    <!-- Grille de livres -->
+    <div class="row">
         {% for livre in Listelivres %}
-            <tr>
-                <td style="text-align: center">{% if livre.id in images|keys %}<img id='img-{{ livre.id }}' class="img-cover" alt="{{ livre.titre }}" width="100" src="data:image/png;base64,{{ images[livre.id] }}" />{% endif %}</td>
-                <td>
-                    <strong><a href="{{ path('livreDetail', {'id': livre.id}) }}">{{ livre.titre }}</a></strong>
-                    {% if mobile %}
-                        <br>{% if livre.edition %}<br>Edition : {{livre.edition.nom }}{% endif %}
-                        {% if livre.isbn %}<br>ISBN : {{ livre.isbn }}{% endif %}
-                        <br>PRIX : {{ livre.prixBase | format_currency('EUR')}}
+        <div class="col-6 col-md-4 col-lg-3 col-xl-2 mb-4">
+            <div class="card h-100 livre-card shadow-sm">
+                <!-- Image -->
+                <div class="livre-cover-wrapper text-center p-2" style="background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);">
+                    {% if livre.id in images|keys %}
+                        <img id='img-{{ livre.id }}' 
+                             class="img-cover img-fluid" 
+                             alt="{{ livre.titre }}" 
+                             src="data:image/png;base64,{{ images[livre.id] }}"
+                             style="max-height: 180px; object-fit: contain; cursor: pointer;" />
+                    {% else %}
+                        <div class="d-flex align-items-center justify-content-center" style="height: 180px;">
+                            <i class="fas fa-book fa-4x text-muted"></i>
+                        </div>
                     {% endif %}
-                </td>
-                <td>
-                    {% set nb = 0 %}
-                    {% for auteur in livre.listeAuteur %}
-                        {% if nb > 0 %}, {% endif %}{{ auteur.auteur.nom }}
-                        {% set nb = nb + 1 %}
-                    {% endfor %}
-                </td>
-                <td>
+                </div>
+                
+                <!-- Corps de la card -->
+                <div class="card-body p-2">
+                    <h6 class="card-title mb-1">
+                        <a href="{{ path('livreDetail', {'id': livre.id}) }}" class="text-dark text-decoration-none livre-titre">
+                            {{ livre.titre|length > 40 ? livre.titre|slice(0, 40) ~ '...' : livre.titre }}
+                        </a>
+                    </h6>
+                    
+                    {% if livre.tome and livre.tome > 0 %}
+                        <span class="badge badge-secondary badge-sm mb-1">Tome {{ livre.tome }}</span>
+                    {% endif %}
+                    
+                    <!-- Auteurs -->
+                    <p class="card-text small text-muted mb-1">
+                        <i class="fas fa-pen-fancy"></i>
+                        {% set nb = 0 %}
+                        {% for auteur in livre.listeAuteur %}
+                            {% if nb > 0 %}, {% endif %}
+                            {% if nb < 2 %}{{ auteur.auteur.nom }}{% endif %}
+                            {% set nb = nb + 1 %}
+                        {% endfor %}
+                        {% if nb > 2 %}...{% endif %}
+                    </p>
+                    
+                    <!-- Éditeur -->
                     {% if livre.edition %}
-                        {{ livre.edition.nom }}
+                    <p class="card-text small text-muted mb-1">
+                        <i class="fas fa-building"></i> {{ livre.edition.nom|length > 20 ? livre.edition.nom|slice(0, 20) ~ '...' : livre.edition.nom }}
+                    </p>
                     {% endif %}
-                </td>
-                <td>{% if livre.isbn %}{{ livre.isbn }}{% endif %}
-                </td>
-                <td>{{ livre.prixBase | format_currency('EUR')}}</td>
-            </tr>
+                </div>
+                
+                <!-- Footer -->
+                <div class="card-footer bg-white border-top-0 p-2 pt-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="badge badge-primary">{{ livre.prixBase|number_format(2) }} €</span>
+                        <a href="{{ path('livreDetail', {'id': livre.id}) }}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
         {% endfor %}
-        </tbody>
-    </table>
-    <div class="pagination">
+    </div>
+    
+    <!-- Pagination -->
+    <div class="d-flex justify-content-center mt-4">
         {{ knp_pagination_render(pagination) }}
     </div>
 </div>
 
-<!-- The Modal -->
-<div id="myModal" class="modal">
-  <span class="close">&times;</span>
-  <img class="modal-content" id="img01">
-  <div id="caption"></div>
+<!-- The Image Modal -->
+<div id="myModal" class="image-modal">
+    <span class="image-modal-close">&times;</span>
+    <img class="image-modal-content" id="img01">
+    <div id="caption"></div>
 </div>
+
+<style>
+    .livre-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: 1px solid #e9ecef;
+    }
+    .livre-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+    }
+    .livre-titre:hover {
+        color: #667eea !important;
+    }
+    .livre-cover-wrapper {
+        border-radius: 0.25rem 0.25rem 0 0;
+        min-height: 180px;
+    }
+</style>
 
