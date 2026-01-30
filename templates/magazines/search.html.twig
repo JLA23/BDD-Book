@@ -3,132 +3,90 @@
 {% block title %}Recherche Magazines{% endblock %}
 
 {% block body %}
-<div class="container mt-4">
-    <h1>Recherche de magazines</h1>
-
-    <form method="get" action="{{ path('magazines_search') }}" class="mb-4">
-        <div class="row">
-            <div class="col-md-6">
-                <div class="input-group">
-                    <input type="text" name="q" class="form-control" 
-                           placeholder="Rechercher..." 
-                           value="{{ search }}"
-                           autofocus>
-                    <div class="input-group-append">
-                        <button type="submit" class="btn btn-primary">
+<div id="titleListe">
+    <div class="card mb-4">
+        <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 text-white">
+                    <i class="fas fa-search"></i> Recherche de magazines
+                </h5>
+                {% if totalResults is defined and totalResults > 0 %}
+                    <span class="badge badge-light px-3 py-2">{{ totalResults }} magazine(s)</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card-body">
+            <form action="{{ path('magazines_search') }}" method="get" class="mb-3" id="searchForm">
+                <div class="row">
+                    <div class="col-md-5 mb-2">
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text bg-white border-right-0"><i class="fas fa-book-open text-primary"></i></span>
+                            </div>
+                            <input type="text" name="q" class="form-control border-left-0" id="search"
+                                   value="{{ searchQuery }}" 
+                                   placeholder="Nom du magazine ou éditeur...">
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <select name="user" class="form-control">
+                            <option value="0">Toutes les collections</option>
+                            {% if users is defined %}
+                                {% for user in users %}
+                                    <option value="{{ user.id }}" {% if searchUserId is defined and searchUserId == user.id %}selected{% endif %}>
+                                        {{ user.name }} {{ user.lastName }}
+                                    </option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <button type="submit" class="btn btn-primary btn-block">
                             <i class="fas fa-search"></i> Rechercher
                         </button>
                     </div>
                 </div>
-            </div>
-            <div class="col-md-4">
-                <div class="btn-group" role="group">
-                    <input type="radio" class="btn-check" name="type" id="typeMagazine" value="magazine" 
-                           {{ type == 'magazine' ? 'checked' : '' }} autocomplete="off">
-                    <label class="btn btn-outline-secondary" for="typeMagazine">Magazines</label>
-
-                    <input type="radio" class="btn-check" name="type" id="typeNumero" value="numero" 
-                           {{ type == 'numero' ? 'checked' : '' }} autocomplete="off">
-                    <label class="btn btn-outline-secondary" for="typeNumero">Numéros</label>
+            </form>
+            
+            {% if searchQuery %}
+                <div class="d-flex flex-wrap align-items-center mb-3">
+                    <span class="mr-2 text-muted">Recherche actuelle :</span>
+                    <span class="badge badge-primary mr-2 px-3 py-2" style="font-size: 0.95rem;">{{ searchQuery }}</span>
+                    {% if searchUser %}
+                        <span class="badge badge-success px-3 py-2" style="font-size: 0.95rem;">
+                            <i class="fas fa-user"></i> {{ searchUser }}
+                        </span>
+                    {% endif %}
                 </div>
+            {% endif %}
+            
+            {% if totalResults is defined and totalResults == 0 %}
+            <div class="alert alert-warning border-0" style="background-color: #fff3cd;">
+                <h5 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Aucun résultat</h5>
+                <p class="mb-2">Aucun magazine ne correspond à "<strong>{{ searchQuery }}</strong>"</p>
+                <hr>
+                <p class="mb-0 small">
+                    <strong>Suggestions :</strong> Vérifiez l'orthographe ou essayez des termes plus généraux.
+                </p>
+            </div>
+            {% endif %}
+            
+            <div class="d-flex flex-wrap">
+                <a href="{{ path('magazines_list') }}" class="btn btn-outline-secondary mb-2">
+                    <i class="fas fa-list"></i> Tous les magazines
+                </a>
             </div>
         </div>
-    </form>
-
-    {% if search %}
-        <p class="text-muted">
-            Résultats pour "<strong>{{ search }}</strong>" 
-            dans les {{ type == 'magazine' ? 'magazines' : 'numéros' }} :
-            <strong>{{ results|length }}</strong> résultat(s)
-        </p>
-    {% endif %}
-
-    {% if results|length > 0 %}
-        {% if type == 'magazine' %}
-            <div class="row">
-                {% for magazine in results %}
-                    <div class="col-md-4 col-lg-3 mb-4">
-                        <div class="card h-100">
-                            {% if images[magazine.id] is defined %}
-                                <img src="data:image/jpeg;base64,{{ images[magazine.id] }}" 
-                                     class="card-img-top" 
-                                     alt="{{ magazine.nom }}"
-                                     style="height: 200px; object-fit: cover;">
-                            {% else %}
-                                <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" 
-                                     style="height: 200px;">
-                                    <i class="fas fa-book fa-3x text-white"></i>
-                                </div>
-                            {% endif %}
-                            <div class="card-body">
-                                <h5 class="card-title">{{ magazine.nom }}</h5>
-                                {% if magazine.editeur %}
-                                    <p class="card-text text-muted small">{{ magazine.editeur }}</p>
-                                {% endif %}
-                                <p class="card-text">
-                                    <span class="badge badge-info">{{ magazine.nbnum }} numéro(s)</span>
-                                </p>
-                            </div>
-                            <div class="card-footer">
-                                <a href="{{ path('magazine_detail', {id: magazine.id}) }}" class="btn btn-sm btn-outline-primary">
-                                    Voir les numéros
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-        {% else %}
-            <div class="row">
-                {% for numero in results %}
-                    <div class="col-md-3 col-lg-2 mb-4">
-                        <div class="card h-100">
-                            {% if images[numero.id] is defined %}
-                                <img src="data:image/jpeg;base64,{{ images[numero.id] }}" 
-                                     class="card-img-top" 
-                                     alt="N°{{ numero.num }}"
-                                     style="height: 150px; object-fit: cover;">
-                            {% else %}
-                                <div class="card-img-top bg-light d-flex align-items-center justify-content-center" 
-                                     style="height: 150px;">
-                                    <span class="h4 text-muted">N°{{ numero.num }}</span>
-                                </div>
-                            {% endif %}
-                            <div class="card-body p-2">
-                                <h6 class="card-title mb-1">{{ numero.kioskCollec.nom }}</h6>
-                                <p class="mb-1">N°{{ numero.num }}</p>
-                                {% if numero.dateParution %}
-                                    <small class="text-muted">{{ numero.dateParution|date('m/Y') }}</small>
-                                {% endif %}
-                            </div>
-                            <div class="card-footer p-2">
-                                <a href="{{ path('numero_detail', {id: numero.id}) }}" class="btn btn-sm btn-outline-primary btn-block">
-                                    Détails
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
-
-        <div class="d-flex justify-content-center mt-4">
-            {{ knp_pagination_render(pagination, '@KnpPaginator/Pagination/twitter_bootstrap_v4_pagination.html.twig') }}
-        </div>
-    {% elseif search %}
-        <div class="alert alert-info">
-            Aucun résultat trouvé pour votre recherche.
-        </div>
-    {% else %}
-        <div class="alert alert-secondary">
-            Entrez un terme de recherche pour trouver des magazines ou des numéros.
-        </div>
-    {% endif %}
-
-    <div class="mt-4">
-        <a href="{{ path('magazines_list') }}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left"></i> Retour à la liste des magazines
-        </a>
     </div>
 </div>
+
+{% if results is defined and results|length > 0 %}
+    {% include 'includes/tableauMagazines.html.twig' with {'pagination' : pagination, 'images' : images, 'results' : results}%}
+{% endif %}
+
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script src="{{ asset('js/image-modal.js') }}"></script>
 {% endblock %}

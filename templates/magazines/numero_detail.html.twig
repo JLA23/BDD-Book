@@ -84,13 +84,6 @@
                 </div>
             {% endif %}
 
-            {% if numero.commentaire %}
-                <div class="mt-3">
-                    <h5>Commentaire</h5>
-                    <p class="text-muted">{{ numero.commentaire|nl2br }}</p>
-                </div>
-            {% endif %}
-
             <hr>
 
             <div class="mt-4">
@@ -106,14 +99,54 @@
                 {% if proprietaires|length > 0 %}
                     <ul class="list-group">
                         {% for lien in proprietaires %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>{{ lien.user.name }} {{ lien.user.lastname }}</strong>
-                                    <small class="text-muted">({{ lien.user.username }})</small>
-                                    {% if lien.commentaire %}
-                                        <br><small class="text-muted">{{ lien.commentaire }}</small>
+                            <li class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <strong>{{ lien.user.name }} {{ lien.user.lastname }}</strong>
+                                        <small class="text-muted">({{ lien.user.username }})</small>
+                                    </div>
+                                    {% if is_granted('IS_AUTHENTICATED_FULLY') %}
+                                        <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                data-toggle="modal" data-target="#editCommentModal{{ lien.id }}">
+                                            <i class="fas fa-comment-alt"></i>
+                                        </button>
                                     {% endif %}
                                 </div>
+                                {% if lien.commentaire %}
+                                    <div class="mt-2 p-2 bg-light rounded">
+                                        <small class="text-muted"><i class="fas fa-comment"></i> {{ lien.commentaire|nl2br }}</small>
+                                    </div>
+                                {% endif %}
+                                
+                                <!-- Modal pour éditer le commentaire -->
+                                {% if is_granted('IS_AUTHENTICATED_FULLY') %}
+                                <div class="modal fade" id="editCommentModal{{ lien.id }}" tabindex="-1" role="dialog">
+                                    <div class="modal-dialog" role="document">
+                                        <div class="modal-content">
+                                            <form action="{{ path('numero_edit_owner_comment', {id: lien.id}) }}" method="post">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Commentaire de {{ lien.user.name }}</h5>
+                                                    <button type="button" class="close" data-dismiss="modal">
+                                                        <span>&times;</span>
+                                                    </button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <div class="form-group">
+                                                        <label for="commentaire{{ lien.id }}">Votre commentaire sur ce numéro</label>
+                                                        <textarea name="commentaire" id="commentaire{{ lien.id }}" 
+                                                                  class="form-control" rows="4"
+                                                                  placeholder="État du numéro, notes personnelles...">{{ lien.commentaire }}</textarea>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
+                                                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
                             </li>
                         {% endfor %}
                     </ul>

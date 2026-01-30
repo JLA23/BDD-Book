@@ -35,7 +35,21 @@ class KiosqueController extends AbstractController
     /**
      * @Route("/", name="magazines_list")
      */
-    public function listMagazines(Request $request, PaginatorInterface $paginator, KioskCollecRepository $repository): Response
+    public function listMagazines(Request $request, PaginatorInterface $paginator, KioskCollecRepository $repository, UserRepository $userRepo): Response
+    {
+        $detect = new \Mobile_Detect;
+        $users = $userRepo->findAll();
+
+        return $this->render('magazines/list.html.twig', [
+            'users' => $users,
+            'mobile' => $detect->isMobile()
+        ]);
+    }
+
+    /**
+     * @Route("/tous", name="magazines_all")
+     */
+    public function allMagazines(Request $request, PaginatorInterface $paginator, KioskCollecRepository $repository): Response
     {
         $detect = new \Mobile_Detect;
         
@@ -54,7 +68,7 @@ class KiosqueController extends AbstractController
             }
         }
 
-        return $this->render('magazines/list.html.twig', [
+        return $this->render('magazines/all.html.twig', [
             'pagination' => $pagination,
             'magazines' => $pagination->getItems(),
             'images' => $images,
@@ -221,6 +235,12 @@ class KiosqueController extends AbstractController
 
             $this->em->persist($numero);
             
+            // Le créateur devient automatiquement propriétaire du numéro
+            $lien = new LienKioskNumUser();
+            $lien->setKioskNum($numero);
+            $lien->setUser($user);
+            $this->em->persist($lien);
+            
             $magazine->setNbnum($magazine->getNbnum() + 1);
             $magazine->setUpdateDate(new \DateTime());
             $magazine->setUpdateUser($user);
@@ -242,7 +262,7 @@ class KiosqueController extends AbstractController
     /**
      * @Route("/{id}/numeros/nouveau", name="numeros_new_multiple", requirements={"id"="\d+"})
      */
-    public function newNumerosMultiple(int $id, Request $request, KioskCollecRepository $magazineRepo): Response
+    public function newNumerosMultiple(int $id, Request $request, KioskCollecRepository $magazineRepo, UserRepository $userRepo): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
         
@@ -252,9 +272,11 @@ class KiosqueController extends AbstractController
         }
 
         $user = $this->getUser();
+        $users = $userRepo->findAll();
         
         if ($request->isMethod('POST')) {
             $numerosData = $request->request->all();
+            $files = $request->files->all();
             $count = 0;
             
             if (isset($numerosData['numeros']) && is_array($numerosData['numeros'])) {
@@ -283,6 +305,13 @@ class KiosqueController extends AbstractController
                         $numero->setPrix((float) $numeroData['prix']);
                     }
                     
+                    if (!empty($numeroData['monnaie'])) {
+                        $monnaie = $this->em->getRepository(\App\Entity\Monnaie::class)->find($numeroData['monnaie']);
+                        if ($monnaie) {
+                            $numero->setMonnaie($monnaie);
+                        }
+                    }
+                    
                     if (!empty($numeroData['description'])) {
                         $numero->setDescription($numeroData['description']);
                     }
@@ -291,7 +320,30 @@ class KiosqueController extends AbstractController
                         $numero->setCommentaire($numeroData['commentaire']);
                     }
                     
+                    // Gérer l'image de couverture
+                    if (isset($files['numeros'][$index]['image']) && $files['numeros'][$index]['image']) {
+                        $imageFile = $files['numeros'][$index]['image'];
+                        $imageData = file_get_contents($imageFile->getPathname());
+                        $numero->setCouverture($imageData);
+                    }
+                    
                     $this->em->persist($numero);
+                    $this->em->flush(); // Flush pour obtenir l'ID du numéro
+                    
+                    // Gérer les propriétaires
+                    if (!empty($numeroData['users']) && is_array($numeroData['users'])) {
+                        foreach ($numeroData['users'] as $userId) {
+                            $proprietaire = $userRepo->find($userId);
+                            if ($proprietaire) {
+                                $lien = new LienKioskNumUser();
+                                $lien->setKioskNum($numero);
+                                $lien->setUser($proprietaire);
+                                $lien->setCommentaire($numeroData['commentaire'] ?? '');
+                                $this->em->persist($lien);
+                            }
+                        }
+                    }
+                    
                     $count++;
                 }
                 
@@ -311,7 +363,8 @@ class KiosqueController extends AbstractController
         }
 
         return $this->render('magazines/numeros_multiple_form.html.twig', [
-            'magazine' => $magazine
+            'magazine' => $magazine,
+            'users' => $users
         ]);
     }
 
@@ -391,7 +444,7 @@ class KiosqueController extends AbstractController
     /**
      * @Route("/numero/{id}/proprietaire/ajouter", name="numero_add_owner", requirements={"id"="\d+"})
      */
-    public function addOwner(int $id, Request $request, KioskNumRepository $numeroRepo, UserRepository $userRepo): Response
+    public function addOwner(int $id, Request $request, KioskNumRepository $numeroRepo, UserRepository $userRepo, LienKioskNumUserRepository $lienRepo): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
         
@@ -401,59 +454,146 @@ class KiosqueController extends AbstractController
         }
 
         $users = $userRepo->findAll();
+        
+        // Récupérer les propriétaires existants avec leurs commentaires
+        $existingOwners = $lienRepo->findBy(['kioskNum' => $numero]);
+        $ownersData = [];
+        foreach ($existingOwners as $lien) {
+            $ownersData[$lien->getUser()->getId()] = [
+                'lienId' => $lien->getId(),
+                'commentaire' => $lien->getCommentaire()
+            ];
+        }
 
         if ($request->isMethod('POST')) {
-            $userId = $request->request->get('user_id');
-            $commentaire = $request->request->get('commentaire');
+            $userIds = $request->request->all('user_ids') ?: [];
+            $commentaires = $request->request->all('commentaires') ?: [];
             
-            $user = $userRepo->find($userId);
-            if ($user) {
-                $lien = new LienKioskNumUser();
-                $lien->setKioskNum($numero);
-                $lien->setUser($user);
-                $lien->setCommentaire($commentaire);
-                
-                $this->em->persist($lien);
-                $this->em->flush();
-                
-                $this->addFlash('success', 'Propriétaire ajouté avec succès');
-                return $this->redirectToRoute('numero_detail', ['id' => $numero->getId()]);
+            if (empty($userIds)) {
+                $this->addFlash('warning', 'Veuillez sélectionner au moins un utilisateur');
+                return $this->render('magazines/add_owner.html.twig', [
+                    'numero' => $numero,
+                    'magazine' => $numero->getKioskCollec(),
+                    'users' => $users,
+                    'ownersData' => $ownersData
+                ]);
             }
+            
+            $countAdded = 0;
+            $countUpdated = 0;
+            
+            // Traiter les utilisateurs sélectionnés
+            foreach ($userIds as $userId) {
+                $user = $userRepo->find($userId);
+                if ($user) {
+                    $commentaire = $commentaires[$userId] ?? '';
+                    
+                    // Vérifier si le lien existe déjà
+                    $existingLien = $lienRepo->findOneBy(['kioskNum' => $numero, 'user' => $user]);
+                    
+                    if ($existingLien) {
+                        // Mettre à jour le commentaire si différent
+                        if ($existingLien->getCommentaire() !== $commentaire) {
+                            $existingLien->setCommentaire($commentaire);
+                            $countUpdated++;
+                        }
+                    } else {
+                        // Créer un nouveau lien
+                        $lien = new LienKioskNumUser();
+                        $lien->setKioskNum($numero);
+                        $lien->setUser($user);
+                        $lien->setCommentaire($commentaire);
+                        $this->em->persist($lien);
+                        $countAdded++;
+                    }
+                }
+            }
+            
+            // Supprimer les propriétaires décochés
+            foreach ($existingOwners as $lien) {
+                if (!in_array($lien->getUser()->getId(), $userIds)) {
+                    $this->em->remove($lien);
+                }
+            }
+            
+            $this->em->flush();
+            
+            if ($countAdded > 0 || $countUpdated > 0) {
+                $message = '';
+                if ($countAdded > 0) $message .= $countAdded . ' propriétaire(s) ajouté(s). ';
+                if ($countUpdated > 0) $message .= $countUpdated . ' commentaire(s) mis à jour.';
+                $this->addFlash('success', $message);
+            } else {
+                $this->addFlash('info', 'Aucune modification effectuée');
+            }
+            
+            return $this->redirectToRoute('numero_detail', ['id' => $numero->getId()]);
         }
 
         return $this->render('magazines/add_owner.html.twig', [
             'numero' => $numero,
             'magazine' => $numero->getKioskCollec(),
-            'users' => $users
+            'users' => $users,
+            'ownersData' => $ownersData
         ]);
+    }
+
+    /**
+     * @Route("/proprietaire/{id}/commentaire", name="numero_edit_owner_comment", requirements={"id"="\d+"})
+     */
+    public function editOwnerComment(int $id, Request $request, LienKioskNumUserRepository $lienRepo): Response
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        
+        $lien = $lienRepo->find($id);
+        if (!$lien) {
+            throw $this->createNotFoundException('Lien non trouvé');
+        }
+        
+        if ($request->isMethod('POST')) {
+            $commentaire = $request->request->get('commentaire');
+            $lien->setCommentaire($commentaire);
+            $this->em->flush();
+            
+            $this->addFlash('success', 'Commentaire mis à jour');
+            return $this->redirectToRoute('numero_detail', ['id' => $lien->getKioskNum()->getId()]);
+        }
+        
+        return $this->redirectToRoute('numero_detail', ['id' => $lien->getKioskNum()->getId()]);
     }
 
     /**
      * @Route("/recherche", name="magazines_search")
      */
-    public function searchMagazines(Request $request, PaginatorInterface $paginator, KioskCollecRepository $magazineRepo, KioskNumRepository $numeroRepo): Response
+    public function searchMagazines(Request $request, PaginatorInterface $paginator, KioskCollecRepository $magazineRepo, UserRepository $userRepo): Response
     {
         $detect = new \Mobile_Detect;
-        $search = $request->query->get('q', '');
-        $type = $request->query->get('type', 'magazine');
+        $users = $userRepo->findAll();
+        
+        $searchQuery = $request->query->get('q', '');
+        $userId = $request->query->get('user', '0');
+        $userName = null;
+        $userIdInt = null;
+        
+        if ($userId != '0' && !empty($userId)) {
+            $userIdInt = (int) $userId;
+            $userEntity = $userRepo->find($userId);
+            if ($userEntity) {
+                $userName = $userEntity->getName() . ' ' . $userEntity->getLastName();
+            }
+        }
         
         $results = [];
         $images = [];
+        $totalResults = 0;
         
-        if (!empty($search)) {
-            if ($type === 'magazine') {
-                $results = $magazineRepo->searchByName($search);
-                foreach ($results as $magazine) {
-                    if ($magazine->getImage()) {
-                        $images[$magazine->getId()] = base64_encode(stream_get_contents($magazine->getImage()));
-                    }
-                }
-            } else {
-                $results = $numeroRepo->searchByMagazineOrNum($search);
-                foreach ($results as $numero) {
-                    if ($numero->getCouverture()) {
-                        $images[$numero->getId()] = base64_encode(stream_get_contents($numero->getCouverture()));
-                    }
+        if (!empty($searchQuery)) {
+            $results = $magazineRepo->searchByNameAndUser($searchQuery, $userIdInt);
+            $totalResults = count($results);
+            
+            foreach ($results as $magazine) {
+                if ($magazine->getImage()) {
+                    $images[$magazine->getId()] = base64_encode(stream_get_contents($magazine->getImage()));
                 }
             }
         }
@@ -468,8 +608,11 @@ class KiosqueController extends AbstractController
             'pagination' => $pagination,
             'results' => $pagination->getItems(),
             'images' => $images,
-            'search' => $search,
-            'type' => $type,
+            'searchQuery' => $searchQuery,
+            'searchUser' => $userName,
+            'searchUserId' => $userIdInt,
+            'users' => $users,
+            'totalResults' => $totalResults,
             'mobile' => $detect->isMobile()
         ]);
     }

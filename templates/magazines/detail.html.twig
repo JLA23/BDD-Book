@@ -79,11 +79,8 @@
         <h3>Numéros</h3>
         {% if is_granted('IS_AUTHENTICATED_FULLY') %}
             <div>
-                <a href="{{ path('numero_new', {id: magazine.id}) }}" class="btn btn-success">
-                    <i class="fas fa-plus"></i> Ajouter un numéro
-                </a>
-                <a href="{{ path('numeros_new_multiple', {id: magazine.id}) }}" class="btn btn-primary">
-                    <i class="fas fa-plus-circle"></i> Ajouter plusieurs numéros
+                <a href="{{ path('numeros_new_multiple', {id: magazine.id}) }}" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Ajouter des numéros
                 </a>
             </div>
         {% endif %}
@@ -134,7 +131,7 @@
         <div class="alert alert-info">
             Aucun numéro enregistré pour ce magazine.
             {% if is_granted('IS_AUTHENTICATED_FULLY') %}
-                <a href="{{ path('numero_new', {id: magazine.id}) }}">Ajouter le premier numéro</a>
+                <a href="{{ path('numeros_new_multiple', {id: magazine.id}) }}">Ajouter des numéros</a>
             {% endif %}
         </div>
     {% endif %}

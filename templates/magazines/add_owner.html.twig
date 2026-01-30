@@ -13,39 +13,125 @@
         </ol>
     </nav>
 
-    <h1>Ajouter un propriétaire</h1>
-    <p class="lead">{{ magazine.nom }} - Numéro {{ numero.num }}</p>
+    <div class="card shadow-sm mb-4">
+        <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <h1 class="text-white mb-0">
+                <i class="fas fa-user-plus"></i> Ajouter des propriétaires
+            </h1>
+        </div>
+        <div class="card-body">
+            <p class="lead mb-0">{{ magazine.nom }} - Numéro {{ numero.num }}</p>
+        </div>
+    </div>
 
-    <form method="post" class="mt-4">
-        <div class="card">
+    <form method="post" id="ownersForm" class="mt-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-users"></i> Sélectionner les utilisateurs propriétaires
+            </div>
             <div class="card-body">
-                <div class="form-group">
-                    <label for="user_id">Utilisateur</label>
-                    <select name="user_id" id="user_id" class="form-control" required>
-                        <option value="">-- Sélectionner un utilisateur --</option>
-                        {% for user in users %}
-                            <option value="{{ user.id }}">
-                                {{ user.name }} {{ user.lastname }} ({{ user.username }})
-                            </option>
-                        {% endfor %}
-                    </select>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> 
+                    Sélectionnez un ou plusieurs utilisateurs qui possèdent ce numéro.
                 </div>
+                
                 <div class="form-group">
-                    <label for="commentaire">Commentaire (optionnel)</label>
-                    <textarea name="commentaire" id="commentaire" class="form-control" rows="3" 
-                              placeholder="Ex: État neuf, acheté en kiosque..."></textarea>
+                    <div class="input-group mb-3">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        </div>
+                        <input type="text" id="searchUsers" class="form-control" placeholder="Rechercher un utilisateur...">
+                    </div>
+                </div>
+
+                <div class="row" id="usersList">
+                    {% for user in users %}
+                        {% set isOwner = ownersData[user.id] is defined %}
+                        {% set userComment = isOwner ? ownersData[user.id].commentaire : '' %}
+                        <div class="col-md-6 mb-3 user-item" data-username="{{ user.username|lower }}" data-name="{{ user.name|lower }} {{ user.lastname|lower }}">
+                            <div class="card {% if isOwner %}border-primary{% endif %}">
+                                <div class="card-body">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input user-checkbox" 
+                                               id="user_{{ user.id }}" name="user_ids[]" value="{{ user.id }}"
+                                               {% if isOwner %}checked{% endif %}>
+                                        <label class="custom-control-label" for="user_{{ user.id }}">
+                                            <strong>{{ user.name }} {{ user.lastname }}</strong>
+                                            {% if isOwner %}<span class="badge badge-primary ml-2">Propriétaire</span>{% endif %}
+                                            <br>
+                                            <small class="text-muted">{{ user.username }}</small>
+                                        </label>
+                                    </div>
+                                    <div class="mt-2 comment-field" {% if not isOwner %}style="display: none;"{% endif %}>
+                                        <textarea name="commentaires[{{ user.id }}]" class="form-control form-control-sm" 
+                                                  rows="2" placeholder="Commentaire pour {{ user.name }}...">{{ userComment }}</textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
                 </div>
             </div>
         </div>
 
-        <div class="form-group mt-3">
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-user-plus"></i> Ajouter le propriétaire
+        <div class="form-group mt-4">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-user-plus"></i> Ajouter les propriétaires sélectionnés
             </button>
-            <a href="{{ path('numero_detail', {id: numero.id}) }}" class="btn btn-secondary">
+            <a href="{{ path('numero_detail', {id: numero.id}) }}" class="btn btn-secondary btn-lg">
                 Annuler
             </a>
         </div>
     </form>
 </div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+    $(document).ready(function() {
+        // Recherche d'utilisateurs
+        $('#searchUsers').on('keyup', function() {
+            var searchTerm = $(this).val().toLowerCase();
+            
+            $('.user-item').each(function() {
+                var username = $(this).data('username');
+                var name = $(this).data('name');
+                
+                if (username.includes(searchTerm) || name.includes(searchTerm)) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        });
+
+        // Afficher/masquer le champ de commentaire quand on coche/décoche
+        $('.user-checkbox').on('change', function() {
+            var commentField = $(this).closest('.card-body').find('.comment-field');
+            var card = $(this).closest('.card');
+            
+            if ($(this).is(':checked')) {
+                commentField.slideDown();
+                card.addClass('border-primary');
+            } else {
+                commentField.slideUp();
+                card.removeClass('border-primary');
+            }
+        });
+
+        // Validation du formulaire
+        $('#ownersForm').on('submit', function(e) {
+            var checkedCount = $('.user-checkbox:checked').length;
+            
+            if (checkedCount === 0) {
+                e.preventDefault();
+                alert('Veuillez sélectionner au moins un utilisateur.');
+                return false;
+            }
+            
+            return true;
+        });
+    });
+    </script>
 {% endblock %}

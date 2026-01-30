@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Ajouter plusieurs numéros - {{ magazine.nom }}{% endblock %}
+{% block title %}Ajouter des numéros - {{ magazine.nom }}{% endblock %}
 
 {% block body %}
 <div class="container mt-4">
@@ -8,18 +8,30 @@
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ path('magazines_list') }}">Magazines</a></li>
             <li class="breadcrumb-item"><a href="{{ path('magazine_detail', {id: magazine.id}) }}">{{ magazine.nom }}</a></li>
-            <li class="breadcrumb-item active">Ajouter plusieurs numéros</li>
+            <li class="breadcrumb-item active">Ajouter des numéros</li>
         </ol>
     </nav>
 
-    <h1>Ajouter plusieurs numéros - {{ magazine.nom }}</h1>
-    <p class="text-muted">Remplissez les informations pour chaque numéro que vous souhaitez ajouter. Seul le champ "Numéro" est obligatoire.</p>
+    <div class="card shadow-sm mb-4">
+        <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <h1 class="text-white mb-0">
+                <i class="fas fa-plus-circle"></i> Ajouter des numéros - {{ magazine.nom }}
+            </h1>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> 
+                <strong>Note :</strong> Remplissez les informations pour chaque numéro. Seul le champ "Numéro" est obligatoire. 
+                Vous pouvez ajouter une image de couverture et sélectionner les propriétaires pour chaque numéro.
+            </div>
+        </div>
+    </div>
 
-    <form method="post" id="numerosForm">
+    <form method="post" id="numerosForm" enctype="multipart/form-data">
         <div id="numeros-container">
-            <div class="card mb-3 numero-item" data-index="0">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>Numéro <span class="numero-index">1</span></span>
+            <div class="card mb-4 shadow-sm numero-item" data-index="0">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-newspaper"></i> Numéro <span class="numero-index">1</span></h5>
                     <button type="button" class="btn btn-sm btn-danger remove-numero" style="display: none;">
                         <i class="fas fa-times"></i> Supprimer
                     </button>
@@ -28,40 +40,65 @@
                     <div class="row">
                         <div class="col-md-2">
                             <div class="form-group">
-                                <label>Numéro *</label>
-                                <input type="number" name="numeros[0][num]" class="form-control" required>
+                                <label class="font-weight-bold">Numéro *</label>
+                                <input type="number" name="numeros[0][num]" class="form-control" required placeholder="Ex: 42">
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="form-group">
-                                <label>Date de parution</label>
-                                <input type="date" name="numeros[0][dateParution]" class="form-control">
+                                <label class="font-weight-bold">Date de parution (mois/année)</label>
+                                <input type="text" name="numeros[0][dateParution]" class="form-control" placeholder="AAAA-MM">
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="form-group">
-                                <label>Code EAN</label>
-                                <input type="text" name="numeros[0][EAN]" class="form-control">
+                                <label class="font-weight-bold">Code EAN</label>
+                                <input type="text" name="numeros[0][EAN]" class="form-control" placeholder="Ex: 9782123456789">
                             </div>
                         </div>
                         <div class="col-md-2">
                             <div class="form-group">
-                                <label>Prix</label>
-                                <input type="number" step="0.01" name="numeros[0][prix]" class="form-control">
+                                <label class="font-weight-bold">Prix</label>
+                                <input type="number" step="0.01" name="numeros[0][prix]" class="form-control" placeholder="Ex: 5.99">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group">
+                                <label class="font-weight-bold">Monnaie</label>
+                                <select name="numeros[0][monnaie]" class="form-control">
+                                    <option value="">-</option>
+                                    <option value="1">EUR (€)</option>
+                                    <option value="2">USD ($)</option>
+                                    <option value="3">GBP (£)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label class="font-weight-bold">Résumé</label>
+                                <textarea name="numeros[0][description]" class="form-control" rows="3" placeholder="Résumé du contenu de ce numéro..."></textarea>
                             </div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label>Résumé</label>
-                                <textarea name="numeros[0][description]" class="form-control" rows="2"></textarea>
+                                <label class="font-weight-bold">Image de couverture</label>
+                                <input type="file" name="numeros[0][image]" class="form-control-file" accept="image/*">
+                                <small class="text-muted">JPEG, PNG, GIF, WEBP - Max 5 Mo</small>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label>Commentaire</label>
-                                <textarea name="numeros[0][commentaire]" class="form-control" rows="2"></textarea>
+                                <label class="font-weight-bold">Propriétaires</label>
+                                <select name="numeros[0][users][]" class="form-control select-users" multiple size="4">
+                                    {% for user in users %}
+                                        <option value="{{ user.id }}">{{ user.name }} {{ user.lastname }} ({{ user.username }})</option>
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted">Maintenez Ctrl/Cmd pour sélectionner plusieurs utilisateurs</small>
                             </div>
                         </div>
                     </div>
@@ -97,9 +134,9 @@
         
         $('#add-numero').on('click', function() {
             var template = `
-                <div class="card mb-3 numero-item" data-index="${index}">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <span>Numéro <span class="numero-index">${index + 1}</span></span>
+                <div class="card mb-4 shadow-sm numero-item" data-index="${index}">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-newspaper"></i> Numéro <span class="numero-index">${index + 1}</span></h5>
                         <button type="button" class="btn btn-sm btn-danger remove-numero">
                             <i class="fas fa-times"></i> Supprimer
                         </button>
@@ -108,40 +145,65 @@
                         <div class="row">
                             <div class="col-md-2">
                                 <div class="form-group">
-                                    <label>Numéro *</label>
-                                    <input type="number" name="numeros[${index}][num]" class="form-control" required>
+                                    <label class="font-weight-bold">Numéro *</label>
+                                    <input type="number" name="numeros[${index}][num]" class="form-control" required placeholder="Ex: 42">
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="form-group">
-                                    <label>Date de parution</label>
-                                    <input type="date" name="numeros[${index}][dateParution]" class="form-control">
+                                    <label class="font-weight-bold">Date de parution (mois/année)</label>
+                                    <input type="text" name="numeros[${index}][dateParution]" class="form-control" placeholder="AAAA-MM">
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="form-group">
-                                    <label>Code EAN</label>
-                                    <input type="text" name="numeros[${index}][EAN]" class="form-control">
+                                    <label class="font-weight-bold">Code EAN</label>
+                                    <input type="text" name="numeros[${index}][EAN]" class="form-control" placeholder="Ex: 9782123456789">
                                 </div>
                             </div>
                             <div class="col-md-2">
                                 <div class="form-group">
-                                    <label>Prix</label>
-                                    <input type="number" step="0.01" name="numeros[${index}][prix]" class="form-control">
+                                    <label class="font-weight-bold">Prix</label>
+                                    <input type="number" step="0.01" name="numeros[${index}][prix]" class="form-control" placeholder="Ex: 5.99">
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">Monnaie</label>
+                                    <select name="numeros[${index}][monnaie]" class="form-control">
+                                        <option value="">-</option>
+                                        <option value="1">EUR (€)</option>
+                                        <option value="2">USD ($)</option>
+                                        <option value="3">GBP (£)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">Résumé</label>
+                                    <textarea name="numeros[${index}][description]" class="form-control" rows="3" placeholder="Résumé du contenu de ce numéro..."></textarea>
                                 </div>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label>Résumé</label>
-                                    <textarea name="numeros[${index}][description]" class="form-control" rows="2"></textarea>
+                                    <label class="font-weight-bold">Image de couverture</label>
+                                    <input type="file" name="numeros[${index}][image]" class="form-control-file" accept="image/*">
+                                    <small class="text-muted">JPEG, PNG, GIF, WEBP - Max 5 Mo</small>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label>Commentaire</label>
-                                    <textarea name="numeros[${index}][commentaire]" class="form-control" rows="2"></textarea>
+                                    <label class="font-weight-bold">Propriétaires</label>
+                                    <select name="numeros[${index}][users][]" class="form-control select-users" multiple size="4">
+                                        {% for user in users %}
+                                            <option value="{{ user.id }}">{{ user.name }} {{ user.lastname }} ({{ user.username }})</option>
+                                        {% endfor %}
+                                    </select>
+                                    <small class="text-muted">Maintenez Ctrl/Cmd pour sélectionner plusieurs utilisateurs</small>
                                 </div>
                             </div>
                         </div>

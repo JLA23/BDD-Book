@@ -1,77 +1,90 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Liste des Magazines{% endblock %}
+{% block title %}BDD-Magazines{% endblock %}
 
 {% block body %}
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Magazines</h1>
-        <div>
-            <a href="{{ path('magazines_search') }}" class="btn btn-outline-secondary mr-2">
-                <i class="fas fa-search"></i> Rechercher
-            </a>
-            {% if is_granted('IS_AUTHENTICATED_FULLY') %}
-                <a href="{{ path('magazine_new') }}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Nouveau magazine
-                </a>
-            {% endif %}
+    <div id="acceuilSite">
+        <div class="text-center mb-4">
+            <h1 class="display-5 font-weight-bold" style="color: #667eea;">
+                <i class="fas fa-newspaper"></i> BDD-Magazines
+            </h1>
+            <p class="lead text-muted">Base de données de magazines de la famille Lefebvre</p>
         </div>
-    </div>
-
-    {% for message in app.flashes('success') %}
-        <div class="alert alert-success">{{ message }}</div>
-    {% endfor %}
-
-    {% if magazines|length > 0 %}
-        <div class="row">
-            {% for magazine in magazines %}
-                <div class="col-md-4 col-lg-3 mb-4">
-                    <div class="card h-100">
-                        {% if images[magazine.id] is defined %}
-                            <img src="data:image/jpeg;base64,{{ images[magazine.id] }}" 
-                                 class="card-img-top" 
-                                 alt="{{ magazine.nom }}"
-                                 style="height: 200px; object-fit: cover;">
-                        {% else %}
-                            <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" 
-                                 style="height: 200px;">
-                                <i class="fas fa-book fa-3x text-white"></i>
+        
+        <div class="card mb-4">
+            <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <h5 class="mb-0 text-white"><i class="fas fa-search"></i> Rechercher un magazine</h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ path('magazines_search')}}" class="form-horizontal" id="searchForm">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="form-group mb-3">
+                                <label for="search" class="font-weight-bold text-dark">Que recherchez-vous ?</label>
+                                <div class="input-group input-group-lg">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text bg-white border-right-0"><i class="fas fa-book-open text-primary"></i></span>
+                                    </div>
+                                    <input class='form-control border-left-0' name='q' placeholder="Nom du magazine ou éditeur..." type="text" id="search" style="border-top-right-radius: 0.3rem !important; border-bottom-right-radius: 0.3rem !important;"/>
+                                </div>
+                                <small class="form-text text-muted">Recherche par nom de magazine ou éditeur.</small>
                             </div>
-                        {% endif %}
-                        <div class="card-body">
-                            <h5 class="card-title">{{ magazine.nom }}</h5>
-                            {% if magazine.editeur %}
-                                <p class="card-text text-muted small">{{ magazine.editeur }}</p>
-                            {% endif %}
-                            <p class="card-text">
-                                <span class="badge badge-info">{{ magazine.nbnum }} numéro(s)</span>
-                                {% if magazine.statut %}
-                                    <span class="badge badge-success">En cours</span>
-                                {% else %}
-                                    <span class="badge badge-secondary">Terminé</span>
-                                {% endif %}
-                            </p>
                         </div>
-                        <div class="card-footer">
-                            <a href="{{ path('magazine_detail', {id: magazine.id}) }}" class="btn btn-sm btn-outline-primary">
-                                Voir les numéros
-                            </a>
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label for="user-select" class="font-weight-bold text-dark">Collection</label>
+                                <select class="form-control form-control-lg" name="user" id="user-select">
+                                    <option value="0">Toutes</option>
+                                    {% if users is defined %}
+                                        {% for user in users %}
+                                            <option value="{{ user.id }}">{{ user.name }} {{ user.lastName }}</option>
+                                        {% endfor %}
+                                    {% endif %}
+                                </select>
+                            </div>
                         </div>
                     </div>
-                </div>
-            {% endfor %}
+                    
+                    <div class="text-center">
+                        <button id="searchButton" type="submit" class="btn btn-lg text-white px-5" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <i class="fas fa-search"></i> Rechercher
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
 
-        <div class="d-flex justify-content-center mt-4">
-            {{ knp_pagination_render(pagination, '@KnpPaginator/Pagination/twitter_bootstrap_v4_pagination.html.twig') }}
+        {% if is_granted('IS_AUTHENTICATED_FULLY') %}
+        <div class="text-center mb-4">
+            <a href="{{ path('magazine_new') }}" class="btn btn-success btn-lg">
+                <i class="fas fa-plus"></i> Ajouter un magazine
+            </a>
         </div>
-    {% else %}
-        <div class="alert alert-info">
-            Aucun magazine enregistré pour le moment.
-            {% if is_granted('IS_AUTHENTICATED_FULLY') %}
-                <a href="{{ path('magazine_new') }}">Créer le premier magazine</a>
-            {% endif %}
+        {% endif %}
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <a href="{{ path('magazines_all')}}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                    <div class="card-body text-center py-4">
+                        <div class="mb-3">
+                            <i class="fas fa-newspaper fa-3x text-primary"></i>
+                        </div>
+                        <h5 class="card-title text-dark">Tous les magazines</h5>
+                        <p class="card-text text-muted small">Parcourir le catalogue complet</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-6 mb-3">
+                <a href="{{ path('listeUser')}}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                    <div class="card-body text-center py-4">
+                        <div class="mb-3">
+                            <i class="fas fa-users fa-3x text-success"></i>
+                        </div>
+                        <h5 class="card-title text-dark">Collections</h5>
+                        <p class="card-text text-muted small">Collections par utilisateur</p>
+                    </div>
+                </a>
+            </div>
         </div>
-    {% endif %}
-</div>
+    </div>
 {% endblock %}

@@ -40,11 +40,17 @@
                         </div>
                         <div class="row">
                             <div class="col-md-6">
-                                {{ form_row(form.nbnum) }}
+                                <div class="form-group">
+                                    {{ form_row(form.nbnum) }}
+                                </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="form-group mt-4">
-                                    {{ form_row(form.statut) }}
+                                <div class="form-group">
+                                    {{ form_label(form.statut, 'Encore en publication') }}
+                                    <div class="mt-2">
+                                        {{ form_widget(form.statut, {'attr': {'class': 'form-check-input'}}) }}
+                                    </div>
+                                    {{ form_errors(form.statut) }}
                                 </div>
                             </div>
                         </div>
