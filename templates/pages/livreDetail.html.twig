@@ -115,6 +115,14 @@
                                 <strong>{% if livre.edition %}{{ livre.edition.nom }}{% else %}-{% endif %}</strong>
                             </div>
                         </div>
+                        {% if livre.collection %}
+                        <div class="col-sm-6">
+                            <div class="info-item mb-3">
+                                <small class="text-muted d-block"><i class="fas fa-layer-group"></i> Collection</small>
+                                <strong>{{ livre.collection.nom }}</strong>
+                            </div>
+                        </div>
+                        {% endif %}
                         <div class="col-sm-6">
                             <div class="info-item mb-3">
                                 <small class="text-muted d-block"><i class="fas fa-calendar"></i> Année</small>
@@ -133,14 +141,6 @@
                                 <strong>{{ livre.prixBase|number_format(2) }} {% if livre.monnaie %}{{ livre.monnaie.symbole }}{% endif %}</strong>
                             </div>
                         </div>
-                        {% if livre.collection %}
-                        <div class="col-sm-6">
-                            <div class="info-item mb-3">
-                                <small class="text-muted d-block"><i class="fas fa-layer-group"></i> Collection</small>
-                                <strong>{{ livre.collection.nom }}</strong>
-                            </div>
-                        </div>
-                        {% endif %}
                         {% if livre.category %}
                         <div class="col-sm-6">
                             <div class="info-item mb-3">

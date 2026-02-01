@@ -11,10 +11,19 @@ namespace App\Repository;
 class EditionRepository extends \Doctrine\ORM\EntityRepository
 {
     public function getEditionByName($name){
-        return $this->createQueryBuilder('e')
-            ->where('UPPER(e.nom) = :name')
-            ->setParameter(':name', strtoupper($name))
-            ->distinct('e.name')
-            ->getQuery()->getOneOrNullResult();
+        // Recherche insensible à la casse ET aux accents avec SQL natif
+        // Privilégie la version avec accents en triant par longueur du nom
+        $conn = $this->getEntityManager()->getConnection();
+        $normalizedName = strtoupper(str_replace(['é', 'è', 'ê', 'à', 'ô', 'û', 'ù', 'ï', 'î', 'ç'], ['e', 'e', 'e', 'a', 'o', 'u', 'u', 'i', 'i', 'c'], $name));
+        
+        $sql = "SELECT id FROM edition 
+                WHERE UPPER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(nom, 'é', 'e'), 'è', 'e'), 'ê', 'e'), 'à', 'a'), 'ô', 'o'), 'û', 'u'), 'ù', 'u'), 'ï', 'i'), 'î', 'i'), 'ç', 'c')) = :name
+                ORDER BY LENGTH(nom) DESC
+                LIMIT 1";
+        
+        $stmt = $conn->prepare($sql);
+        $result = $stmt->executeQuery(['name' => $normalizedName])->fetchAssociative();
+        
+        return $result ? $this->find($result['id']) : null;
     }
 }

@@ -762,7 +762,7 @@ class BookCoverService
             ]);
             
             $response = @file_get_contents($url, false, $context);
-            
+            dump($response);
             if ($response) {
                 $data = json_decode($response, true);
                 if ($data['success'] && !empty($data['images'])) {

@@ -28,11 +28,22 @@
                 <!-- Image -->
                 <div class="livre-cover-wrapper text-center p-2" style="background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);">
                     {% if livre.id in images|keys %}
-                        <img id='img-{{ livre.id }}' 
-                             class="img-cover img-fluid" 
-                             alt="{{ livre.titre }}" 
-                             src="data:image/png;base64,{{ images[livre.id] }}"
-                             style="max-height: 180px; object-fit: contain; cursor: pointer;" />
+                        {% set imageData = images[livre.id] %}
+                        {% if livre.image2 %}
+                            {# URL directe (image2) #}
+                            <img id='img-{{ livre.id }}' 
+                                 class="img-cover img-fluid" 
+                                 alt="{{ livre.titre }}" 
+                                 src="{{ livre.getBestImage }}"
+                                 style="max-height: 180px; object-fit: contain; cursor: pointer;" />
+                        {% else %}
+                            {# Image base64 (BLOB) #}
+                            <img id='img-{{ livre.id }}' 
+                                 class="img-cover img-fluid" 
+                                 alt="{{ livre.titre }}" 
+                                 src="data:image/png;base64,{{ imageData }}"
+                                 style="max-height: 180px; object-fit: contain; cursor: pointer;" />
+                        {% endif %}
                     {% else %}
                         <div class="d-flex align-items-center justify-content-center" style="height: 180px;">
                             <i class="fas fa-book fa-4x text-muted"></i>
@@ -55,13 +66,11 @@
                     <!-- Auteurs -->
                     <p class="card-text small text-muted mb-1">
                         <i class="fas fa-pen-fancy"></i>
-                        {% set nb = 0 %}
+                        {% set auteurs = [] %}
                         {% for auteur in livre.listeAuteur %}
-                            {% if nb > 0 %}, {% endif %}
-                            {% if nb < 2 %}{{ auteur.auteur.nom }}{% endif %}
-                            {% set nb = nb + 1 %}
+                            {% set auteurs = auteurs|merge([auteur.auteur.nom]) %}
                         {% endfor %}
-                        {% if nb > 2 %}...{% endif %}
+                        {{ auteurs|slice(0, 2)|join(', ') }}{% if auteurs|length > 2 %}, ...{% endif %}
                     </p>
                     
                     <!-- Éditeur -->
