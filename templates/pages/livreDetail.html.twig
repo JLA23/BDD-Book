@@ -431,9 +431,9 @@
             btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Enregistrement...');
             
             $.ajax({
-                url: '/livre/' + livreId + '/mettre-a-jour-couverture',
+                url: '/livre/' + livreId + '/update-cover-url',
                 method: 'POST',
-                data: { image_url: foundImageUrl },
+                data: { imageUrl: foundImageUrl },
                 success: function(response) {
                     if (response.success) {
                         location.reload();
