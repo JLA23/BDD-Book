@@ -29,7 +29,9 @@ class NumeroMagazineType extends AbstractType
                 'label' => 'Date de parution (mois/année)',
                 'required' => false,
                 'widget' => 'single_text',
-                'attr' => ['class' => 'form-control']
+                'format' => 'yyyy-MM',
+                'html5' => false,
+                'attr' => ['class' => 'form-control', 'placeholder' => 'AAAA-MM']
             ])
             ->add('EAN', TextType::class, [
                 'label' => 'Code EAN',
@@ -72,11 +74,6 @@ class NumeroMagazineType extends AbstractType
                 'label' => 'Résumé',
                 'required' => false,
                 'attr' => ['class' => 'form-control', 'rows' => 4]
-            ])
-            ->add('commentaire', TextareaType::class, [
-                'label' => 'Commentaire',
-                'required' => false,
-                'attr' => ['class' => 'form-control', 'rows' => 3]
             ])
         ;
     }

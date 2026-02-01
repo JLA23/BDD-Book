@@ -20,24 +20,30 @@ class LienUserLivreRepository extends \Doctrine\ORM\EntityRepository
     }
 
     public function getLivreByUserAndSeq ($user, $seq){
-        return $this->createQueryBuilder('lul')
+        $results = $this->createQueryBuilder('lul')
             ->innerJoin('lul.livre', 'l')
             ->where('lul.user = :user')
             ->andWhere('lul.seq = :seq')
             ->setParameter(':user', $user)
             ->setParameter(':seq', $seq)
-            ->getQuery()->getOneOrNullResult();
+            ->setMaxResults(1)
+            ->getQuery()->getResult();
+        
+        return !empty($results) ? $results[0] : null;
     }
 
     public function getLienByUserAndLivre($user, $livre, $seq){
-        return $this->createQueryBuilder('lul')
+        $results = $this->createQueryBuilder('lul')
             ->where('lul.user = :user')
             ->andWhere('lul.livre = :livre')
             ->andWhere('lul.seq = :seq')
             ->setParameter(':user', $user)
             ->setParameter(':livre', $livre)
             ->setParameter(':seq', $seq)
-            ->getQuery()->getOneOrNullResult();
+            ->setMaxResults(1)
+            ->getQuery()->getResult();
+        
+        return !empty($results) ? $results[0] : null;
     }
 
     public function getListeUserByLivre($livre){

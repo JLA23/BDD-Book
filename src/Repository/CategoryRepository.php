@@ -11,9 +11,19 @@ namespace App\Repository;
 class CategoryRepository extends \Doctrine\ORM\EntityRepository
 {
     public function getCategoryByName($name){
-        return $this->createQueryBuilder('c')
-            ->where('UPPER(c.nom) = :name')
-            ->setParameter(':name', strtoupper($name))
-            ->getQuery()->getOneOrNullResult();
+        // Recherche insensible à la casse ET aux accents avec SQL natif
+        // Privilégie la version avec accents en triant par longueur du nom
+        $conn = $this->getEntityManager()->getConnection();
+        $normalizedName = strtoupper(str_replace(['é', 'è', 'ê', 'à', 'ô', 'û', 'ù', 'ï', 'î', 'ç'], ['e', 'e', 'e', 'a', 'o', 'u', 'u', 'i', 'i', 'c'], $name));
+        
+        $sql = "SELECT id FROM category 
+                WHERE UPPER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(nom, 'é', 'e'), 'è', 'e'), 'ê', 'e'), 'à', 'a'), 'ô', 'o'), 'û', 'u'), 'ù', 'u'), 'ï', 'i'), 'î', 'i'), 'ç', 'c')) = :name
+                ORDER BY LENGTH(nom) DESC
+                LIMIT 1";
+        
+        $stmt = $conn->prepare($sql);
+        $result = $stmt->executeQuery(['name' => $normalizedName])->fetchAssociative();
+        
+        return $result ? $this->find($result['id']) : null;
     }
 }

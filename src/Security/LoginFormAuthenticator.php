@@ -56,6 +56,11 @@ class LoginFormAuthenticator extends AbstractFormLoginAuthenticator implements P
             Security::LAST_USERNAME,
             $credentials['email']
         );
+        
+        // Enregistrer le target_path si présent dans le formulaire
+        if ($targetPath = $request->request->get('_target_path')) {
+            $this->saveTargetPath($request->getSession(), 'main', $targetPath);
+        }
 
         return $credentials;
     }

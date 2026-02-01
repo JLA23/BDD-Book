@@ -1,0 +1,108 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Ma collection - BDD{% endblock %}
+
+{% block body %}
+<div class="container mt-4">
+    <div class="text-center mb-4">
+        <h1 class="display-5 font-weight-bold" style="color: #667eea;">
+            <i class="fas fa-chart-bar"></i> Ma collection
+        </h1>
+        <p class="lead text-muted">Statistiques de {{ app.user.name }} {{ app.user.lastname }}</p>
+    </div>
+
+    <div class="row">
+        <!-- Statistiques Livres -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <h5 class="mb-0"><i class="fas fa-book"></i> Mes livres</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="border rounded p-3 text-center">
+                                <h3 class="mb-0 text-primary">{{ userLivresCount }}</h3>
+                                <small class="text-muted">Livres</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border rounded p-3 text-center">
+                                <h3 class="mb-0 text-success">{{ userLivresPrix|number_format(2, ',', ' ') }} €</h3>
+                                <small class="text-muted">Valeur</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3 text-center">
+                        <a href="{{ path('index') }}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-arrow-right"></i> Voir mes livres
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistiques Magazines -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header text-white" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                    <h5 class="mb-0"><i class="fas fa-newspaper"></i> Mes magazines</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="border rounded p-3 text-center">
+                                <h3 class="mb-0 text-info">{{ userMagazinesCount }}</h3>
+                                <small class="text-muted">Magazines</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="border rounded p-3 text-center">
+                                <h3 class="mb-0 text-primary">{{ userNumerosCount }}</h3>
+                                <small class="text-muted">Numéros</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="border rounded p-3 text-center">
+                                <h3 class="mb-0 text-success">{{ userNumerosPrix|number_format(2, ',', ' ') }} €</h3>
+                                <small class="text-muted">Valeur</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3 text-center">
+                        <a href="{{ path('magazines_list') }}" class="btn btn-outline-success btn-sm">
+                            <i class="fas fa-arrow-right"></i> Voir mes magazines
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Résumé total -->
+    <div class="card shadow-sm mt-2">
+        <div class="card-header" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+            <h5 class="mb-0 text-white"><i class="fas fa-calculator"></i> Résumé</h5>
+        </div>
+        <div class="card-body">
+            <div class="row text-center">
+                <div class="col-md-4">
+                    <h2 class="text-primary">{{ userLivresCount + userNumerosCount }}</h2>
+                    <p class="text-muted mb-0">Articles au total</p>
+                    <small class="text-muted">({{ userLivresCount }} livres + {{ userNumerosCount }} numéros)</small>
+                </div>
+                <div class="col-md-4">
+                    <h2 class="text-success">{{ (userLivresPrix + userNumerosPrix)|number_format(2, ',', ' ') }} €</h2>
+                    <p class="text-muted mb-0">Valeur totale</p>
+                </div>
+                <div class="col-md-4">
+                    <h2 class="text-info">{{ userMagazinesCount }}</h2>
+                    <p class="text-muted mb-0">Collections de magazines</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

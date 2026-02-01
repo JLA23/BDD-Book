@@ -29,16 +29,20 @@ class MagazineType extends AbstractType
                 'attr' => ['class' => 'form-control']
             ])
             ->add('debpub', DateType::class, [
-                'label' => 'Date de début de publication',
+                'label' => 'Date de début de publication (mois/année)',
                 'required' => false,
                 'widget' => 'single_text',
-                'attr' => ['class' => 'form-control']
+                'format' => 'yyyy-MM',
+                'html5' => false,
+                'attr' => ['class' => 'form-control', 'placeholder' => 'AAAA-MM']
             ])
             ->add('findeb', DateType::class, [
-                'label' => 'Date de fin de publication',
+                'label' => 'Date de fin de publication (mois/année)',
                 'required' => false,
                 'widget' => 'single_text',
-                'attr' => ['class' => 'form-control']
+                'format' => 'yyyy-MM',
+                'html5' => false,
+                'attr' => ['class' => 'form-control', 'placeholder' => 'AAAA-MM']
             ])
             ->add('nbnum', IntegerType::class, [
                 'label' => 'Nombre de numéros',

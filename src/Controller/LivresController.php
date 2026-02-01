@@ -46,8 +46,13 @@ class LivresController extends AbstractController
         $listeLivre = $em->getRepository(Livre::class)->getLivresByID($page->getItems(), $request->get('sort'), $request->get('order'));
 
         foreach ($listeLivre as $livre) {
-            if ($livre && $livre->getImage()) {
-                $images[$livre->getId()] = base64_encode(stream_get_contents($livre->getImage()));
+            if ($livre) {
+                // Privilégier image2 (fichier téléchargé) si disponible, sinon image (BLOB)
+                if ($livre->getImage2()) {
+                    $images[$livre->getId()] = '/uploads/covers/' . $livre->getImage2();
+                } elseif ($livre->getImage()) {
+                    $images[$livre->getId()] = base64_encode(stream_get_contents($livre->getImage()));
+                }
             }
         }
 
@@ -119,8 +124,13 @@ public function livreDetail(string $id, Request $request)
                 $listeLivre = $em->getRepository(Livre::class)->getLivresByID($page->getItems(), $request->get('sort'), $request->get('order'));
 
                 foreach ($listeLivre as $livre) {
-                    if ($livre && $livre->getImage()) {
-                        $images[$livre->getId()] = base64_encode(stream_get_contents($livre->getImage()));
+                    if ($livre) {
+                        // Privilégier image2 (fichier téléchargé) si disponible, sinon image (BLOB)
+                        if ($livre->getImage2()) {
+                            $images[$livre->getId()] = '/uploads/covers/' . $livre->getImage2();
+                        } elseif ($livre->getImage()) {
+                            $images[$livre->getId()] = base64_encode(stream_get_contents($livre->getImage()));
+                        }
                     }
                 }
 

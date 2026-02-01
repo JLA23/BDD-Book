@@ -38,7 +38,9 @@ class LivreRepository extends \Doctrine\ORM\EntityRepository
             $query = $entityManager->createQuery($requete)
                 ->setParameter(':edition_id', $edition_id)->setParameter(':name', $name);
         }
-        return $query->getOneOrNullResult();
+        
+        $results = $query->setMaxResults(1)->getResult();
+        return !empty($results) ? $results[0] : null;
 
     }
 

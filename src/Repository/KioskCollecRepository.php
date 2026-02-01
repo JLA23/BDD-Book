@@ -58,4 +58,27 @@ class KioskCollecRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    public function searchByNameAndUser(string $search, ?int $userId = null): array
+    {
+        $qb = $this->createQueryBuilder('k');
+        
+        if ($userId !== null) {
+            $qb->innerJoin('App\Entity\KioskNum', 'n', 'WITH', 'n.kioskCollec = k.id')
+               ->innerJoin('App\Entity\LienKioskNumUser', 'l', 'WITH', 'l.kioskNum = n.id')
+               ->where('l.user = :userId')
+               ->andWhere('(LOWER(k.nom) LIKE LOWER(:search) OR LOWER(k.editeur) LIKE LOWER(:search))')
+               ->setParameter('userId', $userId)
+               ->setParameter('search', '%' . $search . '%')
+               ->groupBy('k.id')
+               ->orderBy('k.nom', 'ASC');
+        } else {
+            $qb->where('LOWER(k.nom) LIKE LOWER(:search)')
+               ->orWhere('LOWER(k.editeur) LIKE LOWER(:search)')
+               ->setParameter('search', '%' . $search . '%')
+               ->orderBy('k.nom', 'ASC');
+        }
+        
+        return $qb->getQuery()->getResult();
+    }
 }

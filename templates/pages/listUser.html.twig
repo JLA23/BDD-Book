@@ -7,13 +7,13 @@
             {% for user in users %}
                 <div id='div-btn-user' class="col-lg-3 col-md-6 col-sm-12">
                     <a type="button" id='btn-user' class="btn btn-light center-btn" href="{{ path('listelivreUser', {id : user.id}) }}">
-                        <div>
-                            {% if user.logo is null %}
-                                <img class="logo" src="{{ asset('build/images/user.jpeg') }}" >
-                            {% else %}
-                                <img class="logo" src="{{ asset('images_upload/users/' ~ user.logo) }}" >
-                            {% endif %}
-                        </div>
+                            <div class="user-avatar-large mx-auto mb-3">
+                                {% if user.logo %}
+                                    <img src="{{ asset('uploads/avatars/' ~ user.logo) }}" alt="{{ user.username }}" class="user-avatar-img">
+                                {% else %}
+                                    <span class="user-avatar-initials">{{ user.name|first|upper }}{{ user.lastname|first|upper }}</span>
+                                {% endif %}
+                            </div>
                         <div>
                             <strong>{{ user.name }} {{ user.lastname }}</strong>
                         </div>
