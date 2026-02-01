@@ -287,7 +287,17 @@ public function livreDetail(string $id, Request $request)
             return new JsonResponse(['success' => false, 'message' => 'Livre non trouvé'], 404);
         }
 
-        $livre->setImageUrl(null);
+        $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/covers';
+
+        // Supprimer l'ancienne image si elle existe
+        if ($livre->getImage2()) {
+            $oldFile = $uploadDir . '/' . $livre->getImage2();
+            if (file_exists($oldFile)) {
+                @unlink($oldFile);
+            }
+        }
+
+        $livre->setImage2(null);
         $this->em->flush();
         
         return new JsonResponse([
