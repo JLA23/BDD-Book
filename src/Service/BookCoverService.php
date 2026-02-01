@@ -756,25 +756,20 @@ class BookCoverService
             
             $context = stream_context_create([
                 'http' => [
-                    'timeout' => 120,
-                    'ignore_errors' => true,
+                    'timeout' => 120, // 2 minutes pour scraper tous les sites
                     'header' => "X-API-Key: {$apiKey}\r\n"
                 ]
             ]);
             
             $response = @file_get_contents($url, false, $context);
-            
-            if ($response === false) {
-                error_log("Puppeteer service unreachable at {$serviceUrl}");
-                return [];
-            }
-            
-            $data = json_decode($response, true);
-            if ($data && isset($data['success']) && $data['success'] && !empty($data['images'])) {
-                return $data['images'];
+            if ($response) {
+                $data = json_decode($response, true);
+                if ($data['success'] && !empty($data['images'])) {
+                    return $data['images'];
+                }
             }
         } catch (\Exception $e) {
-            error_log("Puppeteer error: " . $e->getMessage());
+            // Log error
         }
         
         return [];
