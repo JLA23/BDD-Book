@@ -245,9 +245,9 @@ public function livreDetail(string $id, Request $request)
     }
 
     /**
-     * @Route("/livre/{id}/mettre-a-jour-couverture", name="livre_update_cover", methods={"POST"}, requirements={"id"="\d+"})
+     * @Route("/livre/{id}/upload-cover", name="livre_upload_cover", methods={"POST"}, requirements={"id"="\d+"})
      */
-    public function updateCover(int $id, Request $request): JsonResponse
+    public function uploadCover(int $id, Request $request): JsonResponse
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
         
@@ -257,21 +257,61 @@ public function livreDetail(string $id, Request $request)
             return new JsonResponse(['success' => false, 'message' => 'Livre non trouvé'], 404);
         }
 
-        $imageUrl = $request->request->get('image_url');
+        $uploadedFile = $request->files->get('cover');
         
-        if (empty($imageUrl)) {
-            return new JsonResponse(['success' => false, 'message' => 'URL de l\'image manquante']);
+        if (!$uploadedFile) {
+            return new JsonResponse(['success' => false, 'message' => 'Aucun fichier uploadé'], 400);
         }
 
-        // Stocker l'URL au lieu de télécharger l'image
-        $livre->setImageUrl($imageUrl);
-        $this->em->flush();
-        
-        return new JsonResponse([
-            'success' => true,
-            'message' => 'URL de l\'image enregistrée avec succès',
-            'imageUrl' => $imageUrl
-        ]);
+        // Vérifier que c'est bien une image
+        $mimeType = $uploadedFile->getMimeType();
+        if (!in_array($mimeType, ['image/jpeg', 'image/png', 'image/gif', 'image/webp'])) {
+            return new JsonResponse(['success' => false, 'message' => 'Le fichier doit être une image (JPEG, PNG, GIF ou WebP)'], 400);
+        }
+
+        $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/covers';
+        if (!is_dir($uploadDir)) {
+            if (!mkdir($uploadDir, 0755, true)) {
+                return new JsonResponse(['error' => 'Impossible de créer le répertoire uploads/covers'], 500);
+            }
+        }
+
+        // Vérifier que le répertoire est accessible en écriture
+        if (!is_writable($uploadDir)) {
+            return new JsonResponse(['error' => 'Le répertoire uploads/covers n\'est pas accessible en écriture'], 500);
+        }
+
+        try {
+            // Lire le contenu du fichier
+            $imageContent = file_get_contents($uploadedFile->getPathname());
+            
+            if ($imageContent === false) {
+                return new JsonResponse(['success' => false, 'message' => 'Impossible de lire le fichier'], 500);
+            }
+            // Générer un nom de fichier unique
+            $extension = pathinfo(parse_url($uploadedFile->getPathname(), PHP_URL_PATH), PATHINFO_EXTENSION);
+            if (empty($extension) || !in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+                $extension = 'jpg';
+            }
+
+            $this->enregistrementImageCover($livre, $imageContent, $uploadDir, $extension);
+
+
+            // Stocker l'image en base64 dans la base de données
+            /*$livre->setImage($imageContent);
+            $livre->setImage2(null); // Supprimer l'URL externe si elle existe
+            $this->em->flush();*/
+            
+            return new JsonResponse([
+                'success' => true,
+                'message' => 'Image uploadée avec succès'
+            ]);
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'success' => false,
+                'message' => 'Erreur lors de l\'upload: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -287,46 +327,13 @@ public function livreDetail(string $id, Request $request)
             return new JsonResponse(['success' => false, 'message' => 'Livre non trouvé'], 404);
         }
 
-        $livre->setImageUrl(null);
+        $livre->setImage2(null);
         $this->em->flush();
         
         return new JsonResponse([
             'success' => true,
             'message' => 'URL de l\'image supprimée, l\'image originale sera utilisée'
         ]);
-    }
-
-    /**
-     * @Route("/livres/mettre-a-jour-toutes-couvertures", name="livres_update_all_covers")
-     */
-    public function updateAllCovers(): Response
-    {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
-        
-        $livres = $this->em->getRepository(Livre::class)->findAll();
-        $updated = 0;
-
-        foreach ($livres as $livre) {
-            $isbn = $livre->getIsbn();
-            
-            // Ne pas mettre à jour si déjà une URL ou pas d'ISBN
-            if (empty($isbn) || !empty($livre->getImageUrl())) {
-                continue;
-            }
-
-            $result = $this->bookCoverService->findBestCover($isbn);
-            
-            if ($result['url']) {
-                $livre->setImageUrl($result['url']);
-                $updated++;
-            }
-        }
-
-        $this->em->flush();
-
-        $this->addFlash('success', $updated . ' URL(s) de couverture(s) ajoutée(s)');
-        
-        return $this->redirectToRoute('listesLivres');
     }
 
     /**
@@ -423,7 +430,7 @@ public function livreDetail(string $id, Request $request)
                 $extension = 'jpg';
             }
             
-            $filename = $livre->getId() . '_' . uniqid() . '.' . $extension;
+            /*$filename = $livre->getId() . '_' . uniqid() . '.' . $extension;
             $filepath = $uploadDir . '/' . $filename;
 
             // Sauvegarder l'image
@@ -443,15 +450,41 @@ public function livreDetail(string $id, Request $request)
             // Mettre à jour le livre
             $livre->setImage2($filename);
             $this->em->flush();
+*/
+            $this->enregistrementImageCover($livre, $imageContent, $uploadDir, $extension);
 
             return new JsonResponse([
                 'success' => true,
-                'message' => 'Image de couverture mise à jour',
-                'filename' => $filename
+                'message' => 'Image de couverture mise à jour'
             ]);
             
         } catch (\Exception $e) {
             return new JsonResponse(['error' => 'Erreur: ' . $e->getMessage()], 500);
         }
     }
+
+    function enregistrementImageCover($livre, $imageContent, $uploadDir, $extension) {
+        
+        $filename = $livre->getId() . '_' . uniqid() . '.' . $extension;
+        $filepath = $uploadDir . '/' . $filename;
+
+        // Sauvegarder l'image
+        $bytesWritten = @file_put_contents($filepath, $imageContent);
+        if ($bytesWritten === false) {
+            return new JsonResponse(['error' => 'Impossible de sauvegarder l\'image sur le disque'], 500);
+        }
+
+        // Supprimer l'ancienne image si elle existe
+        if ($livre->getImage2()) {
+            $oldFile = $uploadDir . '/' . $livre->getImage2();
+            if (file_exists($oldFile)) {
+                @unlink($oldFile);
+            }
+        }
+
+        // Mettre à jour le livre
+        $livre->setImage2($filename);
+        $this->em->flush();    
+    }
+
 }
