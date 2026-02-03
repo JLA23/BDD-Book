@@ -11,6 +11,7 @@
 
 namespace Symfony\Flex;
 
+use Composer\Command\BaseConfigCommand;
 use Composer\Command\GlobalCommand;
 use Composer\Composer;
 use Composer\Console\Application;
@@ -18,9 +19,7 @@ use Composer\DependencyResolver\Operation\InstallOperation;
 use Composer\DependencyResolver\Operation\OperationInterface;
 use Composer\DependencyResolver\Operation\UninstallOperation;
 use Composer\DependencyResolver\Operation\UpdateOperation;
-use Composer\DependencyResolver\Pool;
 use Composer\DependencyResolver\Transaction;
-use Composer\Downloader\FileDownloader;
 use Composer\EventDispatcher\EventSubscriberInterface;
 use Composer\Factory;
 use Composer\Installer;
@@ -33,18 +32,11 @@ use Composer\IO\IOInterface;
 use Composer\IO\NullIO;
 use Composer\Json\JsonFile;
 use Composer\Json\JsonManipulator;
-use Composer\Package\BasePackage;
-use Composer\Package\Comparer\Comparer;
 use Composer\Package\Locker;
 use Composer\Package\Package;
-use Composer\Package\PackageInterface;
 use Composer\Plugin\PluginEvents;
 use Composer\Plugin\PluginInterface;
-use Composer\Plugin\PreFileDownloadEvent;
 use Composer\Plugin\PrePoolCreateEvent;
-use Composer\Repository\ComposerRepository as BaseComposerRepository;
-use Composer\Repository\RepositoryFactory;
-use Composer\Repository\RepositoryManager;
 use Composer\Script\Event;
 use Composer\Script\ScriptEvents;
 use Composer\Semver\VersionParser;
@@ -84,25 +76,14 @@ class Flex implements PluginInterface, EventSubscriberInterface
     private $postInstallOutput = [''];
     private $operations = [];
     private $lock;
-    private $cacheDirPopulated = false;
     private $displayThanksReminder = 0;
-    private $rfs;
-    private $progress = true;
-    private $dryRun = false;
+    private $ignorePreleases = false;
     private $reinstall;
     private static $activated = true;
-    private static $repoReadingCommands = [
-        'create-project' => true,
-        'outdated' => true,
-        'require' => true,
-        'update' => true,
-        'install' => true,
-    ];
     private static $aliasResolveCommands = [
         'require' => true,
         'update' => false,
         'remove' => false,
-        'unpack' => true,
     ];
     private $filter;
 
@@ -126,62 +107,29 @@ class Flex implements PluginInterface, EventSubscriberInterface
             }
         }
 
+        $composer->getInstallationManager()->addInstaller(new SymfonyPackInstaller($io));
+
         $this->composer = $composer;
         $this->io = $io;
         $this->config = $composer->getConfig();
-        $this->options = $this->initOptions();
-
-        // if Flex is being upgraded, the original operations from the original Flex
-        // instance are stored in the static property, so we can reuse them now.
-        if (property_exists(self::class, 'storedOperations') && self::$storedOperations) {
-            $this->operations = self::$storedOperations;
-            self::$storedOperations = [];
-        }
-
-        $symfonyRequire = preg_replace('/\.x$/', '.x-dev', getenv('SYMFONY_REQUIRE') ?: ($composer->getPackage()->getExtra()['symfony']['require'] ?? ''));
-
-        if ($composer2 = version_compare('2.0.0', PluginInterface::PLUGIN_API_VERSION, '<=')) {
-            $rfs = Factory::createHttpDownloader($this->io, $this->config);
-
-            $this->downloader = $downloader = new Downloader($composer, $io, $rfs);
-
-            if ($symfonyRequire) {
-                $this->filter = new PackageFilter($io, $symfonyRequire, $this->downloader);
-            }
-
-            $setRepositories = null;
-        } else {
-            $rfs = Factory::createRemoteFilesystem($this->io, $this->config);
-            $this->rfs = $rfs = new ParallelDownloader($this->io, $this->config, $rfs->getOptions(), $rfs->isTlsDisabled());
-
-            $this->downloader = $downloader = new Downloader($composer, $io, $this->rfs);
-
-            $rootPackage = $composer->getPackage();
-            $manager = RepositoryFactory::manager($this->io, $this->config, $composer->getEventDispatcher(), $this->rfs);
-            $setRepositories = \Closure::bind(function (RepositoryManager $manager) use (&$symfonyRequire, $rootPackage, $downloader) {
-                $manager->repositoryClasses = $this->repositoryClasses;
-                $manager->setRepositoryClass('composer', TruncatedComposerRepository::class);
-                $manager->repositories = $this->repositories;
-                $i = 0;
-                foreach (RepositoryFactory::defaultRepos(null, $this->config, $manager) as $repo) {
-                    $manager->repositories[$i++] = $repo;
-                    if ($repo instanceof TruncatedComposerRepository && $symfonyRequire) {
-                        $repo->setSymfonyRequire($symfonyRequire, $rootPackage, $downloader, $this->io);
-                    }
-                }
-                $manager->setLocalRepository($this->getLocalRepository());
-            }, $composer->getRepositoryManager(), RepositoryManager::class);
-
-            $setRepositories($manager);
-            $composer->setRepositoryManager($manager);
-        }
 
         $composerFile = Factory::getComposerFile();
         $composerLock = 'json' === pathinfo($composerFile, \PATHINFO_EXTENSION) ? substr($composerFile, 0, -4).'lock' : $composerFile.'.lock';
         $symfonyLock = str_replace('composer', 'symfony', basename($composerLock));
 
-        $this->configurator = new Configurator($composer, $io, $this->options);
         $this->lock = new Lock(getenv('SYMFONY_LOCKFILE') ?: \dirname($composerLock).'/'.(basename($composerLock) !== $symfonyLock ? $symfonyLock : 'symfony.lock'));
+        $this->options = $this->initOptions();
+
+        // if Flex is being upgraded, the original operations from the original Flex
+        // instance are stored in the static property, so we can reuse them now.
+        if (property_exists(Flex::class, 'storedOperations') && Flex::$storedOperations) {
+            $this->operations = Flex::$storedOperations;
+            Flex::$storedOperations = [];
+        }
+
+        $rfs = $composer->getLoop()->getHttpDownloader();
+        $this->downloader = $downloader = new Downloader($composer, $io, $rfs);
+        $this->configurator = new Configurator($composer, $io, $this->options);
 
         $disable = true;
         foreach (array_merge($composer->getPackage()->getRequires() ?? [], $composer->getPackage()->getDevRequires() ?? []) as $link) {
@@ -193,21 +141,6 @@ class Flex implements PluginInterface, EventSubscriberInterface
         }
         if ($disable) {
             $downloader->disable();
-        }
-
-        $populateRepoCacheDir = !$composer2 && __CLASS__ === self::class;
-        if (!$composer2 && $composer->getPluginManager()) {
-            foreach ($composer->getPluginManager()->getPlugins() as $plugin) {
-                if (0 === strpos(\get_class($plugin), 'Hirak\Prestissimo\Plugin')) {
-                    if (method_exists($rfs, 'getRemoteContents')) {
-                        $plugin->disable();
-                    } else {
-                        $this->cacheDirPopulated = true;
-                    }
-                    $populateRepoCacheDir = false;
-                    break;
-                }
-            }
         }
 
         $backtrace = $this->configureInstaller();
@@ -228,12 +161,6 @@ class Flex implements PluginInterface, EventSubscriberInterface
 
             $resolver = new PackageResolver($this->downloader);
 
-            if (version_compare('1.1.0', PluginInterface::PLUGIN_API_VERSION, '>')) {
-                $note = $app->has('self-update') ? sprintf('`php %s self-update`', $_SERVER['argv'][0]) : 'https://getcomposer.org/';
-                $io->writeError('<warning>Some Symfony Flex features may not work as expected: your version of Composer is too old</>');
-                $io->writeError(sprintf('<warning>Please upgrade using %s</>', $note));
-            }
-
             try {
                 $command = $input->getFirstArgument();
                 $command = $command ? $app->find($command)->getName() : null;
@@ -241,65 +168,41 @@ class Flex implements PluginInterface, EventSubscriberInterface
             }
 
             if ('create-project' === $command) {
-                // detect Composer >=1.7 (using the Composer::VERSION constant doesn't work with snapshot builds)
-                if (class_exists(Comparer::class)) {
-                    if ($input->hasOption('remove-vcs')) {
-                        $input->setOption('remove-vcs', true);
-                    }
-                } else {
-                    $input->setInteractive(false);
+                if ($input->hasOption('remove-vcs')) {
+                    $input->setOption('remove-vcs', true);
                 }
-                $populateRepoCacheDir = $populateRepoCacheDir && !$input->hasOption('remove-vcs');
             } elseif ('update' === $command) {
                 $this->displayThanksReminder = 1;
             } elseif ('outdated' === $command) {
                 $symfonyRequire = null;
-                if ($setRepositories) {
-                    $setRepositories($manager);
-                }
             }
 
             if (isset(self::$aliasResolveCommands[$command])) {
                 if ($input->hasArgument('packages')) {
                     $input->setArgument('packages', $resolver->resolve($input->getArgument('packages'), self::$aliasResolveCommands[$command]));
                 }
-
-                if (version_compare('2.0.0', PluginInterface::PLUGIN_API_VERSION, '>') && $input->hasOption('no-suggest')) {
-                    $input->setOption('no-suggest', true);
-                }
             }
 
-            if (!$composer2) {
-                if ($input->hasParameterOption('--no-progress', true)) {
-                    $this->progress = false;
-                }
-
-                if ($input->hasParameterOption('--dry-run', true)) {
-                    $this->dryRun = true;
-                }
+            if (class_exists(BaseConfigCommand::class)) {
+                // composer 2.9+
+                $_SERVER['COMPOSER_PREFER_DEV_OVER_PRERELEASE'] = '1';
+            } else {
+                $this->ignorePreleases = $input->hasParameterOption('--prefer-lowest', true) && $input->hasParameterOption('--prefer-stable', true);
             }
 
-            if ($input->hasParameterOption('--prefer-lowest', true)) {
-                // When prefer-lowest is set and no stable version has been released,
-                // we consider "dev" more stable than "alpha", "beta" or "RC". This
-                // allows testing lowest versions with potential fixes applied.
-                BasePackage::$stabilities['dev'] = 1 + BasePackage::STABILITY_STABLE;
-            }
-
-            if ($populateRepoCacheDir && isset(self::$repoReadingCommands[$command]) && ('install' !== $command || (file_exists($composerFile = Factory::getComposerFile()) && !file_exists(substr($composerFile, 0, -4).'lock')))) {
-                $this->populateRepoCacheDir();
-            }
-
-            $app->add(new Command\UnpackCommand($resolver));
-            $app->add(new Command\RecipesCommand($this, $this->lock, $rfs));
-            $app->add(new Command\InstallRecipesCommand($this, $this->options->get('root-dir'), $this->options->get('runtime')['dotenv_path'] ?? '.env'));
-            $app->add(new Command\UpdateRecipesCommand($this, $this->downloader, $rfs, $this->configurator, $this->options->get('root-dir')));
-            if (class_exists(Command\GenerateIdCommand::class)) {
-                $app->add(new Command\GenerateIdCommand(null));
-            }
-            $app->add(new Command\DumpEnvCommand($this->config, $this->options));
+            $addCommand = 'add'.(method_exists($app, 'addCommand') ? 'Command' : '');
+            $app->$addCommand(new Command\RecipesCommand($this, $this->lock, $rfs));
+            $app->$addCommand(new Command\InstallRecipesCommand($this, $this->options->get('root-dir'), $this->options->get('runtime')['dotenv_path'] ?? '.env'));
+            $app->$addCommand(new Command\UpdateRecipesCommand($this, $this->downloader, $rfs, $this->configurator, $this->options->get('root-dir')));
+            $app->$addCommand(new Command\DumpEnvCommand($this->config, $this->options));
 
             break;
+        }
+
+        $symfonyRequire = preg_replace('/\.x$/', '.x-dev', getenv('SYMFONY_REQUIRE') ?: ($composer->getPackage()->getExtra()['symfony']['require'] ?? ''));
+
+        if ($symfonyRequire || $this->ignorePreleases) {
+            $this->filter = new PackageFilter($io, $symfonyRequire, $this->downloader, $this->ignorePreleases);
         }
     }
 
@@ -308,8 +211,9 @@ class Flex implements PluginInterface, EventSubscriberInterface
      */
     public function deactivate(Composer $composer, IOInterface $io)
     {
-        // store operations in case Flex is being upgraded
-        self::$storedOperations = $this->operations;
+        // Using `Flex::` instead of `self::` to avoid issues when
+        // composer renames plugin classes when upgrading them
+        Flex::$storedOperations = $this->operations;
         self::$activated = false;
     }
 
@@ -319,14 +223,6 @@ class Flex implements PluginInterface, EventSubscriberInterface
         foreach ($backtrace as $trace) {
             if (isset($trace['object']) && $trace['object'] instanceof Installer) {
                 $this->installer = $trace['object']->setSuggestedPackagesReporter(new SuggestedPackagesReporter(new NullIO()));
-
-                $updateAllowList = \Closure::bind(function () {
-                    return $this->updateWhitelist ?? $this->updateAllowList ?? null;
-                }, $this->installer, $this->installer)();
-
-                if (['php' => 0] === $updateAllowList) {
-                    $this->dryRun = true; // prevent recipes from being uninstalled when removing a pack
-                }
             }
 
             if (isset($trace['object']) && $trace['object'] instanceof GlobalCommand) {
@@ -352,7 +248,6 @@ class Flex implements PluginInterface, EventSubscriberInterface
         $file = Factory::getComposerFile();
         $contents = file_get_contents($file);
         $manipulator = new JsonManipulator($contents);
-        $json = JsonFile::parseJson($contents);
 
         // new projects are most of the time proprietary
         $manipulator->addMainKey('license', 'proprietary');
@@ -449,7 +344,7 @@ class Flex implements PluginInterface, EventSubscriberInterface
 
         file_put_contents($file, $manipulator->getContents());
 
-        $this->reinstall($event, true);
+        $this->reinstall($event);
     }
 
     public function install(Event $event)
@@ -458,7 +353,7 @@ class Flex implements PluginInterface, EventSubscriberInterface
         $runtime = $this->options->get('runtime');
         $dotenvPath = $rootDir.'/'.($runtime['dotenv_path'] ?? '.env');
 
-        if (!file_exists($dotenvPath) && !file_exists($dotenvPath.'.local') && file_exists($dotenvPath.'.dist') && false === strpos(file_get_contents($dotenvPath.'.dist'), '.env.local')) {
+        if (!file_exists($dotenvPath) && !file_exists($dotenvPath.'.local') && file_exists($dotenvPath.'.dist') && !str_contains(file_get_contents($dotenvPath.'.dist'), '.env.local')) {
             copy($dotenvPath.'.dist', $dotenvPath);
         }
 
@@ -472,7 +367,7 @@ class Flex implements PluginInterface, EventSubscriberInterface
 
             $this->io->writeError('');
             $this->io->writeError('What about running <comment>composer global require symfony/thanks && composer thanks</> now?');
-            $this->io->writeError(sprintf('This will spread some %s by sending a %s to the GitHub repositories of your fellow package maintainers.', $love, $star));
+            $this->io->writeError(\sprintf('This will spread some %s by sending a %s to the GitHub repositories of your fellow package maintainers.', $love, $star));
         }
 
         $this->io->writeError('');
@@ -490,7 +385,7 @@ class Flex implements PluginInterface, EventSubscriberInterface
             return;
         }
 
-        $this->io->writeError(sprintf('<info>Symfony operations: %d recipe%s (%s)</>', \count($recipes), \count($recipes) > 1 ? 's' : '', $this->downloader->getSessionId()));
+        $this->io->writeError(\sprintf('<info>Symfony operations: %d recipe%s (%s)</>', \count($recipes), \count($recipes) > 1 ? 's' : '', $this->downloader->getSessionId()));
         $installContribs = $this->composer->getPackage()->getExtra()['symfony']['allow-contrib'] ?? false;
         $manifest = null;
         $originalComposerJsonHash = $this->getComposerJsonHash();
@@ -498,8 +393,8 @@ class Flex implements PluginInterface, EventSubscriberInterface
         foreach ($recipes as $recipe) {
             if ('install' === $recipe->getJob() && !$installContribs && $recipe->isContrib()) {
                 $warning = $this->io->isInteractive() ? 'WARNING' : 'IGNORING';
-                $this->io->writeError(sprintf('  - <warning> %s </> %s', $warning, $this->formatOrigin($recipe)));
-                $question = sprintf('    The recipe for this package comes from the "contrib" repository, which is open to community contributions.
+                $this->io->writeError(\sprintf('  - <warning> %s </> %s', $warning, $this->formatOrigin($recipe)));
+                $question = \sprintf('    The recipe for this package comes from the "contrib" repository, which is open to community contributions.
     Review the recipe at %s
 
     Do you want to execute this recipe?
@@ -542,13 +437,14 @@ class Flex implements PluginInterface, EventSubscriberInterface
             switch ($recipe->getJob()) {
                 case 'install':
                     $postInstallRecipes[] = $recipe;
-                    $this->io->writeError(sprintf('  - Configuring %s', $this->formatOrigin($recipe)));
+                    $this->io->writeError(\sprintf('  - Configuring %s', $this->formatOrigin($recipe)));
                     $this->configurator->install($recipe, $this->lock, [
                         'force' => $event instanceof UpdateEvent && $event->force(),
+                        'assumeYesForPrompts' => $event instanceof UpdateEvent && $event->assumeYesForPrompts(),
                     ]);
                     $manifest = $recipe->getManifest();
                     if (isset($manifest['post-install-output'])) {
-                        $this->postInstallOutput[] = sprintf('<bg=yellow;fg=white> %s </> instructions:', $recipe->getName());
+                        $this->postInstallOutput[] = \sprintf('<bg=yellow;fg=white> %s </> instructions:', $recipe->getName());
                         $this->postInstallOutput[] = '';
                         foreach ($manifest['post-install-output'] as $line) {
                             $this->postInstallOutput[] = $this->options->expandTargetDir($line);
@@ -559,7 +455,7 @@ class Flex implements PluginInterface, EventSubscriberInterface
                 case 'update':
                     break;
                 case 'uninstall':
-                    $this->io->writeError(sprintf('  - Unconfiguring %s', $this->formatOrigin($recipe)));
+                    $this->io->writeError(\sprintf('  - Unconfiguring %s', $this->formatOrigin($recipe)));
                     $this->configurator->unconfigure($recipe, $this->lock);
                     break;
             }
@@ -569,6 +465,7 @@ class Flex implements PluginInterface, EventSubscriberInterface
             foreach ($postInstallRecipes as $recipe) {
                 $this->configurator->postInstall($recipe, $this->lock, [
                     'force' => $event instanceof UpdateEvent && $event->force(),
+                    'assumeYesForPrompts' => $event instanceof UpdateEvent && $event->assumeYesForPrompts(),
                 ]);
             }
         }
@@ -600,6 +497,18 @@ class Flex implements PluginInterface, EventSubscriberInterface
 
     private function synchronizePackageJson(string $rootDir)
     {
+        if (!($this->composer->getPackage()->getExtra()['symfony/flex']['synchronize_package_json'] ?? true)) {
+            $this->io->writeError('<info>Skip synchronizing package.json with PHP packages</>');
+
+            return;
+        }
+
+        if (!$this->downloader->isEnabled()) {
+            $this->io->writeError('<warning>Synchronizing package.json is disabled: "symfony/flex" not found in the root composer.json</>');
+
+            return;
+        }
+
         $rootDir = realpath($rootDir);
         $vendorDir = trim((new Filesystem())->makePathRelative($this->config->get('vendor-dir'), $rootDir), '/');
 
@@ -628,7 +537,7 @@ class Flex implements PluginInterface, EventSubscriberInterface
     public function enableThanksReminder()
     {
         if (1 === $this->displayThanksReminder) {
-            $this->displayThanksReminder = !class_exists(Thanks::class, false) && version_compare('1.1.0', PluginInterface::PLUGIN_API_VERSION, '<=') ? 2 : 0;
+            $this->displayThanksReminder = !class_exists(Thanks::class, false) ? 2 : 0;
         }
     }
 
@@ -647,124 +556,6 @@ class Flex implements PluginInterface, EventSubscriberInterface
 
         $this->io->write($this->postInstallOutput);
         $this->postInstallOutput = [];
-    }
-
-    public function populateProvidersCacheDir(InstallerEvent $event)
-    {
-        $listed = [];
-        $packages = [];
-        $pool = $event->getPool();
-        $pool = \Closure::bind(function () {
-            foreach ($this->providerRepos as $k => $repo) {
-                $this->providerRepos[$k] = new class($repo) extends BaseComposerRepository {
-                    private $repo;
-
-                    public function __construct($repo)
-                    {
-                        $this->repo = $repo;
-                    }
-
-                    public function whatProvides(Pool $pool, $name, $bypassFilters = false)
-                    {
-                        $packages = [];
-                        foreach ($this->repo->whatProvides($pool, $name, $bypassFilters) as $k => $p) {
-                            $packages[$k] = clone $p;
-                        }
-
-                        return $packages;
-                    }
-                };
-            }
-
-            return $this;
-        }, clone $pool, $pool)();
-
-        foreach ($event->getRequest()->getJobs() as $job) {
-            if ('install' !== $job['cmd'] || false === strpos($job['packageName'], '/')) {
-                continue;
-            }
-
-            $listed[$job['packageName']] = true;
-            $packages[] = [$job['packageName'], $job['constraint']];
-        }
-
-        $loadExtraRepos = !(new \ReflectionMethod(Pool::class, 'match'))->isPublic(); // Detect Composer < 1.7.3
-        $this->rfs->download($packages, function ($packageName, $constraint) use (&$listed, &$packages, $pool, $loadExtraRepos) {
-            foreach ($pool->whatProvides($packageName, $constraint, true) as $package) {
-                $links = $loadExtraRepos ? array_merge($package->getRequires(), $package->getConflicts(), $package->getReplaces()) : $package->getRequires();
-                foreach ($links as $link) {
-                    if (isset($listed[$link->getTarget()]) || false === strpos($link->getTarget(), '/')) {
-                        continue;
-                    }
-                    $listed[$link->getTarget()] = true;
-                    $packages[] = [$link->getTarget(), $link->getConstraint()];
-                }
-            }
-        });
-    }
-
-    public function populateFilesCacheDir(InstallerEvent $event)
-    {
-        if ($this->cacheDirPopulated || $this->dryRun) {
-            return;
-        }
-        $this->cacheDirPopulated = true;
-
-        $downloads = [];
-        $cacheDir = rtrim($this->config->get('cache-files-dir'), '\/').\DIRECTORY_SEPARATOR;
-        $getCacheKey = function (PackageInterface $package, $processedUrl) {
-            return $this->getCacheKey($package, $processedUrl);
-        };
-        $getCacheKey = \Closure::bind($getCacheKey, new FileDownloader($this->io, $this->config), FileDownloader::class);
-
-        foreach ($event->getOperations() as $op) {
-            if ('install' === $op->getJobType()) {
-                $package = $op->getPackage();
-            } elseif ('update' === $op->getJobType()) {
-                $package = $op->getTargetPackage();
-            } else {
-                continue;
-            }
-
-            if (!$fileUrl = $package->getDistUrl()) {
-                continue;
-            }
-
-            if ($package->getDistMirrors()) {
-                $fileUrl = current($package->getDistUrls());
-            }
-
-            if (!preg_match('/^https?:/', $fileUrl) || !$originUrl = parse_url($fileUrl, \PHP_URL_HOST)) {
-                continue;
-            }
-
-            if (file_exists($file = $cacheDir.$getCacheKey($package, $fileUrl))) {
-                continue;
-            }
-
-            @mkdir(\dirname($file), 0775, true);
-
-            if (!is_dir(\dirname($file))) {
-                continue;
-            }
-
-            if (preg_match('#^https://github\.com/#', $package->getSourceUrl()) && preg_match('#^https://api\.github\.com/repos(/[^/]++/[^/]++/)zipball(.++)$#', $fileUrl, $m)) {
-                $fileUrl = sprintf('https://codeload.github.com%slegacy.zip%s', $m[1], $m[2]);
-            }
-
-            $downloads[] = [$originUrl, $fileUrl, [], $file, false];
-        }
-
-        if (1 < \count($downloads)) {
-            $this->rfs->download($downloads, [$this->rfs, 'get'], false, $this->progress);
-        }
-    }
-
-    public function onFileDownload(PreFileDownloadEvent $event)
-    {
-        if ($event->getRemoteFilesystem() !== $this->rfs) {
-            $event->setRemoteFilesystem($this->rfs->setNextOptions($event->getRemoteFilesystem()->getOptions()));
-        }
     }
 
     /**
@@ -802,7 +593,7 @@ class Flex implements PluginInterface, EventSubscriberInterface
             $job = method_exists($operation, 'getOperationType') ? $operation->getOperationType() : $operation->getJobType();
 
             if (!isset($manifests[$name]) && isset($data['conflicts'][$name])) {
-                $this->io->writeError(sprintf('  - Skipping recipe for %s: all versions of the recipe conflict with your package versions.', $name));
+                $this->io->writeError(\sprintf('  - Skipping recipe for %s: all versions of the recipe conflict with your package versions.', $name));
                 continue;
             }
 
@@ -813,7 +604,7 @@ class Flex implements PluginInterface, EventSubscriberInterface
 
                 if (!isset($newManifests[$name])) {
                     // no older recipe found
-                    $this->io->writeError(sprintf('  - Skipping recipe for %s: all versions of the recipe conflict with your package versions.', $name));
+                    $this->io->writeError(\sprintf('  - Skipping recipe for %s: all versions of the recipe conflict with your package versions.', $name));
 
                     continue 2;
                 }
@@ -862,7 +653,7 @@ class Flex implements PluginInterface, EventSubscriberInterface
 
                 if ($bundles) {
                     $manifest = [
-                        'origin' => sprintf('%s:%s@auto-generated recipe', $name, $package->getPrettyVersion()),
+                        'origin' => \sprintf('%s:%s@auto-generated recipe', $name, $package->getPrettyVersion()),
                         'manifest' => ['bundles' => $bundles],
                     ];
                     $recipes[$name] = new Recipe($package, $name, $job, $manifest);
@@ -918,7 +709,7 @@ class Flex implements PluginInterface, EventSubscriberInterface
             'runtime' => $extra['runtime'] ?? [],
         ], $extra);
 
-        return new Options($options, $this->io);
+        return new Options($options, $this->io, $this->lock);
     }
 
     private function formatOrigin(Recipe $recipe): string
@@ -935,12 +726,12 @@ class Flex implements PluginInterface, EventSubscriberInterface
             return $origin;
         }
 
-        return sprintf('<info>%s</> (<comment>>=%s</>): From %s', $matches[1], $matches[2], 'auto-generated recipe' === $matches[3] ? '<comment>'.$matches[3].'</>' : $matches[3]);
+        return \sprintf('<info>%s</> (<comment>>=%s</>): From %s', $matches[1], $matches[2], 'auto-generated recipe' === $matches[3] ? '<comment>'.$matches[3].'</>' : $matches[3]);
     }
 
     private function shouldRecordOperation(OperationInterface $operation, bool $isDevMode, ?Composer $composer = null): bool
     {
-        if ($this->dryRun || $this->reinstall) {
+        if ($this->reinstall) {
             return false;
         }
 
@@ -972,40 +763,12 @@ class Flex implements PluginInterface, EventSubscriberInterface
         return false;
     }
 
-    private function populateRepoCacheDir()
-    {
-        $repos = [];
-
-        foreach ($this->composer->getPackage()->getRepositories() as $name => $repo) {
-            if (!isset($repo['type']) || 'composer' !== $repo['type'] || !empty($repo['force-lazy-providers'])) {
-                continue;
-            }
-
-            if (!preg_match('#^http(s\??)?://#', $repo['url'])) {
-                continue;
-            }
-
-            $repo = new ComposerRepository($repo, $this->io, $this->config, null, $this->rfs);
-
-            $repos[] = [$repo];
-        }
-
-        $this->rfs->download($repos, function ($repo) {
-            ParallelDownloader::$cacheNext = true;
-            $repo->getProviderNames();
-        });
-    }
-
     private function updateComposerLock()
     {
         $lock = substr(Factory::getComposerFile(), 0, -4).'lock';
         $composerJson = file_get_contents(Factory::getComposerFile());
         $lockFile = new JsonFile($lock, null, $this->io);
-        if (version_compare('2.0.0', PluginInterface::PLUGIN_API_VERSION, '>')) {
-            $locker = new Locker($this->io, $lockFile, $this->composer->getRepositoryManager(), $this->composer->getInstallationManager(), $composerJson);
-        } else {
-            $locker = new Locker($this->io, $lockFile, $this->composer->getInstallationManager(), $composerJson);
-        }
+        $locker = new Locker($this->io, $lockFile, $this->composer->getInstallationManager(), $composerJson);
         $lockData = $locker->getLockData();
         $lockData['content-hash'] = Locker::getContentHash($composerJson);
         $lockFile->write($lockData);
@@ -1024,24 +787,21 @@ class Flex implements PluginInterface, EventSubscriberInterface
             }
         }
 
-        $unpacker = new Unpacker($this->composer, new PackageResolver($this->downloader), $this->dryRun);
+        $unpacker = new Unpacker($this->composer, new PackageResolver($this->downloader), false); // 3rd arg to ease upgrading from flex <= 2.6.0
         $result = $unpacker->unpack($unpackOp);
 
         if (!$result->getUnpacked()) {
             return;
         }
 
-        $this->io->writeError('<info>Unpacking Symfony packs</>');
         foreach ($result->getUnpacked() as $pkg) {
-            $this->io->writeError(sprintf('  - Unpacked <info>%s</>', $pkg->getName()));
+            $this->io->writeError(\sprintf('  - Unpacked <info>%s</>', $pkg->getName()));
         }
 
         $unpacker->updateLock($result, $this->io);
-
-        $this->reinstall($event, false);
     }
 
-    private function reinstall(Event $event, bool $update)
+    private function reinstall(Event $event)
     {
         $this->reinstall = false;
         $event->stopPropagation();
@@ -1049,6 +809,7 @@ class Flex implements PluginInterface, EventSubscriberInterface
         $ed = $this->composer->getEventDispatcher();
         $disableScripts = !method_exists($ed, 'setRunScripts') || !((array) $ed)["\0*\0runScripts"];
         $composer = Factory::create($this->io, null, false, $disableScripts);
+        $composer->getInstallationManager()->addInstaller(new SymfonyPackInstaller($this->io));
 
         $installer = clone $this->installer;
         $installer->__construct(
@@ -1066,16 +827,6 @@ class Flex implements PluginInterface, EventSubscriberInterface
             $installer->setPlatformRequirementFilter(((array) $this->installer)["\0*\0platformRequirementFilter"]);
         }
 
-        if (!$update && method_exists($installer, 'setUpdateAllowList')) {
-            $installer->setUpdateAllowList(['php']);
-        } elseif (!$update) {
-            $installer->setUpdateWhiteList(['php']);
-        }
-
-        if (method_exists($installer, 'setSkipSuggest')) {
-            $installer->setSkipSuggest(true);
-        }
-
         $installer->run();
 
         $this->io->write($this->postInstallOutput);
@@ -1089,32 +840,17 @@ class Flex implements PluginInterface, EventSubscriberInterface
         }
 
         $events = [
+            PackageEvents::POST_PACKAGE_UPDATE => 'enableThanksReminder',
+            PackageEvents::POST_PACKAGE_INSTALL => 'recordFlexInstall',
             PackageEvents::POST_PACKAGE_UNINSTALL => 'record',
+            InstallerEvents::PRE_OPERATIONS_EXEC => 'recordOperations',
+            PluginEvents::PRE_POOL_CREATE => 'truncatePackages',
             ScriptEvents::POST_CREATE_PROJECT_CMD => 'configureProject',
             ScriptEvents::POST_INSTALL_CMD => 'install',
             ScriptEvents::PRE_UPDATE_CMD => 'configureInstaller',
             ScriptEvents::POST_UPDATE_CMD => 'update',
             'auto-scripts' => 'executeAutoScripts',
         ];
-
-        if (version_compare('2.0.0', PluginInterface::PLUGIN_API_VERSION, '>')) {
-            $events += [
-                PackageEvents::POST_PACKAGE_INSTALL => [['recordFlexInstall'], ['record']],
-                PackageEvents::POST_PACKAGE_UPDATE => [['record'], ['enableThanksReminder']],
-                InstallerEvents::PRE_DEPENDENCIES_SOLVING => [['populateProvidersCacheDir', \PHP_INT_MAX]],
-                InstallerEvents::POST_DEPENDENCIES_SOLVING => [['populateFilesCacheDir', \PHP_INT_MAX]],
-                PackageEvents::PRE_PACKAGE_INSTALL => [['populateFilesCacheDir', ~\PHP_INT_MAX]],
-                PackageEvents::PRE_PACKAGE_UPDATE => [['populateFilesCacheDir', ~\PHP_INT_MAX]],
-                PluginEvents::PRE_FILE_DOWNLOAD => 'onFileDownload',
-            ];
-        } else {
-            $events += [
-                PackageEvents::POST_PACKAGE_UPDATE => 'enableThanksReminder',
-                PackageEvents::POST_PACKAGE_INSTALL => 'recordFlexInstall',
-                InstallerEvents::PRE_OPERATIONS_EXEC => 'recordOperations',
-                PluginEvents::PRE_POOL_CREATE => 'truncatePackages',
-            ];
-        }
 
         return $events;
     }
@@ -1125,7 +861,7 @@ class Flex implements PluginInterface, EventSubscriberInterface
             return false;
         }
 
-        $lockedRepository = $this->composer->getLocker()->getLockedRepository();
+        $lockedRepository = $this->composer->getLocker()->getLockedRepository(true);
 
         foreach ($recipeData['manifest']['conflict'] as $conflictingPackage => $constraint) {
             if ($lockedRepository->findPackage($conflictingPackage, $constraint)) {

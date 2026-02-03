@@ -11,13 +11,14 @@
 
 namespace Symfony\Flex;
 
-use Composer\Cache as ComposerCache;
+use Composer\Cache;
 use Composer\Composer;
 use Composer\DependencyResolver\Operation\OperationInterface;
 use Composer\DependencyResolver\Operation\UninstallOperation;
 use Composer\DependencyResolver\Operation\UpdateOperation;
 use Composer\IO\IOInterface;
 use Composer\Json\JsonFile;
+use Composer\Package\BasePackage;
 use Composer\Util\Http\Response as ComposerResponse;
 use Composer\Util\HttpDownloader;
 use Composer\Util\Loop;
@@ -41,8 +42,7 @@ class Downloader
     private $sess;
     private $cache;
 
-    /** @var HttpDownloader|ParallelDownloader */
-    private $rfs;
+    private HttpDownloader $rfs;
     private $degradedMode = false;
     private $endpoints;
     private $index;
@@ -52,7 +52,7 @@ class Downloader
     private $enabled = true;
     private $composer;
 
-    public function __construct(Composer $composer, IOInterface $io, $rfs)
+    public function __construct(Composer $composer, IOInterface $io, HttpDownloader $rfs)
     {
         if (getenv('SYMFONY_CAFILE')) {
             $this->caFile = getenv('SYMFONY_CAFILE');
@@ -60,9 +60,9 @@ class Downloader
 
         if (null === $endpoint = $composer->getPackage()->getExtra()['symfony']['endpoint'] ?? null) {
             $this->endpoints = self::DEFAULT_ENDPOINTS;
-        } elseif (\is_array($endpoint) || false !== strpos($endpoint, '.json') || 'flex://defaults' === $endpoint) {
+        } elseif (\is_array($endpoint) || str_contains($endpoint, '.json') || 'flex://defaults' === $endpoint) {
             $this->endpoints = array_values((array) $endpoint);
-            if (\is_string($endpoint) && false !== strpos($endpoint, '.json')) {
+            if (\is_string($endpoint) && str_contains($endpoint, '.json')) {
                 $this->endpoints[] = 'flex://defaults';
             }
         } else {
@@ -71,7 +71,7 @@ class Downloader
 
         if (false === $endpoint = getenv('SYMFONY_ENDPOINT')) {
             // no-op
-        } elseif (false !== strpos($endpoint, '.json') || 'flex://defaults' === $endpoint) {
+        } elseif (str_contains($endpoint, '.json') || 'flex://defaults' === $endpoint) {
             $this->endpoints ?? $this->endpoints = self::DEFAULT_ENDPOINTS;
             array_unshift($this->endpoints, $endpoint);
             $this->legacyEndpoint = null;
@@ -91,7 +91,7 @@ class Downloader
         $this->io = $io;
         $config = $composer->getConfig();
         $this->rfs = $rfs;
-        $this->cache = new ComposerCache($io, $config->get('cache-repo-dir').'/flex');
+        $this->cache = new Cache($io, $config->get('cache-repo-dir').'/flex');
         $this->sess = bin2hex(random_bytes(16));
         $this->composer = $composer;
     }
@@ -99,11 +99,6 @@ class Downloader
     public function getSessionId(): string
     {
         return $this->sess;
-    }
-
-    public function setFlexId(?string $id = null)
-    {
-        // No-op to support downgrading to v1.12.x
     }
 
     public function isEnabled()
@@ -140,7 +135,7 @@ class Downloader
         $this->initialize();
 
         if ($this->conflicts) {
-            $lockedRepository = $this->composer->getLocker()->getLockedRepository();
+            $lockedRepository = $this->composer->getLocker()->getLockedRepository(true);
             foreach ($this->conflicts as $conflicts) {
                 foreach ($conflicts as $package => $versions) {
                     foreach ($versions as $version => $conflicts) {
@@ -179,20 +174,20 @@ class Downloader
             if ($operation instanceof InformationOperation && $operation->getVersion()) {
                 $version = $operation->getVersion();
             }
-            if (0 === strpos($version, 'dev-') && isset($package->getExtra()['branch-alias'])) {
+            if (str_starts_with($version, 'dev-') && isset($package->getExtra()['branch-alias'])) {
                 $branchAliases = $package->getExtra()['branch-alias'];
                 if (
-                    (isset($branchAliases[$version]) && $alias = $branchAliases[$version]) ||
-                    (isset($branchAliases['dev-main']) && $alias = $branchAliases['dev-main']) ||
-                    (isset($branchAliases['dev-trunk']) && $alias = $branchAliases['dev-trunk']) ||
-                    (isset($branchAliases['dev-develop']) && $alias = $branchAliases['dev-develop']) ||
-                    (isset($branchAliases['dev-default']) && $alias = $branchAliases['dev-default']) ||
-                    (isset($branchAliases['dev-latest']) && $alias = $branchAliases['dev-latest']) ||
-                    (isset($branchAliases['dev-next']) && $alias = $branchAliases['dev-next']) ||
-                    (isset($branchAliases['dev-current']) && $alias = $branchAliases['dev-current']) ||
-                    (isset($branchAliases['dev-support']) && $alias = $branchAliases['dev-support']) ||
-                    (isset($branchAliases['dev-tip']) && $alias = $branchAliases['dev-tip']) ||
-                    (isset($branchAliases['dev-master']) && $alias = $branchAliases['dev-master'])
+                    (isset($branchAliases[$version]) && $alias = $branchAliases[$version])
+                    || (isset($branchAliases['dev-main']) && $alias = $branchAliases['dev-main'])
+                    || (isset($branchAliases['dev-trunk']) && $alias = $branchAliases['dev-trunk'])
+                    || (isset($branchAliases['dev-develop']) && $alias = $branchAliases['dev-develop'])
+                    || (isset($branchAliases['dev-default']) && $alias = $branchAliases['dev-default'])
+                    || (isset($branchAliases['dev-latest']) && $alias = $branchAliases['dev-latest'])
+                    || (isset($branchAliases['dev-next']) && $alias = $branchAliases['dev-next'])
+                    || (isset($branchAliases['dev-current']) && $alias = $branchAliases['dev-current'])
+                    || (isset($branchAliases['dev-support']) && $alias = $branchAliases['dev-support'])
+                    || (isset($branchAliases['dev-tip']) && $alias = $branchAliases['dev-tip'])
+                    || (isset($branchAliases['dev-master']) && $alias = $branchAliases['dev-master'])
                 ) {
                     $version = $alias;
                 }
@@ -250,7 +245,7 @@ class Downloader
 
             // FIXME: Multi name with getNames()
             $name = str_replace('/', ',', $package->getName());
-            $path = sprintf('%s,%s%s', $name, $o, $version);
+            $path = \sprintf('%s,%s%s', $name, $o, $version);
             if ($date = $package->getReleaseDate()) {
                 $path .= ','.$date->format('U');
             }
@@ -322,6 +317,30 @@ class Downloader
         unset($this->index[$packageName][$version]);
     }
 
+    public function getSymfonyPacks(array $packages)
+    {
+        $packs = [];
+        foreach ($this->composer->getRepositoryManager()->getRepositories() as $repo) {
+            if (!$packages) {
+                break;
+            }
+
+            $result = $repo->loadPackages($packages, BasePackage::$stabilities, []);
+
+            foreach ($result['packages'] ?? [] as $package) {
+                if (!isset($packages[$package->getName()])) {
+                    continue;
+                }
+                if ('symfony-pack' === $package->getType()) {
+                    $packs[$package->getName()] = true;
+                }
+                unset($packages[$package->getName()]);
+            }
+        }
+
+        return array_keys($packs);
+    }
+
     /**
      * Fetches and decodes JSON HTTP response bodies.
      */
@@ -360,37 +379,19 @@ class Downloader
             $options[$url] = $this->getOptions($headers);
         }
 
-        if ($this->rfs instanceof HttpDownloader) {
-            $loop = new Loop($this->rfs);
-            $jobs = [];
-            foreach ($urls as $url) {
-                $jobs[] = $this->rfs->add($url, $options[$url])->then(function (ComposerResponse $response) use ($url, &$responses) {
-                    if (200 === $response->getStatusCode()) {
-                        $cacheKey = self::generateCacheKey($url);
-                        $responses[$url] = $this->parseJson($response->getBody(), $url, $cacheKey, $response->getHeaders())->getBody();
-                    }
-                }, function (\Exception $e) use ($url, &$retries) {
-                    $retries[] = [$url, $e];
-                });
-            }
-            $loop->wait($jobs);
-        } else {
-            foreach ($urls as $i => $url) {
-                $urls[$i] = [$url];
-            }
-            $this->rfs->download($urls, function ($url) use ($options, &$responses, &$retries, &$error) {
-                try {
+        $loop = new Loop($this->rfs);
+        $jobs = [];
+        foreach ($urls as $url) {
+            $jobs[] = $this->rfs->add($url, $options[$url])->then(function (ComposerResponse $response) use ($url, &$responses) {
+                if (200 === $response->getStatusCode()) {
                     $cacheKey = self::generateCacheKey($url);
-                    $origin = method_exists($this->rfs, 'getOrigin') ? $this->rfs::getOrigin($url) : parse_url($url, \PHP_URL_HOST);
-                    $json = $this->rfs->getContents($origin, $url, false, $options[$url]);
-                    if (200 === $this->rfs->findStatusCode($this->rfs->getLastHeaders())) {
-                        $responses[$url] = $this->parseJson($json, $url, $cacheKey, $this->rfs->getLastHeaders())->getBody();
-                    }
-                } catch (\Exception $e) {
-                    $retries[] = [$url, $e];
+                    $responses[$url] = $this->parseJson($response->getBody(), $url, $cacheKey, $response->getHeaders())->getBody();
                 }
+            }, function (\Exception $e) use ($url, &$retries) {
+                $retries[] = [$url, $e];
             });
         }
+        $loop->wait($jobs);
 
         if (!$retries) {
             return $responses;

@@ -23,24 +23,20 @@ use Symfony\Component\Stopwatch\Stopwatch;
  */
 final class Driver extends AbstractDriverMiddleware
 {
-    private $debugDataHolder;
-    private $stopwatch;
-    private $connectionName;
-
-    public function __construct(DriverInterface $driver, DebugDataHolder $debugDataHolder, ?Stopwatch $stopwatch, string $connectionName)
-    {
+    public function __construct(
+        DriverInterface $driver,
+        private readonly DebugDataHolder $debugDataHolder,
+        private readonly ?Stopwatch $stopwatch,
+        private readonly string $connectionName,
+    ) {
         parent::__construct($driver);
-
-        $this->debugDataHolder = $debugDataHolder;
-        $this->stopwatch = $stopwatch;
-        $this->connectionName = $connectionName;
     }
 
     public function connect(array $params): ConnectionInterface
     {
         $connection = parent::connect($params);
 
-        if ('void' !== (string) (new \ReflectionMethod(DriverInterface\Connection::class, 'commit'))->getReturnType()) {
+        if ('void' !== (string) (new \ReflectionMethod(ConnectionInterface::class, 'commit'))->getReturnType()) {
             return new DBAL3\Connection(
                 $connection,
                 $this->debugDataHolder,

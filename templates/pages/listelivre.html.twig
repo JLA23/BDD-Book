@@ -54,25 +54,6 @@
                     </div>
                 </form>
                 
-                <!-- Zone de scan de code-barres -->
-                <div id="barcodeScannerContainer" class="mb-3" style="display: none;">
-                    <div class="card border-primary">
-                        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-2">
-                            <span><i class="fas fa-camera"></i> Scanner un code-barres ISBN</span>
-                            <button type="button" class="btn btn-sm btn-light" id="closeScannerBtn">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                        <div class="card-body p-0">
-                            <div id="barcodeReader" style="width: 100%;"></div>
-                            <div class="p-2">
-                                <p class="text-muted small mb-0">
-                                    <i class="fas fa-info-circle"></i> Positionnez le code-barres ISBN devant la caméra.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
                 
                 <div class="d-flex flex-wrap align-items-center mb-3">
                     <span class="mr-2 text-muted">Recherche actuelle :</span>
@@ -129,6 +110,25 @@
     {% include 'includes/tableauLivres.html.twig' with {'pagination' : pagination, 'images' : images, 'Listelivres' : Listelivres}%}
 {% endif %}
 
+    <!-- Overlay plein écran pour le scanner - HORS de tout conteneur -->
+    <div id="barcodeScannerOverlay">
+        <div class="scanner-header">
+            <span><i class="fas fa-barcode"></i> Scanner ISBN</span>
+            <button type="button" class="btn btn-light btn-sm" id="closeScannerBtn">
+                <i class="fas fa-times"></i> Fermer
+            </button>
+        </div>
+        <div id="barcodeReader"></div>
+        <div class="scanner-footer">
+            <div class="d-flex align-items-center justify-content-center mb-2">
+                <label class="mr-2 mb-0"><i class="fas fa-camera"></i> Caméra :</label>
+                <select id="cameraSelect" class="form-control form-control-sm" style="width: auto; max-width: 200px;">
+                    <option value="">Chargement...</option>
+                </select>
+            </div>
+            <p class="mb-0 small"><i class="fas fa-info-circle"></i> Positionnez le code-barres dans le cadre</p>
+        </div>
+    </div>
 {% endblock %}
 
 
@@ -142,6 +142,46 @@
                 border-bottom-right-radius: 0.25rem !important;
             }
         }
+        
+        #barcodeScannerOverlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            z-index: 999999;
+            flex-direction: column;
+        }
+        #barcodeScannerOverlay.active {
+            display: flex !important;
+        }
+        #barcodeScannerOverlay .scanner-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+        }
+        #barcodeScannerOverlay #barcodeReader {
+            flex: 1;
+            width: 100%;
+            background: #000;
+        }
+        #barcodeScannerOverlay .scanner-footer {
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 12px 15px;
+            text-align: center;
+        }
+        html.scanner-open,
+        html.scanner-open body {
+            overflow: hidden !important;
+            height: 100% !important;
+        }
     </style>
 {% endblock %}
 
@@ -149,5 +189,277 @@
     {{ parent() }}
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="{{ asset('js/image-modal.js') }}"></script>
-    <script src="{{ asset('js/barcode-scanner.js') }}"></script>
+    
+    <script>
+    $(document).ready(function() {
+        let html5QrCode = null;
+        let isScanning = false;
+        
+        // Vérifier si le contexte est sécurisé (HTTPS ou localhost)
+        function isSecureContext() {
+            return window.isSecureContext || 
+                   location.protocol === 'https:' || 
+                   location.hostname === 'localhost' || 
+                   location.hostname === '127.0.0.1';
+        }
+        
+        // Vérifier si la caméra est disponible
+        function checkCameraAvailable() {
+            return navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
+        }
+        
+        // Ouvrir le scanner en plein écran
+        $('#scanBarcodeBtn').click(function() {
+            // Afficher l'overlay plein écran
+            $('#barcodeScannerOverlay').addClass('active');
+            
+            // Empêcher le scroll
+            $('html').addClass('scanner-open');
+            
+            // Vérifier le contexte sécurisé
+            if (!isSecureContext()) {
+                showScannerError(
+                    "<strong>Connexion non sécurisée</strong><br>" +
+                    "Le scanner nécessite HTTPS."
+                );
+                return;
+            }
+            
+            // Vérifier si l'API caméra est disponible
+            if (!checkCameraAvailable()) {
+                showScannerError(
+                    "<strong>Caméra non disponible</strong><br>" +
+                    "Votre navigateur ne supporte pas la caméra."
+                );
+                return;
+            }
+            
+            // Demander la permission
+            requestCameraPermission();
+        });
+        
+        // Fermer le scanner
+        $('#closeScannerBtn').click(function() {
+            closeScanner();
+        });
+        
+        function closeScanner() {
+            stopScanner();
+            $('#barcodeScannerOverlay').removeClass('active');
+            $('html').removeClass('scanner-open');
+            $('#barcodeReader').html('');
+        }
+        
+        function requestCameraPermission() {
+            // Afficher un message de chargement
+            $('#barcodeReader').html(
+                '<div class="d-flex align-items-center justify-content-center h-100" style="color: white;">' +
+                '<div class="text-center">' +
+                '<i class="fas fa-spinner fa-spin fa-3x mb-3"></i>' +
+                '<p>Accès à la caméra...</p>' +
+                '</div></div>'
+            );
+            
+            // Demander la permission avec haute résolution pour les petits codes-barres
+            navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    facingMode: "environment",
+                    width: { ideal: 3840, min: 1920 },
+                    height: { ideal: 2160, min: 1080 },
+                    focusMode: "continuous"
+                } 
+            })
+            .then(function(stream) {
+                stream.getTracks().forEach(track => track.stop());
+                $('#barcodeReader').html('');
+                startScanner();
+            })
+            .catch(function(err) {
+                console.error("Erreur permission caméra:", err);
+                
+                let errorMessage = "";
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    errorMessage = "<strong>Permission refusée</strong><br>Autorisez l'accès à la caméra.";
+                } else if (err.name === 'NotFoundError') {
+                    errorMessage = "<strong>Aucune caméra</strong><br>Pas de caméra détectée.";
+                } else {
+                    errorMessage = "<strong>Erreur</strong><br>" + (err.message || "Erreur inconnue");
+                }
+                
+                showScannerError(errorMessage);
+            });
+        }
+        
+        let availableCameras = [];
+        let currentCameraId = null;
+        
+        const scannerConfig = {
+            fps: 15,
+            qrbox: function(viewfinderWidth, viewfinderHeight) {
+                let width = Math.floor(viewfinderWidth * 0.9);
+                let height = Math.floor(viewfinderHeight * 0.5);
+                return { width: width, height: height };
+            },
+            experimentalFeatures: {
+                useBarCodeDetectorIfSupported: true
+            },
+            formatsToSupport: [
+                Html5QrcodeSupportedFormats.EAN_13,
+                Html5QrcodeSupportedFormats.EAN_8,
+                Html5QrcodeSupportedFormats.UPC_A,
+                Html5QrcodeSupportedFormats.UPC_E,
+                Html5QrcodeSupportedFormats.CODE_128,
+                Html5QrcodeSupportedFormats.CODE_39
+            ]
+        };
+        
+        async function loadCameras() {
+            try {
+                const allCameras = await Html5Qrcode.getCameras();
+                console.log("Toutes les caméras:", allCameras);
+                
+                // Filtrer pour ne garder que les caméras arrière (back)
+                availableCameras = allCameras.filter(cam => {
+                    const label = cam.label.toLowerCase();
+                    return label.includes('back') || label.includes('arrière') || label.includes('environment');
+                });
+                
+                // Si aucune caméra arrière trouvée, utiliser toutes les caméras
+                if (availableCameras.length === 0) {
+                    availableCameras = allCameras;
+                }
+                
+                console.log("Caméras arrière:", availableCameras);
+                
+                const select = $('#cameraSelect');
+                select.empty();
+                
+                if (availableCameras && availableCameras.length > 0) {
+                    availableCameras.forEach((cam, index) => {
+                        // Simplifier le label pour l'affichage
+                        let label = cam.label || `Caméra ${index + 1}`;
+                        // Nettoyer le label
+                        label = label.replace(/camera2?\s*/gi, '').replace(/facing\s*/gi, '');
+                        if (label.length > 25) {
+                            label = label.substring(0, 25) + '...';
+                        }
+                        select.append(`<option value="${cam.id}">Objectif ${index + 1}: ${label}</option>`);
+                    });
+                    // Sélectionner le 2ème objectif par défaut s'il existe (souvent meilleur pour les codes-barres)
+                    return availableCameras.length > 1 ? availableCameras[1].id : availableCameras[0].id;
+                } else {
+                    select.append('<option value="">Aucune caméra</option>');
+                    return null;
+                }
+            } catch(err) {
+                console.error("Erreur liste caméras:", err);
+                return null;
+            }
+        }
+        
+        async function startScanner() {
+            if (isScanning) return;
+            
+            html5QrCode = new Html5Qrcode("barcodeReader");
+            
+            try {
+                // Charger la liste des caméras
+                const defaultCameraId = await loadCameras();
+                
+                if (defaultCameraId) {
+                    currentCameraId = defaultCameraId;
+                    $('#cameraSelect').val(currentCameraId);
+                    await startWithCamera(currentCameraId);
+                } else {
+                    // Essayer avec facingMode
+                    await html5QrCode.start(
+                        { facingMode: "environment" },
+                        scannerConfig,
+                        onScanSuccess,
+                        onScanError
+                    );
+                    isScanning = true;
+                }
+            } catch(err) {
+                console.error("Erreur démarrage scanner:", err);
+                showScannerError("<strong>Erreur</strong><br>Impossible de démarrer le scanner.");
+            }
+        }
+        
+        async function startWithCamera(cameraId) {
+            try {
+                await html5QrCode.start(
+                    cameraId,
+                    scannerConfig,
+                    onScanSuccess,
+                    onScanError
+                );
+                isScanning = true;
+                currentCameraId = cameraId;
+            } catch(err) {
+                console.error("Erreur démarrage caméra:", err);
+                throw err;
+            }
+        }
+        
+        // Changement de caméra
+        $('#cameraSelect').on('change', async function() {
+            const newCameraId = $(this).val();
+            if (newCameraId && newCameraId !== currentCameraId && isScanning) {
+                try {
+                    // Arrêter le scanner actuel
+                    await html5QrCode.stop();
+                    isScanning = false;
+                    // Démarrer avec la nouvelle caméra
+                    await startWithCamera(newCameraId);
+                } catch(err) {
+                    console.error("Erreur changement caméra:", err);
+                }
+            }
+        });
+        
+        function stopScanner() {
+            if (html5QrCode && isScanning) {
+                html5QrCode.stop().then(() => {
+                    isScanning = false;
+                    html5QrCode.clear();
+                }).catch((err) => {
+                    console.error("Erreur arrêt scanner:", err);
+                    isScanning = false;
+                });
+            }
+        }
+        
+        function onScanSuccess(decodedText, decodedResult) {
+            // Vibration sur mobile
+            if (navigator.vibrate) {
+                navigator.vibrate(100);
+            }
+            
+            // Mettre le code dans le champ de recherche
+            $('#search').val(decodedText);
+            
+            // Afficher succès et fermer
+            $('.scanner-footer p').html('<i class="fas fa-check-circle text-success"></i> Code détecté : <strong>' + decodedText + '</strong>');
+            
+            setTimeout(function() {
+                closeScanner();
+            }, 800);
+        }
+        
+        function onScanError(errorMessage) {
+            // Ignorer les erreurs normales
+        }
+        
+        function showScannerError(message) {
+            $('#barcodeReader').html(
+                '<div class="d-flex align-items-center justify-content-center h-100">' +
+                '<div class="alert alert-danger m-4 text-center">' +
+                '<i class="fas fa-exclamation-triangle fa-2x mb-2"></i><br>' + message +
+                '<br><button class="btn btn-outline-danger btn-sm mt-3" onclick="$(\"#closeScannerBtn\").click();">Fermer</button>' +
+                '</div></div>'
+            );
+        }
+    });
+    </script>
 {% endblock %}

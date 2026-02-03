@@ -16,9 +16,9 @@ use Symfony\Component\BrowserKit\AbstractBrowser;
 
 final class BrowserHasCookie extends Constraint
 {
-    private $name;
-    private $path;
-    private $domain;
+    private string $name;
+    private string $path;
+    private ?string $domain;
 
     public function __construct(string $name, string $path = '/', ?string $domain = null)
     {
@@ -27,17 +27,14 @@ final class BrowserHasCookie extends Constraint
         $this->domain = $domain;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function toString(): string
     {
-        $str = sprintf('has cookie "%s"', $this->name);
+        $str = \sprintf('has cookie "%s"', $this->name);
         if ('/' !== $this->path) {
-            $str .= sprintf(' with path "%s"', $this->path);
+            $str .= \sprintf(' with path "%s"', $this->path);
         }
         if ($this->domain) {
-            $str .= sprintf(' for domain "%s"', $this->domain);
+            $str .= \sprintf(' for domain "%s"', $this->domain);
         }
 
         return $str;
@@ -45,8 +42,6 @@ final class BrowserHasCookie extends Constraint
 
     /**
      * @param AbstractBrowser $browser
-     *
-     * {@inheritdoc}
      */
     protected function matches($browser): bool
     {
@@ -55,8 +50,6 @@ final class BrowserHasCookie extends Constraint
 
     /**
      * @param AbstractBrowser $browser
-     *
-     * {@inheritdoc}
      */
     protected function failureDescription($browser): string
     {

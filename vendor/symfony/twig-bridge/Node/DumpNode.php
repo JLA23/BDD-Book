@@ -23,20 +23,10 @@ use Twig\Node\Node;
 #[YieldReady]
 final class DumpNode extends Node
 {
-    /**
-     * @var LocalVariable|string
-     */
-    private $varPrefix;
+    private LocalVariable|string $varPrefix;
 
-    /**
-     * @param LocalVariable|string $varPrefix
-     */
-    public function __construct($varPrefix, ?Node $values, int $lineno, ?string $tag = null)
+    public function __construct(LocalVariable|string $varPrefix, ?Node $values, int $lineno, ?string $tag = null)
     {
-        if (!\is_string($varPrefix) && !$varPrefix instanceof LocalVariable) {
-            throw new \TypeError(sprintf('Expected a string or an instance of "%s", but got "%s".', LocalVariable::class, get_debug_type($varPrefix)));
-        }
-
         $nodes = [];
         if (null !== $values) {
             $nodes['values'] = $values;
@@ -66,18 +56,18 @@ final class DumpNode extends Node
         if (!$this->hasNode('values')) {
             // remove embedded templates (macros) from the context
             $compiler
-                ->write(sprintf('$%svars = [];'."\n", $varPrefix))
-                ->write(sprintf('foreach ($context as $%1$skey => $%1$sval) {'."\n", $varPrefix))
+                ->write(\sprintf('$%svars = [];'."\n", $varPrefix))
+                ->write(\sprintf('foreach ($context as $%1$skey => $%1$sval) {'."\n", $varPrefix))
                 ->indent()
-                ->write(sprintf('if (!$%sval instanceof \Twig\Template) {'."\n", $varPrefix))
+                ->write(\sprintf('if (!$%sval instanceof \Twig\Template) {'."\n", $varPrefix))
                 ->indent()
-                ->write(sprintf('$%1$svars[$%1$skey] = $%1$sval;'."\n", $varPrefix))
+                ->write(\sprintf('$%1$svars[$%1$skey] = $%1$sval;'."\n", $varPrefix))
                 ->outdent()
                 ->write("}\n")
                 ->outdent()
                 ->write("}\n")
                 ->addDebugInfo($this)
-                ->write(sprintf('\Symfony\Component\VarDumper\VarDumper::dump($%svars);'."\n", $varPrefix));
+                ->write(\sprintf('\Symfony\Component\VarDumper\VarDumper::dump($%svars);'."\n", $varPrefix));
         } elseif (($values = $this->getNode('values')) && 1 === $values->count()) {
             $compiler
                 ->addDebugInfo($this)

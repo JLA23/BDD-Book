@@ -26,10 +26,10 @@
                 <div class="col-md-4 text-center mb-4">
                     <div class="livre-cover-container">
                         <img id='img-{{ livre.id }}' 
-                             class="img-fluid rounded shadow" 
+                             class="img-fluid rounded shadow clickable-image" 
                              alt="{{ livre.titre }}" 
                              src="{{ livre.getBestImage }}"
-                             style="max-height: 400px; object-fit: contain;" />
+                             style="max-height: 400px; object-fit: contain; cursor: pointer;" />
                     </div>
                     
                     {% if is_granted('IS_AUTHENTICATED_FULLY') %}
@@ -48,22 +48,27 @@
                                 <i class="fas fa-undo"></i> Image originale
                             </button>
                         {% else %}
-                            {% if livre.isbn %}
-                            <button type="button" id="searchCoverBtn" class="btn btn-outline-primary btn-sm" data-livre-id="{{ livre.id }}">
-                                <i class="fas fa-search"></i> Chercher couverture
-                            </button>
-                            {% endif %}
+                            <div class="mb-2">
+                                <label for="uploadCoverInput" class="btn btn-outline-primary btn-sm mb-0" style="cursor: pointer;">
+                                    <i class="fas fa-upload"></i> Uploader une couverture
+                                </label>
+                                <input type="file" id="uploadCoverInput" accept="image/*" style="display: none;" data-livre-id="{{ livre.id }}">
+                            </div>
                             <button type="button" id="manualUrlBtn" class="btn btn-outline-secondary btn-sm">
                                 <i class="fas fa-link"></i> URL manuelle
                             </button>
                         {% endif %}
                         
-                        <div id="coverSearchResult" class="mt-2" style="display: none;">
-                            <div id="coverPreview" class="mb-2"></div>
-                            <button type="button" id="applyCoverBtn" class="btn btn-success btn-sm" style="display: none;">
-                                <i class="fas fa-check"></i> Utiliser
-                            </button>
-                            <span id="coverMessage" class="text-muted"></span>
+                        <div id="uploadPreview" class="mt-2" style="display: none;">
+                            <img id="uploadPreviewImg" class="img-thumbnail" style="max-height: 150px;" alt="Prévisualisation">
+                            <div class="mt-2">
+                                <button type="button" id="confirmUploadBtn" class="btn btn-success btn-sm">
+                                    <i class="fas fa-check"></i> Confirmer
+                                </button>
+                                <button type="button" id="cancelUploadBtn" class="btn btn-secondary btn-sm">
+                                    <i class="fas fa-times"></i> Annuler
+                                </button>
+                            </div>
                         </div>
                         
                         <div id="manualUrlForm" class="mt-3 text-left" style="display: none;">
@@ -185,10 +190,14 @@
     
     <!-- Propriétaires -->
     {% if livre.listeUser|length > 0 %}
-    <div class="card mt-4 shadow-sm">
-        <div class="card-header bg-dark text-white">
-            <h5 class="mb-0"><i class="fas fa-users"></i> Propriétaires ({{ livre.listeUser|length }})</h5>
+    <div class="card mt-4 mb-5 shadow-sm">
+        <div class="card-header bg-dark text-white" style="cursor: pointer;" data-toggle="collapse" data-target="#proprietairesCollapse" aria-expanded="false" aria-controls="proprietairesCollapse">
+            <h5 class="mb-0">
+                <i class="fas fa-users"></i> Propriétaires ({{ livre.listeUser|length }})
+                <i class="fas fa-chevron-down float-right"></i>
+            </h5>
         </div>
+        <div id="proprietairesCollapse" class="collapse">
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
@@ -225,8 +234,16 @@
                 </table>
             </div>
         </div>
+        </div>
     </div>
     {% endif %}
+</div>
+
+<!-- The Image Modal -->
+<div id="myModal" class="image-modal">
+    <span class="image-modal-close">&times;</span>
+    <img class="image-modal-content" id="img01">
+    <div id="caption"></div>
 </div>
 
 <!-- Modale de sélection d'images scrapées -->
@@ -297,89 +314,79 @@
 
 {% block javascripts %}
     {{ parent() }}
-    {% if is_granted('IS_AUTHENTICATED_FULLY') and livre.isbn %}
+    <script src="{{ asset('js/image-modal.js') }}"></script>
+    {% if is_granted('IS_AUTHENTICATED_FULLY') %}
     <script>
     $(document).ready(function() {
-        var foundImageUrl = null;
         var livreId = {{ livre.id }};
+        var selectedFile = null;
         
-        $('#searchCoverBtn').on('click', function() {
-            var btn = $(this);
-            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Recherche en cours...');
-            $('#coverSearchResult').show();
-            $('#coverMessage').text('Recherche en cours...');
-            $('#coverPreview').empty();
-            $('#applyCoverBtn').hide();
-            $('#manualUrlForm').hide();
+        // Gestion de l'upload de fichier
+        $('#uploadCoverInput').on('change', function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
             
-            $.ajax({
-                url: '/livre/' + livreId + '/rechercher-couverture',
-                method: 'GET',
-                success: function(response) {
-                    btn.prop('disabled', false).html('<i class="fas fa-search"></i> Rechercher automatiquement');
-                    
-                    if (response.success && response.images && response.images.length > 0) {
-                        var html = '<p class="text-success"><i class="fas fa-check-circle"></i> ' + response.message + '</p>';
-                        html += '<div class="row">';
-                        
-                        response.images.forEach(function(img, index) {
-                            html += '<div class="col-4 col-md-3 mb-2">';
-                            html += '<div class="card h-100">';
-                            html += '<img src="' + img.url + '" class="card-img-top img-select-cover" style="height: 120px; object-fit: contain; cursor: pointer;" data-url="' + img.url + '" alt="Option ' + (index+1) + '" onerror="this.parentElement.parentElement.remove()">';
-                            html += '<div class="card-body p-1 text-center"><small class="text-muted">' + img.source + '</small></div>';
-                            html += '</div></div>';
-                        });
-                        
-                        html += '</div>';
-                        html += '<p class="small text-muted mt-2">Cliquez sur une image pour la sélectionner</p>';
-                        
-                        $('#coverPreview').html(html);
-                    } else {
-                        $('#coverMessage').html('<span class="text-warning"><i class="fas fa-exclamation-triangle"></i> ' + (response.message || 'Aucune image trouvée') + '</span>');
-                    }
-                },
-                error: function() {
-                    btn.prop('disabled', false).html('<i class="fas fa-search"></i> Rechercher automatiquement');
-                    $('#coverMessage').html('<span class="text-danger"><i class="fas fa-times-circle"></i> Erreur lors de la recherche</span>');
-                }
-            });
+            // Vérifier que c'est une image
+            if (!file.type.match('image.*')) {
+                alert('Veuillez sélectionner un fichier image');
+                return;
+            }
+            
+            selectedFile = file;
+            
+            // Prévisualiser l'image
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                $('#uploadPreviewImg').attr('src', e.target.result);
+                $('#uploadPreview').show();
+                $('#manualUrlForm').hide();
+            };
+            reader.readAsDataURL(file);
         });
         
-        // Sélection d'une image dans la galerie
-        $(document).on('click', '.img-select-cover', function() {
-            $('.img-select-cover').removeClass('border-success').css('border-width', '1px');
-            $(this).addClass('border-success').css('border-width', '3px');
-            foundImageUrl = $(this).data('url');
-            $('#applyCoverBtn').show();
-        });
-        
-        $('#applyCoverBtn').on('click', function() {
-            if (!foundImageUrl) return;
+        // Confirmer l'upload
+        $('#confirmUploadBtn').on('click', function() {
+            if (!selectedFile) return;
             
             var btn = $(this);
-            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Enregistrement...');
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Upload...');
+            
+            var formData = new FormData();
+            formData.append('cover', selectedFile);
             
             $.ajax({
-                url: '/livre/' + livreId + '/mettre-a-jour-couverture',
+                url: '/livre/' + livreId + '/upload-cover',
                 method: 'POST',
-                data: { image_url: foundImageUrl },
+                data: formData,
+                processData: false,
+                contentType: false,
                 success: function(response) {
                     if (response.success) {
-                        $('#img-' + livreId).attr('src', response.imageUrl);
-                        $('#coverSearchResult').html('<span class="text-success"><i class="fas fa-check-circle"></i> ' + response.message + '</span>');
-                        setTimeout(function() { location.reload(); }, 1500);
+                        location.reload();
                     } else {
-                        btn.prop('disabled', false).html('<i class="fas fa-check"></i> Utiliser cette image');
-                        $('#coverMessage').html('<span class="text-danger">' + response.message + '</span>');
+                        alert('Erreur: ' + (response.message || 'Erreur inconnue'));
+                        btn.prop('disabled', false).html('<i class="fas fa-check"></i> Confirmer');
                     }
                 },
-                error: function() {
-                    btn.prop('disabled', false).html('<i class="fas fa-check"></i> Utiliser cette image');
-                    $('#coverMessage').html('<span class="text-danger">Erreur lors de l\'enregistrement</span>');
+                error: function(xhr) {
+                    var errorMsg = 'Erreur lors de l\'upload';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMsg = xhr.responseJSON.message;
+                    }
+                    alert(errorMsg);
+                    btn.prop('disabled', false).html('<i class="fas fa-check"></i> Confirmer');
                 }
             });
         });
         
+        // Annuler l'upload
+        $('#cancelUploadBtn').on('click', function() {
+            $('#uploadPreview').hide();
+            $('#uploadCoverInput').val('');
+            selectedFile = null;
+        });
+        
+        // Supprimer l'image externe et revenir à l'originale
         $('#removeCoverUrlBtn').on('click', function() {
             if (!confirm('Revenir à l\'image originale stockée en base ?')) return;
             
@@ -431,9 +438,9 @@
             btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Enregistrement...');
             
             $.ajax({
-                url: '/livre/' + livreId + '/mettre-a-jour-couverture',
+                url: '/livre/' + livreId + '/update-cover-url',
                 method: 'POST',
-                data: { image_url: foundImageUrl },
+                data: { imageUrl: foundImageUrl },
                 success: function(response) {
                     if (response.success) {
                         location.reload();

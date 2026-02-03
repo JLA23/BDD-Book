@@ -23,8 +23,7 @@ class InfoCommand extends AbstractEntityManagerCommand
 {
     use CommandCompatibility;
 
-    /** @return void */
-    protected function configure()
+    private function doConfigure(): void
     {
         $this->setName('orm:info')
              ->setDescription('Show basic information about all mapped entities')
@@ -39,7 +38,7 @@ EOT
 
     private function doExecute(InputInterface $input, OutputInterface $output): int
     {
-        $ui = (new SymfonyStyle($input, $output))->getErrorStyle();
+        $ui = new SymfonyStyle($input, $output);
 
         $entityManager = $this->getEntityManager($input);
 
@@ -48,7 +47,7 @@ EOT
                                           ->getAllClassNames();
 
         if (! $entityClassNames) {
-            $ui->caution(
+            $ui->getErrorStyle()->caution(
                 [
                     'You do not have any mapped Doctrine ORM entities according to the current configuration.',
                     'If you have entities or mapping files you should check your mapping configuration for errors.',

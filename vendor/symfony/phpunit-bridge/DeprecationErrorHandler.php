@@ -143,6 +143,9 @@ class DeprecationErrorHandler
         if ($deprecation->isMuted()) {
             return null;
         }
+        if ($this->getConfiguration()->isIgnoredDeprecation($deprecation)) {
+            return null;
+        }
         if ($this->getConfiguration()->isBaselineDeprecation($deprecation)) {
             return null;
         }
@@ -166,6 +169,13 @@ class DeprecationErrorHandler
             echo "\n".ucfirst($group).' '.$deprecation->toString();
 
             exit(1);
+        }
+
+        if (\PHP_VERSION_ID >= 80500 && \in_array($msg, [
+            'The __sleep() serialization magic method has been deprecated. Implement __serialize() instead (or in addition, if support for old PHP versions is necessary)',
+            'The __wakeup() serialization magic method has been deprecated. Implement __unserialize() instead (or in addition, if support for old PHP versions is necessary)',
+        ], true)) {
+            return null;
         }
 
         if ('legacy' === $group) {
@@ -307,7 +317,7 @@ class DeprecationErrorHandler
 
         if ($configuration->shouldWriteToLogFile()) {
             if (false === $handle = @fopen($file = $configuration->getLogFile(), 'a')) {
-                throw new \InvalidArgumentException(sprintf('The configured log file "%s" is not writeable.', $file));
+                throw new \InvalidArgumentException(\sprintf('The configured log file "%s" is not writeable.', $file));
             }
         } else {
             $handle = fopen('php://output', 'w');
@@ -315,7 +325,7 @@ class DeprecationErrorHandler
 
         foreach ($groups as $group) {
             if ($this->deprecationGroups[$group]->count()) {
-                $deprecationGroupMessage = sprintf(
+                $deprecationGroupMessage = \sprintf(
                     '%s deprecation notices (%d)',
                     \in_array($group, ['direct', 'indirect', 'self'], true) ? "Remaining $group" : ucfirst($group),
                     $this->deprecationGroups[$group]->count()
@@ -334,14 +344,19 @@ class DeprecationErrorHandler
                 uasort($notices, $cmp);
 
                 foreach ($notices as $msg => $notice) {
-                    fwrite($handle, sprintf("\n  %sx: %s\n", $notice->count(), $msg));
+                    fwrite($handle, \sprintf("\n  %sx: %s\n", $notice->count(), $msg));
 
                     $countsByCaller = $notice->getCountsByCaller();
                     arsort($countsByCaller);
+                    $limit = 5;
 
                     foreach ($countsByCaller as $method => $count) {
                         if ('count' !== $method) {
-                            fwrite($handle, sprintf("    %dx in %s\n", $count, preg_replace('/(.*)\\\\(.*?::.*?)$/', '$2 from $1', $method)));
+                            if (!$limit--) {
+                                fwrite($handle, "    ...\n");
+                                break;
+                            }
+                            fwrite($handle, \sprintf("    %dx in %s\n", $count, preg_replace('/(.*)\\\\(.*?::.*?)$/', '$2 from $1', $method)));
                         }
                     }
                 }
@@ -353,7 +368,7 @@ class DeprecationErrorHandler
         }
     }
 
-    private static function getPhpUnitErrorHandler()
+    private static function getPhpUnitErrorHandler(): callable
     {
         if (!$eh = self::$errorHandler) {
             if (class_exists(Handler::class)) {

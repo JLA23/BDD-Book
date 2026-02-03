@@ -23,16 +23,16 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\DependencyInjection\ContainerInterface;
+use Doctrine\ORM\EntityManagerInterface;
 
 class RecoverBDDCommand extends Command
 {
-    public $container;
+    private EntityManagerInterface $entityManager;
 
-    public function __construct(ContainerInterface $container)
+    public function __construct(EntityManagerInterface $entityManager)
     {
         parent::__construct();
-        $this->container = $container;
+        $this->entityManager = $entityManager;
     }
 
     protected function configure()
@@ -45,13 +45,13 @@ class RecoverBDDCommand extends Command
         //->addOption('option', null, InputOption::VALUE_NONE, 'Option description');
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $servername = "192.168.5.10:3307";
         $username = "serveur";
         $password = "Ejmpa@16091992";
 
-        $em = $this->container->get('doctrine')->getManager();
+        $em = $this->entityManager;
         $pdo = new \PDO('mysql:host='.$servername.';dbname=DatabaseBook', $username, $password, array(\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION));
 
         $sql = "SELECT * FROM Traitement";

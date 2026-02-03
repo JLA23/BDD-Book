@@ -22,8 +22,8 @@ $(document).ready(function () {
     });
 
     // Ouvrir la modale en cliquant sur une image de couverture
-    $('.img-cover').click(function (event) {
-        var image = document.getElementById(event.target.id);
+    $('.img-cover, .clickable-image').click(function (event) {
+        var image = event.target;
         if (image) {
             modal.style.display = "block";
             modalImg.src = image.src;

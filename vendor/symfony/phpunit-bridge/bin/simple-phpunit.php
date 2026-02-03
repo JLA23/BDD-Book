@@ -98,10 +98,8 @@ $passthruOrFail = function ($command) {
 };
 
 if (\PHP_VERSION_ID >= 80000) {
-    // PHP 8 requires PHPUnit 9.3+, PHP 8.1 requires PHPUnit 9.5+
-    $PHPUNIT_VERSION = $getEnvVar('SYMFONY_PHPUNIT_VERSION', '9.5') ?: '9.5';
+    $PHPUNIT_VERSION = $getEnvVar('SYMFONY_PHPUNIT_VERSION', '9.6') ?: '9.6';
 } elseif (\PHP_VERSION_ID >= 70200) {
-    // PHPUnit 8 requires PHP 7.2+
     $PHPUNIT_VERSION = $getEnvVar('SYMFONY_PHPUNIT_VERSION', '8.5') ?: '8.5';
 } else {
     $PHPUNIT_VERSION = $getEnvVar('SYMFONY_PHPUNIT_VERSION', '7.5') ?: '7.5';
@@ -137,6 +135,7 @@ $defaultEnvs = [
     'COMPOSER' => 'composer.json',
     'COMPOSER_VENDOR_DIR' => 'vendor',
     'COMPOSER_BIN_DIR' => 'bin',
+    'COMPOSER_NO_INTERACTION' => '1',
     'SYMFONY_SIMPLE_PHPUNIT_BIN_DIR' => __DIR__,
 ];
 
@@ -149,6 +148,11 @@ foreach ($defaultEnvs as $envName => $envValue) {
 
 if ('disabled' === $getEnvVar('SYMFONY_DEPRECATIONS_HELPER')) {
     putenv('SYMFONY_DEPRECATIONS_HELPER=disabled');
+}
+
+if (!$getEnvVar('DOCTRINE_DEPRECATIONS')) {
+    putenv('DOCTRINE_DEPRECATIONS=trigger');
+    $_SERVER['DOCTRINE_DEPRECATIONS'] = $_ENV['DOCTRINE_DEPRECATIONS'] = 'trigger';
 }
 
 $COMPOSER = ($COMPOSER = getenv('COMPOSER_BINARY'))
@@ -187,7 +191,7 @@ if (!file_exists("$PHPUNIT_DIR/$PHPUNIT_VERSION_DIR/phpunit") || $configurationH
     }
 
     $info = [];
-    foreach (explode("\n", `$COMPOSER info --no-ansi -a -n phpunit/phpunit "$PHPUNIT_VERSION.*"`) as $line) {
+    foreach (explode("\n", shell_exec("$COMPOSER info --no-ansi -a -n phpunit/phpunit \"$PHPUNIT_VERSION.*\"")) as $line) {
         $line = rtrim($line);
 
         if (!$info && preg_match('/^versions +: /', $line)) {
@@ -228,10 +232,10 @@ if (!file_exists("$PHPUNIT_DIR/$PHPUNIT_VERSION_DIR/phpunit") || $configurationH
     @copy("$PHPUNIT_VERSION_DIR/phpunit.xsd", 'phpunit.xsd');
     chdir("$PHPUNIT_VERSION_DIR");
     if ($SYMFONY_PHPUNIT_REMOVE) {
-        $passthruOrFail("$COMPOSER remove --no-update --no-interaction ".$SYMFONY_PHPUNIT_REMOVE);
+        $passthruOrFail("$COMPOSER remove --no-update ".$SYMFONY_PHPUNIT_REMOVE);
     }
     if ($SYMFONY_PHPUNIT_REQUIRE) {
-        $passthruOrFail("$COMPOSER require --no-update --no-interaction ".$SYMFONY_PHPUNIT_REQUIRE);
+        $passthruOrFail("$COMPOSER require --no-update ".$SYMFONY_PHPUNIT_REQUIRE);
     }
     if (5.1 <= $PHPUNIT_VERSION && $PHPUNIT_VERSION < 5.4) {
         $passthruOrFail("$COMPOSER require --no-update phpunit/phpunit-mock-objects \"~3.1.0\"");

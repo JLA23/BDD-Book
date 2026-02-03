@@ -58,6 +58,10 @@ class MakerTestKernel extends Kernel implements CompilerPassInterface
                 'utf8' => true,
             ],
             'http_method_override' => false,
+            'handle_all_throwables' => true,
+            'php_errors' => [
+                'log' => true,
+            ],
         ]);
     }
 
@@ -71,10 +75,7 @@ class MakerTestKernel extends Kernel implements CompilerPassInterface
         return $this->testRootDir;
     }
 
-    /**
-     * @return void
-     */
-    public function process(ContainerBuilder $container)
+    public function process(ContainerBuilder $container): void
     {
         // makes all makers public to help the tests
         foreach ($container->findTaggedServiceIds(MakeCommandRegistrationPass::MAKER_TAG) as $id => $tags) {

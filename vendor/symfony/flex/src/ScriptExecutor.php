@@ -14,7 +14,6 @@ namespace Symfony\Flex;
 use Composer\Composer;
 use Composer\EventDispatcher\ScriptExecutionException;
 use Composer\IO\IOInterface;
-use Composer\Semver\Constraint\EmptyConstraint;
 use Composer\Semver\Constraint\MatchAllConstraint;
 use Composer\Util\ProcessExecutor;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -54,20 +53,20 @@ class ScriptExecutor
             $cmdOutput->write($buffer, false, OutputInterface::OUTPUT_RAW);
         };
 
-        $this->io->writeError(sprintf('Executing script %s', $parsedCmd), $this->io->isVerbose());
+        $this->io->writeError(\sprintf('Executing script %s', $parsedCmd), $this->io->isVerbose());
         $exitCode = $this->executor->execute($expandedCmd, $outputHandler);
 
         $code = 0 === $exitCode ? ' <info>[OK]</>' : ' <error>[KO]</>';
 
         if ($this->io->isVerbose()) {
-            $this->io->writeError(sprintf('Executed script %s %s', $cmd, $code));
+            $this->io->writeError(\sprintf('Executed script %s %s', $cmd, $code));
         } else {
             $this->io->writeError($code);
         }
 
         if (0 !== $exitCode) {
             $this->io->writeError(' <error>[KO]</>');
-            $this->io->writeError(sprintf('<error>Script %s returned with error code %s</>', $cmd, $exitCode));
+            $this->io->writeError(\sprintf('<error>Script %s returned with error code %s</>', $cmd, $exitCode));
             fseek($cmdOutput->getStream(), 0);
             foreach (explode("\n", stream_get_contents($cmdOutput->getStream())) as $line) {
                 $this->io->writeError('!!  '.$line);
@@ -87,15 +86,15 @@ class ScriptExecutor
             case 'script':
                 return $cmd;
             default:
-                throw new \InvalidArgumentException(sprintf('Invalid symfony/flex auto-script in composer.json: "%s" is not a valid type of command.', $type));
+                throw new \InvalidArgumentException(\sprintf('Invalid symfony/flex auto-script in composer.json: "%s" is not a valid type of command.', $type));
         }
     }
 
     private function expandSymfonyCmd(string $cmd, array $arguments)
     {
         $repo = $this->composer->getRepositoryManager()->getLocalRepository();
-        if (!$repo->findPackage('symfony/console', class_exists(MatchAllConstraint::class) ? new MatchAllConstraint() : new EmptyConstraint())) {
-            $this->io->writeError(sprintf('<warning>Skipping "%s" (needs symfony/console to run).</>', $cmd));
+        if (!$repo->findPackage('symfony/console', new MatchAllConstraint())) {
+            $this->io->writeError(\sprintf('<warning>Skipping "%s" (needs symfony/console to run).</>', $cmd));
 
             return null;
         }
