@@ -18,11 +18,9 @@ use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 
-/**
- * @Route("/magazines")
- */
+#[Route('/magazines')]
 class KiosqueController extends AbstractController
 {
     private EntityManagerInterface $em;
@@ -32,9 +30,7 @@ class KiosqueController extends AbstractController
         $this->em = $em;
     }
 
-    /**
-     * @Route("/", name="magazines_list")
-     */
+    #[Route('/', name: 'magazines_list')]
     public function listMagazines(Request $request, PaginatorInterface $paginator, KioskCollecRepository $repository, UserRepository $userRepo): Response
     {
         $detect = new \Mobile_Detect;
@@ -46,9 +42,7 @@ class KiosqueController extends AbstractController
         ]);
     }
 
-    /**
-     * @Route("/tous", name="magazines_all")
-     */
+    #[Route('/tous', name: 'magazines_all')]
     public function allMagazines(Request $request, PaginatorInterface $paginator, KioskCollecRepository $repository): Response
     {
         $detect = new \Mobile_Detect;
@@ -76,9 +70,7 @@ class KiosqueController extends AbstractController
         ]);
     }
 
-    /**
-     * @Route("/nouveau", name="magazine_new")
-     */
+    #[Route('/nouveau', name: 'magazine_new')]
     public function newMagazine(Request $request): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
@@ -116,9 +108,7 @@ class KiosqueController extends AbstractController
         ]);
     }
 
-    /**
-     * @Route("/{id}", name="magazine_detail", requirements={"id"="\d+"})
-     */
+    #[Route('/{id}', name: 'magazine_detail', requirements: ['id' => '\d+'])]
     public function detailMagazine(int $id, Request $request, PaginatorInterface $paginator, KioskCollecRepository $magazineRepo, KioskNumRepository $numeroRepo): Response
     {
         $detect = new \Mobile_Detect;
@@ -159,9 +149,7 @@ class KiosqueController extends AbstractController
         ]);
     }
 
-    /**
-     * @Route("/{id}/modifier", name="magazine_edit", requirements={"id"="\d+"})
-     */
+    #[Route('/{id}/modifier', name: 'magazine_edit', requirements: ['id' => '\d+'])]
     public function editMagazine(int $id, Request $request, KioskCollecRepository $repository): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
@@ -203,9 +191,7 @@ class KiosqueController extends AbstractController
         ]);
     }
 
-    /**
-     * @Route("/{id}/numero/nouveau", name="numero_new", requirements={"id"="\d+"})
-     */
+    #[Route('/{id}/numero/nouveau', name: 'numero_new', requirements: ['id' => '\d+'])]
     public function newNumero(int $id, Request $request, KioskCollecRepository $magazineRepo): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
@@ -259,9 +245,7 @@ class KiosqueController extends AbstractController
         ]);
     }
 
-    /**
-     * @Route("/{id}/numeros/nouveau", name="numeros_new_multiple", requirements={"id"="\d+"})
-     */
+    #[Route('/{id}/numeros/nouveau', name: 'numeros_new_multiple', requirements: ['id' => '\d+'])]
     public function newNumerosMultiple(int $id, Request $request, KioskCollecRepository $magazineRepo, UserRepository $userRepo): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
@@ -368,9 +352,7 @@ class KiosqueController extends AbstractController
         ]);
     }
 
-    /**
-     * @Route("/numero/{id}", name="numero_detail", requirements={"id"="\d+"})
-     */
+    #[Route('/numero/{id}', name: 'numero_detail', requirements: ['id' => '\d+'])]
     public function detailNumero(int $id, KioskNumRepository $repository, LienKioskNumUserRepository $lienRepo): Response
     {
         $detect = new \Mobile_Detect;
@@ -396,9 +378,7 @@ class KiosqueController extends AbstractController
         ]);
     }
 
-    /**
-     * @Route("/numero/{id}/modifier", name="numero_edit", requirements={"id"="\d+"})
-     */
+    #[Route('/numero/{id}/modifier', name: 'numero_edit', requirements: ['id' => '\d+'])]
     public function editNumero(int $id, Request $request, KioskNumRepository $repository): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
@@ -441,9 +421,7 @@ class KiosqueController extends AbstractController
         ]);
     }
 
-    /**
-     * @Route("/numero/{id}/proprietaire/ajouter", name="numero_add_owner", requirements={"id"="\d+"})
-     */
+    #[Route('/numero/{id}/proprietaire/ajouter', name: 'numero_add_owner', requirements: ['id' => '\d+'])]
     public function addOwner(int $id, Request $request, KioskNumRepository $numeroRepo, UserRepository $userRepo, LienKioskNumUserRepository $lienRepo): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
@@ -538,9 +516,7 @@ class KiosqueController extends AbstractController
         ]);
     }
 
-    /**
-     * @Route("/proprietaire/{id}/commentaire", name="numero_edit_owner_comment", requirements={"id"="\d+"})
-     */
+    #[Route('/proprietaire/{id}/commentaire', name: 'numero_edit_owner_comment', requirements: ['id' => '\d+'])]
     public function editOwnerComment(int $id, Request $request, LienKioskNumUserRepository $lienRepo): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
@@ -562,9 +538,7 @@ class KiosqueController extends AbstractController
         return $this->redirectToRoute('numero_detail', ['id' => $lien->getKioskNum()->getId()]);
     }
 
-    /**
-     * @Route("/recherche", name="magazines_search")
-     */
+    #[Route('/recherche', name: 'magazines_search')]
     public function searchMagazines(Request $request, PaginatorInterface $paginator, KioskCollecRepository $magazineRepo, UserRepository $userRepo): Response
     {
         $detect = new \Mobile_Detect;

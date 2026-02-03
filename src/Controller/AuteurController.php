@@ -4,19 +4,25 @@ namespace App\Controller;
 
 use App\Entity\Auteur;
 use App\Entity\LienAuteurLivre;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 
 class AuteurController extends AbstractController
 {
-    /**
-     * @Route("/auteurs", name="liste_auteurs")
-     */
+    private EntityManagerInterface $em;
+
+    public function __construct(EntityManagerInterface $em)
+    {
+        $this->em = $em;
+    }
+
+    #[Route('/auteurs', name: 'liste_auteurs')]
     public function listeAuteurs(Request $request): Response
     {
-        $em = $this->getDoctrine()->getManager();
+        $em = $this->em;
         
         $lettre = $request->query->get('lettre');
         $search = $request->query->get('search');
@@ -68,12 +74,10 @@ class AuteurController extends AbstractController
         ]);
     }
 
-    /**
-     * @Route("/auteur/{id}", name="auteur_detail", requirements={"id"="\d+"})
-     */
+    #[Route('/auteur/{id}', name: 'auteur_detail', requirements: ['id' => '\d+'])]
     public function detailAuteur(int $id): Response
     {
-        $em = $this->getDoctrine()->getManager();
+        $em = $this->em;
         
         $auteur = $em->getRepository(Auteur::class)->find($id);
         

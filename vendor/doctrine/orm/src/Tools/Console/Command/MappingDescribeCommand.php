@@ -65,7 +65,7 @@ EOT
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $ui = (new SymfonyStyle($input, $output))->getErrorStyle();
+        $ui = new SymfonyStyle($input, $output);
 
         $entityManager = $this->getEntityManager($input);
 
@@ -98,7 +98,7 @@ EOT
                     $this->formatField('Embedded class?', $metadata->isEmbeddedClass),
                     $this->formatField('Parent classes', $metadata->parentClasses),
                     $this->formatField('Sub classes', $metadata->subClasses),
-                    $this->formatField('Embedded classes', $metadata->subClasses),
+                    $this->formatField('Embedded classes', $metadata->embeddedClasses),
                     $this->formatField('Named queries', $metadata->namedQueries),
                     $this->formatField('Named native queries', $metadata->namedNativeQueries),
                     $this->formatField('SQL result set mappings', $metadata->sqlResultSetMappings),

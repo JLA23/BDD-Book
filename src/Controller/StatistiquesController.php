@@ -10,7 +10,7 @@ use App\Entity\LienKioskNumUser;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 
 class StatistiquesController extends AbstractController
 {
@@ -21,9 +21,7 @@ class StatistiquesController extends AbstractController
         $this->em = $em;
     }
 
-    /**
-     * @Route("/statistiques", name="statistiques")
-     */
+    #[Route('/statistiques', name: 'statistiques')]
     public function index(): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');

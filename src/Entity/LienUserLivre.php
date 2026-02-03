@@ -28,7 +28,7 @@ class LienUserLivre
     private $user;
 
     /**
-     * @ORM\ManyToOne(targetEntity="App\Entity\Livre")
+     * @ORM\ManyToOne(targetEntity="App\Entity\Livre", inversedBy="listeUser")
      * @ORM\JoinColumn(name="livre_id", referencedColumnName="id", nullable=false)
      */
     private $livre;

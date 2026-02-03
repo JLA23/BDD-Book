@@ -2,7 +2,9 @@
 
 /*
  * This file is part of the Symfony WebpackEncoreBundle package.
+ *
  * (c) Fabien Potencier <fabien@symfony.com>
+ *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
@@ -25,13 +27,13 @@ class EntrypointLookupCollection implements EntrypointLookupCollectionInterface
 
     private $defaultBuildName;
 
-    public function __construct(ContainerInterface $buildEntrypoints, string $defaultBuildName = null)
+    public function __construct(ContainerInterface $buildEntrypoints, ?string $defaultBuildName = null)
     {
         $this->buildEntrypoints = $buildEntrypoints;
         $this->defaultBuildName = $defaultBuildName;
     }
 
-    public function getEntrypointLookup(string $buildName = null): EntrypointLookupInterface
+    public function getEntrypointLookup(?string $buildName = null): EntrypointLookupInterface
     {
         if (null === $buildName) {
             if (null === $this->defaultBuildName) {
@@ -42,7 +44,7 @@ class EntrypointLookupCollection implements EntrypointLookupCollectionInterface
         }
 
         if (!$this->buildEntrypoints->has($buildName)) {
-            throw new UndefinedBuildException(sprintf('The build "%s" is not configured', $buildName));
+            throw new UndefinedBuildException(\sprintf('The build "%s" is not configured', $buildName));
         }
 
         return $this->buildEntrypoints->get($buildName);

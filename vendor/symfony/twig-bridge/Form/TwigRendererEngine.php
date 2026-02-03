@@ -21,15 +21,8 @@ use Twig\Template;
  */
 class TwigRendererEngine extends AbstractRendererEngine
 {
-    /**
-     * @var Environment
-     */
-    private $environment;
-
-    /**
-     * @var Template
-     */
-    private $template;
+    private Environment $environment;
+    private Template $template;
 
     public function __construct(array $defaultThemes, Environment $environment)
     {
@@ -37,10 +30,7 @@ class TwigRendererEngine extends AbstractRendererEngine
         $this->environment = $environment;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function renderBlock(FormView $view, $resource, string $blockName, array $variables = [])
+    public function renderBlock(FormView $view, mixed $resource, string $blockName, array $variables = []): string
     {
         $cacheKey = $view->vars[self::CACHE_KEY_VAR];
 
@@ -69,10 +59,8 @@ class TwigRendererEngine extends AbstractRendererEngine
      * case that the function "block()" is used in the Twig template.
      *
      * @see getResourceForBlock()
-     *
-     * @return bool
      */
-    protected function loadResourceForBlockName(string $cacheKey, FormView $view, string $blockName)
+    protected function loadResourceForBlockName(string $cacheKey, FormView $view, string $blockName): bool
     {
         // The caller guarantees that $this->resources[$cacheKey][$block] is
         // not set, but it doesn't have to check whether $this->resources[$cacheKey]
@@ -83,6 +71,7 @@ class TwigRendererEngine extends AbstractRendererEngine
             // $this->resources[$cacheKey][$block] is not set. Since the themes are
             // already loaded, it can only be a non-existing block.
             $this->resources[$cacheKey][$blockName] = false;
+            $this->setResourceInheritability($cacheKey, $blockName, true);
 
             return false;
         }
@@ -120,8 +109,9 @@ class TwigRendererEngine extends AbstractRendererEngine
 
             // EAGER CACHE POPULATION (see doc comment)
             foreach ($this->resources[$parentCacheKey] as $nestedBlockName => $resource) {
-                if (!isset($this->resources[$cacheKey][$nestedBlockName])) {
+                if (!isset($this->resources[$cacheKey][$nestedBlockName]) && $this->isResourceInheritable($parentCacheKey, $nestedBlockName)) {
                     $this->resources[$cacheKey][$nestedBlockName] = $resource;
+                    $this->setResourceInheritability($cacheKey, $nestedBlockName, true);
                 }
             }
         }
@@ -131,6 +121,7 @@ class TwigRendererEngine extends AbstractRendererEngine
         if (!isset($this->resources[$cacheKey][$blockName])) {
             // Cache that we didn't find anything to speed up further accesses
             $this->resources[$cacheKey][$blockName] = false;
+            $this->setResourceInheritability($cacheKey, $blockName, true);
         }
 
         return false !== $this->resources[$cacheKey][$blockName];
@@ -144,21 +135,20 @@ class TwigRendererEngine extends AbstractRendererEngine
      *                     to initialize the theme first. Any changes made to
      *                     this variable will be kept and be available upon
      *                     further calls to this method using the same theme.
+     *
+     * @return void
      */
-    protected function loadResourcesFromTheme(string $cacheKey, &$theme)
+    protected function loadResourcesFromTheme(string $cacheKey, mixed &$theme)
     {
         if (!$theme instanceof Template) {
-            /* @var Template $theme */
             $theme = $this->environment->load($theme)->unwrap();
         }
 
-        if (null === $this->template) {
-            // Store the first Template instance that we find so that
-            // we can call displayBlock() later on. It doesn't matter *which*
-            // template we use for that, since we pass the used blocks manually
-            // anyway.
-            $this->template = $theme;
-        }
+        // Store the first Template instance that we find so that
+        // we can call displayBlock() later on. It doesn't matter *which*
+        // template we use for that, since we pass the used blocks manually
+        // anyway.
+        $this->template ??= $theme;
 
         // Use a separate variable for the inheritance traversal, because
         // theme is a reference and we don't want to change it.
@@ -175,6 +165,7 @@ class TwigRendererEngine extends AbstractRendererEngine
                     // The resource given back is the key to the bucket that
                     // contains this block.
                     $this->resources[$cacheKey][$block] = $blockData;
+                    $this->setResourceInheritability($cacheKey, $block, true);
                 }
             }
         } while (false !== $currentTheme = $currentTheme->getParent($context));

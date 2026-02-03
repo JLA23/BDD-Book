@@ -8,7 +8,7 @@ class BookCoverService
 {
     private ?HttpClientInterface $httpClient;
 
-    public function __construct(HttpClientInterface $httpClient = null)
+    public function __construct(?HttpClientInterface $httpClient = null)
     {
         $this->httpClient = $httpClient;
     }

@@ -17,7 +17,6 @@ use Symfony\Component\Intl\Data\Bundle\Reader\BundleEntryReaderInterface;
 use Symfony\Component\Intl\Data\Util\ArrayAccessibleResourceBundle;
 use Symfony\Component\Intl\Data\Util\LocaleScanner;
 use Symfony\Component\Intl\Exception\MissingResourceException;
-use Symfony\Component\Intl\Locale;
 
 /**
  * The rule for compiling the zone bundle.
@@ -35,13 +34,11 @@ class TimezoneDataGenerator extends AbstractDataGenerator
      *
      * @var string[]
      */
-    private $zoneIds = [];
-    private $zoneToCountryMapping = [];
-    private $localeAliases = [];
+    private array $zoneIds = [];
+    private array $zoneToCountryMapping = [];
+    private array $localeAliases = [];
+    private array $ianaMap = [];
 
-    /**
-     * {@inheritdoc}
-     */
     protected function scanLocales(LocaleScanner $scanner, string $sourceDir): array
     {
         $this->localeAliases = $scanner->scanAliases($sourceDir.'/locales');
@@ -49,10 +46,7 @@ class TimezoneDataGenerator extends AbstractDataGenerator
         return $scanner->scanLocales($sourceDir.'/zone');
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    protected function compileTemporaryBundles(BundleCompilerInterface $compiler, string $sourceDir, string $tempDir)
+    protected function compileTemporaryBundles(BundleCompilerInterface $compiler, string $sourceDir, string $tempDir): void
     {
         $filesystem = new Filesystem();
         $filesystem->mkdir($tempDir.'/region');
@@ -63,22 +57,22 @@ class TimezoneDataGenerator extends AbstractDataGenerator
         $compiler->compile($sourceDir.'/misc/windowsZones.txt', $tempDir);
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    protected function preGenerate()
+    protected function preGenerate(): void
     {
         $this->zoneIds = [];
         $this->zoneToCountryMapping = [];
     }
 
-    /**
-     * {@inheritdoc}
-     */
     protected function generateDataForLocale(BundleEntryReaderInterface $reader, string $tempDir, string $displayLocale): ?array
     {
+        if (!$this->ianaMap) {
+            foreach ($reader->readEntry($tempDir, 'timezoneTypes', ['ianaMap', 'timezone']) as $cldr => $iana) {
+                $this->ianaMap[str_replace(':', '/', $cldr)] = $iana;
+            }
+        }
+
         if (!$this->zoneToCountryMapping) {
-            $this->zoneToCountryMapping = self::generateZoneToCountryMapping($reader->read($tempDir, 'windowsZones'));
+            $this->zoneToCountryMapping = $this->generateZoneToCountryMapping($reader->read($tempDir, 'windowsZones'));
         }
 
         // Don't generate aliases, as they are resolved during runtime
@@ -89,7 +83,7 @@ class TimezoneDataGenerator extends AbstractDataGenerator
 
         $localeBundle = $reader->read($tempDir, $displayLocale);
 
-        if (!isset($localeBundle['zoneStrings']) || null === $localeBundle['zoneStrings']) {
+        if (!isset($localeBundle['zoneStrings'])) {
             return null;
         }
 
@@ -122,9 +116,6 @@ class TimezoneDataGenerator extends AbstractDataGenerator
         return $data;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     protected function generateDataForRoot(BundleEntryReaderInterface $reader, string $tempDir): ?array
     {
         $rootBundle = $reader->read($tempDir, 'root');
@@ -134,25 +125,18 @@ class TimezoneDataGenerator extends AbstractDataGenerator
         ];
     }
 
-    /**
-     * {@inheritdoc}
-     */
     protected function generateDataForMeta(BundleEntryReaderInterface $reader, string $tempDir): ?array
     {
-        $rootBundle = $reader->read($tempDir, 'root');
-
         $this->zoneIds = array_unique($this->zoneIds);
 
         sort($this->zoneIds);
         ksort($this->zoneToCountryMapping);
 
-        $data = [
+        return [
             'Zones' => $this->zoneIds,
             'ZoneToCountry' => $this->zoneToCountryMapping,
             'CountryToZone' => self::generateCountryToZoneMapping($this->zoneToCountryMapping),
         ];
-
-        return $data;
     }
 
     private function generateZones(BundleEntryReaderInterface $reader, string $tempDir, string $locale): array
@@ -182,7 +166,7 @@ class TimezoneDataGenerator extends AbstractDataGenerator
             if (isset($this->zoneToCountryMapping[$id])) {
                 try {
                     $country = $reader->readEntry($tempDir.'/region', $locale, ['Countries', $this->zoneToCountryMapping[$id]]);
-                } catch (MissingResourceException $e) {
+                } catch (MissingResourceException) {
                     return null;
                 }
 
@@ -200,7 +184,7 @@ class TimezoneDataGenerator extends AbstractDataGenerator
             foreach (\func_get_args() as $indices) {
                 try {
                     return $reader->readEntry($tempDir, $locale, $indices);
-                } catch (MissingResourceException $e) {
+                } catch (MissingResourceException) {
                 }
             }
 
@@ -240,6 +224,10 @@ class TimezoneDataGenerator extends AbstractDataGenerator
             }
 
             $zones[$id] = $name;
+
+            if (isset($this->ianaMap[$id])) {
+                $zones[$this->ianaMap[$id]] = $name;
+            }
         }
 
         return $zones;
@@ -260,14 +248,20 @@ class TimezoneDataGenerator extends AbstractDataGenerator
         return $metadata;
     }
 
-    private static function generateZoneToCountryMapping(ArrayAccessibleResourceBundle $windowsZoneBundle): array
+    private function generateZoneToCountryMapping(ArrayAccessibleResourceBundle $windowsZoneBundle): array
     {
         $mapping = [];
 
         foreach ($windowsZoneBundle['mapTimezones'] as $zoneInfo) {
             foreach ($zoneInfo as $region => $zones) {
                 if (RegionDataGenerator::isValidCountryCode($region)) {
-                    $mapping += array_fill_keys(explode(' ', $zones), $region);
+                    foreach (explode(' ', $zones) as $zone) {
+                        $mapping[$zone] = $region;
+
+                        if (isset($this->ianaMap[$zone])) {
+                            $mapping[$this->ianaMap[$zone]] = $region;
+                        }
+                    }
                 }
             }
         }

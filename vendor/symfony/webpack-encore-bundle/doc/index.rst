@@ -52,6 +52,8 @@ file:
         # if you have multiple builds:
         # builds:
             # frontend: '%kernel.project_dir%/public/frontend/build'
+            # or if you use a CDN:
+            # frontend: 'https://cdn.example.com/frontend/build'
 
             # pass the build name" as the 3rd argument to the Twig functions
             # {{ encore_entry_script_tags('entry1', null, 'frontend') }}
@@ -204,9 +206,9 @@ different ways:
 Stimulus / Symfony UX Helper
 ----------------------------
 
-The ``stimulus_controller()``, ``stimulus_action()`` and ``stimulus_target()``
-Twig functions are deprecated in WebpackEncoreBundle 1.17.0. Install and
-use `symfony/stimulus-bundle`_ for that functionality.
+Version 1 of this bundle came with  ``stimulus_controller()``,
+``stimulus_action()`` and ``stimulus_target()`` Twig functions. These have been
+removed: use `symfony/stimulus-bundle`_ instead.
 
 .. _`Webpack Encore`: https://symfony.com/doc/current/frontend.html
 .. _`enable the bundle manually`: https://symfony.com/doc/current/bundles.html
