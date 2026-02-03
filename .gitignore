@@ -25,4 +25,4 @@ yarn-error.log
 composer.lock
 symfony.lock
 /public/uploads/
-/RecoverBDD_Java/config/config.properties
+/RecoverBDD_Java*/config/config.properties
