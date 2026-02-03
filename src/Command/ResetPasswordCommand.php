@@ -10,7 +10,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 class ResetPasswordCommand extends Command
 {
@@ -18,17 +18,17 @@ class ResetPasswordCommand extends Command
     protected static $defaultDescription = 'Réinitialise le mot de passe d\'un utilisateur';
 
     private EntityManagerInterface $em;
-    private UserPasswordEncoderInterface $passwordEncoder;
+    private UserPasswordHasherInterface $passwordHasher;
     private UserRepository $userRepository;
 
     public function __construct(
         EntityManagerInterface $em,
-        UserPasswordEncoderInterface $passwordEncoder,
+        UserPasswordHasherInterface $passwordHasher,
         UserRepository $userRepository
     ) {
         parent::__construct();
         $this->em = $em;
-        $this->passwordEncoder = $passwordEncoder;
+        $this->passwordHasher = $passwordHasher;
         $this->userRepository = $userRepository;
     }
 
@@ -53,7 +53,7 @@ class ResetPasswordCommand extends Command
             return Command::FAILURE;
         }
 
-        $hashedPassword = $this->passwordEncoder->encodePassword($user, $password);
+        $hashedPassword = $this->passwordHasher->hashPassword($user, $password);
         $user->setPassword($hashedPassword);
 
         $this->em->flush();

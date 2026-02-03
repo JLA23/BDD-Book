@@ -33,12 +33,12 @@ class MakefileConfigurator extends AbstractConfigurator
             return;
         }
 
-        $contents = preg_replace(sprintf('{%s*###> %s ###.*###< %s ###%s+}s', "\n", $recipe->getName(), $recipe->getName(), "\n"), "\n", file_get_contents($makefile), -1, $count);
+        $contents = preg_replace(\sprintf('{%s*###> %s ###.*###< %s ###%s+}s', "\n", $recipe->getName(), $recipe->getName(), "\n"), "\n", file_get_contents($makefile), -1, $count);
         if (!$count) {
             return;
         }
 
-        $this->write(sprintf('Removing Makefile entries from %s', $makefile));
+        $this->write(\sprintf('Removing Makefile entries from %s', $makefile));
         if (!trim($contents)) {
             @unlink($makefile);
         } else {
@@ -76,16 +76,16 @@ class MakefileConfigurator extends AbstractConfigurator
             file_put_contents(
                 $this->options->get('root-dir').'/Makefile',
                 <<<EOF
-ifndef {$envKey}
-	include {$dotenvPath}
-endif
+                    ifndef {$envKey}
+                        include {$dotenvPath}
+                    endif
 
-.DEFAULT_GOAL := help
-.PHONY: help
-help:
-	@awk 'BEGIN {FS = ":.*?## "}; /^[a-zA-Z-]+:.*?## .*$$/ {printf "\033[32m%-15s\033[0m %s\\n", $$1, $$2}' Makefile | sort
+                    .DEFAULT_GOAL := help
+                    .PHONY: help
+                    help:
+                        @awk 'BEGIN {FS = ":.*?## "}; /^[a-zA-Z-]+:.*?## .*$$/ {printf "\033[32m%-15s\033[0m %s\\n", $$1, $$2}' Makefile | sort
 
-EOF
+                    EOF
             );
         }
 

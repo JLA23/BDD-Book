@@ -12,6 +12,7 @@ use OutOfBoundsException;
 
 use function array_key_exists;
 use function array_keys;
+use function array_map;
 use function sprintf;
 
 /**
@@ -25,7 +26,7 @@ class ReferenceRepository
      * List of named references to the fixture objects
      * gathered during fixure loading
      *
-     * @phpstan-var array<class-string, array<string, object>>
+     * @phpstan-var array<class-string, array<string|int, object>>
      */
     private array $referencesByClass = [];
 
@@ -115,7 +116,7 @@ class ReferenceRepository
      * not be set yet
      *
      * Notice: in case if identifier is generated after
-     * the record is inserted, be sure tu use this method
+     * the record is inserted, be sure to use this method
      * after $object is flushed
      *
      * @param object $object - managed object
@@ -192,7 +193,7 @@ class ReferenceRepository
             return [];
         }
 
-        return array_keys($this->referencesByClass[$class], $reference, true);
+        return array_map('strval', array_keys($this->referencesByClass[$class], $reference, true));
     }
 
     /**
@@ -218,7 +219,7 @@ class ReferenceRepository
     /**
      * Get all stored references
      *
-     * @phpstan-return array<class-string, array<string, object>>
+     * @phpstan-return array<class-string, array<string|int, object>>
      */
     public function getReferencesByClass(): array
     {
@@ -237,6 +238,8 @@ class ReferenceRepository
      * Get real class name of a reference that could be a proxy
      *
      * @param string $className Class name of reference object
+     *
+     * @return class-string
      */
     protected function getRealClass(string $className): string
     {

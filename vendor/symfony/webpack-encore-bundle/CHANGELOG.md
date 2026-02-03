@@ -1,5 +1,24 @@
 # Changelog
 
+## v2.3.0
+
+- #248 Add support for Symfony 8 (@Kocal)
+
+## v2.2.0
+
+- #236 Allow entrypoints.json to be hosted remotely (@rlvdx & @Kocal)
+- #232 fix: correctly wire the build-time file into kernel.build_dir (@dkarlovi)
+- #237 Fix missing integrity hash on preload (@arnaud-ritti & @Kocal)
+
+## v2.1.0
+
+- #233 Add support for PHP 8.3 and PHP 8.4 (@Kocal)
+
+## v2.0.0
+
+- Minimum PHP version is now 8.1
+- Minimum Symfony version is now 5.4
+
 ## v1.17.0
 
 - Deprecated the `stimulus_controller()`, `stimulus_action()` and `stimulus_target`

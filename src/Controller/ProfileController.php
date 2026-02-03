@@ -8,25 +8,23 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
+use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 class ProfileController extends AbstractController
 {
     private EntityManagerInterface $em;
-    private UserPasswordEncoderInterface $passwordEncoder;
+    private UserPasswordHasherInterface $passwordHasher;
     private string $avatarDirectory;
 
-    public function __construct(EntityManagerInterface $em, UserPasswordEncoderInterface $passwordEncoder, string $projectDir)
+    public function __construct(EntityManagerInterface $em, UserPasswordHasherInterface $passwordHasher, string $projectDir)
     {
         $this->em = $em;
-        $this->passwordEncoder = $passwordEncoder;
+        $this->passwordHasher = $passwordHasher;
         $this->avatarDirectory = $projectDir . '/public/uploads/avatars';
     }
 
-    /**
-     * @Route("/profil", name="user_profile")
-     */
+    #[Route('/profil', name: 'user_profile')]
     public function profile(Request $request): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
@@ -39,7 +37,7 @@ class ProfileController extends AbstractController
             $plainPassword = $form->get('plainPassword')->getData();
             
             if ($plainPassword) {
-                $hashedPassword = $this->passwordEncoder->encodePassword($user, $plainPassword);
+                $hashedPassword = $this->passwordHasher->hashPassword($user, $plainPassword);
                 $user->setPassword($hashedPassword);
             }
 
@@ -55,9 +53,7 @@ class ProfileController extends AbstractController
         ]);
     }
 
-    /**
-     * @Route("/profil/upload-avatar", name="profile_upload_avatar", methods={"POST"})
-     */
+    #[Route('/profil/upload-avatar', name: 'profile_upload_avatar', methods: ['POST'])]
     public function uploadAvatar(Request $request): JsonResponse
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
@@ -115,9 +111,7 @@ class ProfileController extends AbstractController
         }
     }
 
-    /**
-     * @Route("/profil/remove-avatar", name="profile_remove_avatar", methods={"POST"})
-     */
+    #[Route('/profil/remove-avatar', name: 'profile_remove_avatar', methods: ['POST'])]
     public function removeAvatar(): JsonResponse
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');

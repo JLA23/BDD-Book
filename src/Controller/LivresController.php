@@ -2,7 +2,7 @@
 namespace App\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use App\Entity\Livre;
@@ -22,13 +22,11 @@ class LivresController extends AbstractController
         $this->bookCoverService = $bookCoverService;
         $this->em = $em;
     }
-    /**
-     * @Route("/listelivre", name="listesLivres")
-     */
+    #[Route('/listelivre', name: 'listesLivres')]
     public function listesLivres(Request $request, PaginatorInterface $paginator)
     {
         $detect = new \Mobile_Detect;
-        $em = $this->getDoctrine()->getManager();
+        $em = $this->em;
 
         $listeLivreId = $em->getRepository(Livre::class)->getAllLivres($request->get('user'),$request->get('sort'), $request->get('order'));
         $images = array();
@@ -60,13 +58,11 @@ class LivresController extends AbstractController
 
     }
 
-    /**
- * @Route("/livre/{id}", name="livreDetail")
- */
-public function livreDetail(string $id, Request $request)
-{
-    $detect = new \Mobile_Detect;
-    $em = $this->getDoctrine()->getManager();
+    #[Route('/livre/{id}', name: 'livreDetail')]
+    public function livreDetail(string $id, Request $request)
+    {
+        $detect = new \Mobile_Detect;
+        $em = $this->em;
 
     $livre = $em->getRepository(Livre::class)->findOneById($id);
 
@@ -74,12 +70,10 @@ public function livreDetail(string $id, Request $request)
 
 }
 
-    /**
-     * @Route("/recherche", name="searchBook")
-     */
+    #[Route('/recherche', name: 'searchBook')]
     public function searchBook(Request $request, PaginatorInterface $paginator)
     {
-        $em = $this->getDoctrine()->getManager();
+        $em = $this->em;
         $detect = new \Mobile_Detect;
         
         $users = $em->getRepository(\App\Entity\User::class)->findAll();
@@ -166,12 +160,10 @@ public function livreDetail(string $id, Request $request)
         return $this->redirectToRoute('index');
     }
 
-    /**
-     * @Route("/listelivreUser/{id}", name="listelivreUser")
-     */
+    #[Route('/listelivreUser/{id}', name: 'listelivreUser')]
     public function listesLivresbyUser(string $id, Request $request, PaginatorInterface $paginator)
     {
-        $em = $this->getDoctrine()->getManager();
+        $em = $this->em;
         $detect = new \Mobile_Detect;
 
         $listeLivreId = $em->getRepository(Livre::class)->getAllLivresByUser($id, $request->get('sort'), $request->get('order'));
@@ -199,9 +191,7 @@ public function livreDetail(string $id, Request $request)
 
     }
 
-    /**
-     * @Route("/livre/{id}/rechercher-couverture", name="livre_search_cover", requirements={"id"="\d+"})
-     */
+    #[Route('/livre/{id}/rechercher-couverture', name: 'livre_search_cover', requirements: ['id' => '\d+'])]
     public function searchCover(int $id): JsonResponse
     {
         $livre = $this->em->getRepository(Livre::class)->find($id);
@@ -244,9 +234,7 @@ public function livreDetail(string $id, Request $request)
         ]);
     }
 
-    /**
-     * @Route("/livre/{id}/upload-cover", name="livre_upload_cover", methods={"POST"}, requirements={"id"="\d+"})
-     */
+    #[Route('/livre/{id}/upload-cover', name: 'livre_upload_cover', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function uploadCover(int $id, Request $request): JsonResponse
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
@@ -314,9 +302,7 @@ public function livreDetail(string $id, Request $request)
         }
     }
 
-    /**
-     * @Route("/livre/{id}/supprimer-url-couverture", name="livre_remove_cover_url", methods={"POST"}, requirements={"id"="\d+"})
-     */
+    #[Route('/livre/{id}/supprimer-url-couverture', name: 'livre_remove_cover_url', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function removeCoverUrl(int $id): JsonResponse
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
@@ -336,9 +322,7 @@ public function livreDetail(string $id, Request $request)
         ]);
     }
 
-    /**
-     * @Route("/livre/{id}/scrape-covers", name="livre_scrape_covers")
-     */
+    #[Route('/livre/{id}/scrape-covers', name: 'livre_scrape_covers')]
     public function scrapeCovers(string $id): JsonResponse
     {
         $livre = $this->em->getRepository(Livre::class)->findOneById($id);
@@ -363,9 +347,7 @@ public function livreDetail(string $id, Request $request)
         ]);
     }
 
-    /**
-     * @Route("/livre/{id}/update-cover-url", name="livre_update_cover_url", methods={"POST"})
-     */
+    #[Route('/livre/{id}/update-cover-url', name: 'livre_update_cover_url', methods: ['POST'])]
     public function updateCoverUrl(string $id, Request $request): Response
     {
         $livre = $this->em->getRepository(Livre::class)->findOneById($id);

@@ -2,29 +2,24 @@
 namespace App\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Attribute\Route;
 use App\Entity\User;
-
+use App\Repository\UserRepository;
 
 class IndexController extends AbstractController
 {
-    /**
-     * @Route("/listeUser", name="listeUser")
-     */
-    public function listeUser()
+    #[Route('/listeUser', name: 'listeUser')]
+    public function listeUser(UserRepository $userRepository): Response
     {
-        $em = $this->getDoctrine()->getManager();
-        $users = $em->getRepository(User::class)->findAll();
-        return $this->render('pages/listUser.html.twig', ['users' => $users]) ;
+        $users = $userRepository->findAll();
+        return $this->render('pages/listUser.html.twig', ['users' => $users]);
     }
 
-    /**
-     * @Route("/", name="index")
-     */
-    public function index()
+    #[Route('/', name: 'index')]
+    public function index(UserRepository $userRepository): Response
     {
-        $em = $this->getDoctrine()->getManager();
-        $users = $em->getRepository(User::class)->findAll();
-        return $this->render('pages/index.html.twig',['users' => $users]) ;
+        $users = $userRepository->findAll();
+        return $this->render('pages/index.html.twig', ['users' => $users]);
     }
 }

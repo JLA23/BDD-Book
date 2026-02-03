@@ -5,10 +5,10 @@ namespace App\Command;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\DependencyInjection\ContainerInterface;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Question\Question;
-use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 use App\Entity\User;
 
@@ -16,14 +16,14 @@ class CreateUserCommand extends Command
 {
     // the name of the command (the part after "bin/console")
     protected static $defaultName = 'app:create-user';
-    private $container;
-    private $passwordEncoder;
+    private EntityManagerInterface $entityManager;
+    private UserPasswordHasherInterface $passwordHasher;
 
-    public function __construct(ContainerInterface $container, UserPasswordEncoderInterface $passwordEncoder)
+    public function __construct(EntityManagerInterface $entityManager, UserPasswordHasherInterface $passwordHasher)
     {
         parent::__construct();
-        $this->container = $container;
-        $this->passwordEncoder = $passwordEncoder;
+        $this->entityManager = $entityManager;
+        $this->passwordHasher = $passwordHasher;
     }
 
 
@@ -35,7 +35,7 @@ class CreateUserCommand extends Command
             ->addOption('option', null, InputOption::VALUE_NONE, 'Option description');
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $helper = $this->getHelper('question');
         $error = false;
@@ -122,16 +122,15 @@ class CreateUserCommand extends Command
 
     public function create($username, $password, $email, $prenom, $nom, $idAccess)
     {
-        $em = $this->container->get('doctrine')->getManager();
         $user = new User();
         $user->setUsername($username);
         $user->setEmail($email);
-        $user->setPassword($this->passwordEncoder->encodePassword($user,$password));
+        $user->setPassword($this->passwordHasher->hashPassword($user, $password));
         $user->setLastname($nom);
         $user->setName($prenom);
         $user->setIdAccess($idAccess);
-        $em->persist($user);
-        $em->flush();
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
 
     }
 

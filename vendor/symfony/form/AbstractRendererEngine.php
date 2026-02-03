@@ -48,7 +48,12 @@ abstract class AbstractRendererEngine implements FormRendererEngineInterface, Re
     /**
      * @var array<array<int|false>>
      */
-    private $resourceHierarchyLevels = [];
+    private array $resourceHierarchyLevels = [];
+
+    /**
+     * @var array<string, array<string, bool>>
+     */
+    private array $resourceInheritability = [];
 
     /**
      * Creates a new renderer engine.
@@ -62,9 +67,9 @@ abstract class AbstractRendererEngine implements FormRendererEngineInterface, Re
     }
 
     /**
-     * {@inheritdoc}
+     * @return void
      */
-    public function setTheme(FormView $view, $themes, bool $useDefaultThemes = true)
+    public function setTheme(FormView $view, mixed $themes, bool $useDefaultThemes = true)
     {
         $cacheKey = $view->vars[self::CACHE_KEY_VAR];
 
@@ -75,13 +80,20 @@ abstract class AbstractRendererEngine implements FormRendererEngineInterface, Re
         // Unset instead of resetting to an empty array, in order to allow
         // implementations (like TwigRendererEngine) to check whether $cacheKey
         // is set at all.
-        unset($this->resources[$cacheKey], $this->resourceHierarchyLevels[$cacheKey]);
+        unset($this->resources[$cacheKey], $this->resourceHierarchyLevels[$cacheKey], $this->resourceInheritability[$cacheKey]);
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function getResourceForBlockName(FormView $view, string $blockName)
+    protected function setResourceInheritability(string $cacheKey, string $blockName, bool $inheritable): void
+    {
+        $this->resourceInheritability[$cacheKey][$blockName] = $inheritable;
+    }
+
+    protected function isResourceInheritable(string $cacheKey, string $blockName): bool
+    {
+        return $this->resourceInheritability[$cacheKey][$blockName] ?? false;
+    }
+
+    public function getResourceForBlockName(FormView $view, string $blockName): mixed
     {
         $cacheKey = $view->vars[self::CACHE_KEY_VAR];
 
@@ -92,10 +104,7 @@ abstract class AbstractRendererEngine implements FormRendererEngineInterface, Re
         return $this->resources[$cacheKey][$blockName];
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function getResourceForBlockNameHierarchy(FormView $view, array $blockNameHierarchy, int $hierarchyLevel)
+    public function getResourceForBlockNameHierarchy(FormView $view, array $blockNameHierarchy, int $hierarchyLevel): mixed
     {
         $cacheKey = $view->vars[self::CACHE_KEY_VAR];
         $blockName = $blockNameHierarchy[$hierarchyLevel];
@@ -107,10 +116,7 @@ abstract class AbstractRendererEngine implements FormRendererEngineInterface, Re
         return $this->resources[$cacheKey][$blockName];
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function getResourceHierarchyLevel(FormView $view, array $blockNameHierarchy, int $hierarchyLevel)
+    public function getResourceHierarchyLevel(FormView $view, array $blockNameHierarchy, int $hierarchyLevel): int|false
     {
         $cacheKey = $view->vars[self::CACHE_KEY_VAR];
         $blockName = $blockNameHierarchy[$hierarchyLevel];
@@ -153,6 +159,7 @@ abstract class AbstractRendererEngine implements FormRendererEngineInterface, Re
             // cache. The only missing thing is to set the hierarchy level at which
             // the template was found.
             $this->resourceHierarchyLevels[$cacheKey][$blockName] = $hierarchyLevel;
+            $this->setResourceInheritability($cacheKey, $blockName, true);
 
             return true;
         }
@@ -176,6 +183,7 @@ abstract class AbstractRendererEngine implements FormRendererEngineInterface, Re
                 // Cache the shortcuts for further accesses
                 $this->resources[$cacheKey][$blockName] = $this->resources[$cacheKey][$parentBlockName];
                 $this->resourceHierarchyLevels[$cacheKey][$blockName] = $this->resourceHierarchyLevels[$cacheKey][$parentBlockName];
+                $this->setResourceInheritability($cacheKey, $blockName, false);
 
                 return true;
             }
@@ -184,6 +192,7 @@ abstract class AbstractRendererEngine implements FormRendererEngineInterface, Re
                 // Cache the shortcuts for further accesses
                 $this->resources[$cacheKey][$blockName] = $this->resources[$cacheKey][$parentBlockName];
                 $this->resourceHierarchyLevels[$cacheKey][$blockName] = $this->resourceHierarchyLevels[$cacheKey][$parentBlockName];
+                $this->setResourceInheritability($cacheKey, $blockName, false);
 
                 return true;
             }
@@ -192,6 +201,7 @@ abstract class AbstractRendererEngine implements FormRendererEngineInterface, Re
         // Cache the result for further accesses
         $this->resources[$cacheKey][$blockName] = false;
         $this->resourceHierarchyLevels[$cacheKey][$blockName] = false;
+        $this->setResourceInheritability($cacheKey, $blockName, true);
 
         return false;
     }
@@ -202,5 +212,6 @@ abstract class AbstractRendererEngine implements FormRendererEngineInterface, Re
         $this->useDefaultThemes = [];
         $this->resources = [];
         $this->resourceHierarchyLevels = [];
+        $this->resourceInheritability = [];
     }
 }

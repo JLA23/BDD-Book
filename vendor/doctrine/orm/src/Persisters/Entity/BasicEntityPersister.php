@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Doctrine\ORM\Persisters\Entity;
 
-use BackedEnum;
 use Doctrine\Common\Collections\Criteria;
 use Doctrine\Common\Collections\Expr\Comparison;
 use Doctrine\DBAL\Connection;
@@ -26,9 +25,7 @@ use Doctrine\ORM\Persisters\Exception\InvalidOrientation;
 use Doctrine\ORM\Persisters\Exception\UnrecognizedField;
 use Doctrine\ORM\Persisters\SqlExpressionVisitor;
 use Doctrine\ORM\Persisters\SqlValueVisitor;
-use Doctrine\ORM\Proxy\DefaultProxyClassNameResolver;
 use Doctrine\ORM\Query;
-use Doctrine\ORM\Query\QueryException;
 use Doctrine\ORM\Repository\Exception\InvalidFindByCall;
 use Doctrine\ORM\UnitOfWork;
 use Doctrine\ORM\Utility\IdentifierFlattener;
@@ -37,17 +34,18 @@ use Doctrine\ORM\Utility\PersisterHelper;
 use LengthException;
 
 use function array_combine;
+use function array_diff_key;
+use function array_fill;
+use function array_flip;
 use function array_keys;
 use function array_map;
 use function array_merge;
-use function array_search;
 use function array_unique;
 use function array_values;
 use function assert;
 use function count;
 use function implode;
 use function is_array;
-use function is_object;
 use function reset;
 use function spl_object_id;
 use function sprintf;
@@ -169,14 +167,6 @@ class BasicEntityPersister implements EntityPersister
     protected $quotedColumns = [];
 
     /**
-     * The INSERT SQL statement used for entities handled by this persister.
-     * This SQL is only generated once per request, if at all.
-     *
-     * @var string|null
-     */
-    private $insertSql;
-
-    /**
      * The quote strategy.
      *
      * @var QuoteStrategy
@@ -224,6 +214,16 @@ class BasicEntityPersister implements EntityPersister
             new Query\ResultSetMapping(),
             true
         );
+    }
+
+    final protected function isFilterHashUpToDate(): bool
+    {
+        return $this->filterHash === $this->em->getFilters()->getHash();
+    }
+
+    final protected function updateFilterHash(): void
+    {
+        $this->filterHash = $this->em->getFilters()->getHash();
     }
 
     /**
@@ -300,8 +300,8 @@ class BasicEntityPersister implements EntityPersister
                 $this->assignDefaultVersionAndUpsertableValues($entity, $id);
             }
 
-            // Unset this queued insert, so that the prepareUpdateData() method knows right away
-            // (for the next entity already) that the current entity has been written to the database
+            // Unset this queued insert, so that the prepareUpdateData() method (called via prepareInsertData() method)
+            // knows right away (for the next entity already) that the current entity has been written to the database
             // and no extra updates need to be scheduled to refer to it.
             //
             // In \Doctrine\ORM\UnitOfWork::executeInserts(), the UoW already removed entities
@@ -392,7 +392,7 @@ class BasicEntityPersister implements EntityPersister
         $types = [];
 
         foreach ($id as $field => $value) {
-            $types = array_merge($types, $this->getTypes($field, $value, $versionedClass));
+            $types = array_merge($types, PersisterHelper::inferParameterTypes($field, $value, $versionedClass, $this->em));
         }
 
         return $types;
@@ -953,8 +953,31 @@ class BasicEntityPersister implements EntityPersister
                 continue;
             }
 
-            $sqlParams = array_merge($sqlParams, $this->getValues($value));
-            $sqlTypes  = array_merge($sqlTypes, $this->getTypes($field, $value, $this->class));
+            if ($operator === Comparison::IN || $operator === Comparison::NIN) {
+                if (! is_array($value)) {
+                    $value = [$value];
+                }
+
+                foreach ($value as $item) {
+                    if ($item === null) {
+                        /*
+                         * Compare this to how \Doctrine\ORM\Persisters\Entity\BasicEntityPersister::getSelectConditionStatementSQL
+                         * creates the "[NOT] IN (...)" expression - for NULL values, it does _not_ insert a placeholder in the
+                         * SQL and instead adds an extra ... OR ... IS NULL condition. So we need to skip NULL values here as
+                         * well to create a parameters list that matches the SQL.
+                         */
+                        continue;
+                    }
+
+                    $sqlParams = array_merge($sqlParams, PersisterHelper::convertToParameterValue($item, $this->em));
+                    $sqlTypes  = array_merge($sqlTypes, PersisterHelper::inferParameterTypes($field, $item, $this->class, $this->em));
+                }
+
+                continue;
+            }
+
+            $sqlParams = array_merge($sqlParams, PersisterHelper::convertToParameterValue($value, $this->em));
+            $sqlTypes  = array_merge($sqlTypes, PersisterHelper::inferParameterTypes($field, $value, $this->class, $this->em));
         }
 
         return [$sqlParams, $sqlTypes];
@@ -1274,7 +1297,7 @@ class BasicEntityPersister implements EntityPersister
      */
     protected function getSelectColumnsSQL()
     {
-        if ($this->currentPersisterContext->selectColumnListSql !== null && $this->filterHash === $this->em->getFilters()->getHash()) {
+        if ($this->currentPersisterContext->selectColumnListSql !== null && $this->isFilterHashUpToDate()) {
             return $this->currentPersisterContext->selectColumnListSql;
         }
 
@@ -1374,6 +1397,12 @@ class BasicEntityPersister implements EntityPersister
                     $joinCondition[] = $this->getSQLTableAlias($association['sourceEntity'], $assocAlias) . '.' . $sourceCol . ' = '
                         . $this->getSQLTableAlias($association['targetEntity']) . '.' . $targetCol;
                 }
+
+                // Add filter SQL
+                $filterSql = $this->generateFilterConditionSQL($eagerEntity, $joinTableAlias);
+                if ($filterSql) {
+                    $joinCondition[] = $filterSql;
+                }
             }
 
             $this->currentPersisterContext->selectJoinSql .= ' ' . $joinTableName . ' ' . $joinTableAlias . ' ON ';
@@ -1381,7 +1410,7 @@ class BasicEntityPersister implements EntityPersister
         }
 
         $this->currentPersisterContext->selectColumnListSql = implode(', ', $columnList);
-        $this->filterHash                                   = $this->em->getFilters()->getHash();
+        $this->updateFilterHash();
 
         return $this->currentPersisterContext->selectColumnListSql;
     }
@@ -1457,22 +1486,17 @@ class BasicEntityPersister implements EntityPersister
      */
     public function getInsertSQL()
     {
-        if ($this->insertSql !== null) {
-            return $this->insertSql;
-        }
-
         $columns   = $this->getInsertColumnList();
         $tableName = $this->quoteStrategy->getTableName($this->class, $this->platform);
 
-        if (empty($columns)) {
-            $identityColumn  = $this->quoteStrategy->getColumnName($this->class->identifier[0], $this->class, $this->platform);
-            $this->insertSql = $this->platform->getEmptyIdentityInsertSQL($tableName, $identityColumn);
+        if ($columns === []) {
+            $identityColumn = $this->quoteStrategy->getColumnName($this->class->identifier[0], $this->class, $this->platform);
 
-            return $this->insertSql;
+            return $this->platform->getEmptyIdentityInsertSQL($tableName, $identityColumn);
         }
 
-        $values  = [];
-        $columns = array_unique($columns);
+        $placeholders = [];
+        $columns      = array_unique($columns);
 
         foreach ($columns as $column) {
             $placeholder = '?';
@@ -1486,15 +1510,13 @@ class BasicEntityPersister implements EntityPersister
                 $placeholder = $type->convertToDatabaseValueSQL('?', $this->platform);
             }
 
-            $values[] = $placeholder;
+            $placeholders[] = $placeholder;
         }
 
-        $columns = implode(', ', $columns);
-        $values  = implode(', ', $values);
+        $columns      = implode(', ', $columns);
+        $placeholders = implode(', ', $placeholders);
 
-        $this->insertSql = sprintf('INSERT INTO %s (%s) VALUES (%s)', $tableName, $columns, $values);
-
-        return $this->insertSql;
+        return sprintf('INSERT INTO %s (%s) VALUES (%s)', $tableName, $columns, $placeholders);
     }
 
     /**
@@ -1560,7 +1582,15 @@ class BasicEntityPersister implements EntityPersister
         $tableAlias   = $this->getSQLTableAlias($class->name, $root);
         $fieldMapping = $class->fieldMappings[$field];
         $sql          = sprintf('%s.%s', $tableAlias, $this->quoteStrategy->getColumnName($field, $class, $this->platform));
-        $columnAlias  = $this->getSQLColumnAlias($fieldMapping['columnName']);
+
+        $columnAlias = null;
+        if ($this->currentPersisterContext->rsm->hasColumnAliasByField($alias, $field)) {
+            $columnAlias = $this->currentPersisterContext->rsm->getColumnAliasByField($alias, $field);
+        }
+
+        if ($columnAlias === null) {
+            $columnAlias = $this->getSQLColumnAlias($fieldMapping['columnName']);
+        }
 
         $this->currentPersisterContext->rsm->addFieldResult($alias, $columnAlias, $field);
         if (! empty($fieldMapping['enumType'])) {
@@ -1684,6 +1714,8 @@ class BasicEntityPersister implements EntityPersister
      */
     public function getSelectConditionStatementSQL($field, $value, $assoc = null, $comparison = null)
     {
+        $comparison = $comparison ?? (is_array($value) ? Comparison::IN : Comparison::EQ);
+
         $selectedColumns = [];
         $columns         = $this->getSelectConditionStatementColumnSQL($field, $assoc);
 
@@ -1703,46 +1735,50 @@ class BasicEntityPersister implements EntityPersister
                 $placeholder = $type->convertToDatabaseValueSQL($placeholder, $this->platform);
             }
 
-            if ($comparison !== null) {
-                // special case null value handling
-                if (($comparison === Comparison::EQ || $comparison === Comparison::IS) && $value === null) {
-                    $selectedColumns[] = $column . ' IS NULL';
-
-                    continue;
-                }
-
-                if ($comparison === Comparison::NEQ && $value === null) {
-                    $selectedColumns[] = $column . ' IS NOT NULL';
-
-                    continue;
-                }
-
-                $selectedColumns[] = $column . ' ' . sprintf(self::$comparisonMap[$comparison], $placeholder);
+            // special case null value handling
+            if (($comparison === Comparison::EQ || $comparison === Comparison::IS) && $value === null) {
+                $selectedColumns[] = $column . ' IS NULL';
 
                 continue;
             }
 
-            if (is_array($value)) {
-                $in = sprintf('%s IN (%s)', $column, $placeholder);
+            if ($comparison === Comparison::NEQ && $value === null) {
+                $selectedColumns[] = $column . ' IS NOT NULL';
 
-                if (array_search(null, $value, true) !== false) {
-                    $selectedColumns[] = sprintf('(%s OR %s IS NULL)', $in, $column);
+                continue;
+            }
 
+            if ($comparison === Comparison::IN || $comparison === Comparison::NIN) {
+                if (! is_array($value)) {
+                    $value = [$value];
+                }
+
+                if ($value === []) {
+                    $selectedColumns[] = '1=0';
                     continue;
                 }
 
-                $selectedColumns[] = $in;
+                $nullKeys      = array_keys($value, null, true);
+                $nonNullValues = array_diff_key($value, array_flip($nullKeys));
+
+                $placeholders = implode(', ', array_fill(0, count($nonNullValues), $placeholder));
+
+                $in = $column . ' ' . sprintf(self::$comparisonMap[$comparison], $placeholders);
+
+                if ($nullKeys) {
+                    if ($nonNullValues) {
+                        $selectedColumns[] = sprintf('(%s OR %s IS NULL)', $in, $column);
+                    } else {
+                        $selectedColumns[] = $column . ' IS NULL';
+                    }
+                } else {
+                    $selectedColumns[] = $in;
+                }
 
                 continue;
             }
 
-            if ($value === null) {
-                $selectedColumns[] = sprintf('%s IS NULL', $column);
-
-                continue;
-            }
-
-            $selectedColumns[] = sprintf('%s = %s', $column, $placeholder);
+            $selectedColumns[] = $column . ' ' . sprintf(self::$comparisonMap[$comparison], $placeholder);
         }
 
         return implode(' AND ', $selectedColumns);
@@ -1933,8 +1969,18 @@ class BasicEntityPersister implements EntityPersister
                 continue; // skip null values.
             }
 
-            $types  = array_merge($types, $this->getTypes($field, $value, $this->class));
-            $params = array_merge($params, $this->getValues($value));
+            if (is_array($value)) {
+                $nonNullValues = array_diff_key($value, array_flip(array_keys($value, null, true)));
+                foreach ($nonNullValues as $item) {
+                    $types  = array_merge($types, PersisterHelper::inferParameterTypes($field, $item, $this->class, $this->em));
+                    $params = array_merge($params, PersisterHelper::convertToParameterValue($item, $this->em));
+                }
+
+                continue;
+            }
+
+            $types  = array_merge($types, PersisterHelper::inferParameterTypes($field, $value, $this->class, $this->em));
+            $params = array_merge($params, PersisterHelper::convertToParameterValue($value, $this->em));
         }
 
         return [$params, $types];
@@ -1962,125 +2008,11 @@ class BasicEntityPersister implements EntityPersister
                 continue; // skip null values.
             }
 
-            $types  = array_merge($types, $this->getTypes($criterion['field'], $criterion['value'], $criterion['class']));
-            $params = array_merge($params, $this->getValues($criterion['value']));
+            $types  = array_merge($types, PersisterHelper::inferParameterTypes($criterion['field'], $criterion['value'], $criterion['class'], $this->em));
+            $params = array_merge($params, PersisterHelper::convertToParameterValue($criterion['value'], $this->em));
         }
 
         return [$params, $types];
-    }
-
-    /**
-     * Infers field types to be used by parameter type casting.
-     *
-     * @param mixed $value
-     *
-     * @return int[]|null[]|string[]
-     * @phpstan-return list<int|string|null>
-     *
-     * @throws QueryException
-     */
-    private function getTypes(string $field, $value, ClassMetadata $class): array
-    {
-        $types = [];
-
-        switch (true) {
-            case isset($class->fieldMappings[$field]):
-                $types = array_merge($types, [$class->fieldMappings[$field]['type']]);
-                break;
-
-            case isset($class->associationMappings[$field]):
-                $assoc = $class->associationMappings[$field];
-                $class = $this->em->getClassMetadata($assoc['targetEntity']);
-
-                if (! $assoc['isOwningSide']) {
-                    $assoc = $class->associationMappings[$assoc['mappedBy']];
-                    $class = $this->em->getClassMetadata($assoc['targetEntity']);
-                }
-
-                $columns = $assoc['type'] === ClassMetadata::MANY_TO_MANY
-                    ? $assoc['relationToTargetKeyColumns']
-                    : $assoc['sourceToTargetKeyColumns'];
-
-                foreach ($columns as $column) {
-                    $types[] = PersisterHelper::getTypeOfColumn($column, $class, $this->em);
-                }
-
-                break;
-
-            default:
-                $types[] = null;
-                break;
-        }
-
-        if (is_array($value)) {
-            return array_map(static function ($type) {
-                $type = Type::getType($type);
-
-                return $type->getBindingType() + Connection::ARRAY_PARAM_OFFSET;
-            }, $types);
-        }
-
-        return $types;
-    }
-
-    /**
-     * Retrieves the parameters that identifies a value.
-     *
-     * @param mixed $value
-     *
-     * @return mixed[]
-     */
-    private function getValues($value): array
-    {
-        if (is_array($value)) {
-            $newValue = [];
-
-            foreach ($value as $itemValue) {
-                $newValue = array_merge($newValue, $this->getValues($itemValue));
-            }
-
-            return [$newValue];
-        }
-
-        return $this->getIndividualValue($value);
-    }
-
-    /**
-     * Retrieves an individual parameter value.
-     *
-     * @param mixed $value
-     *
-     * @phpstan-return list<mixed>
-     */
-    private function getIndividualValue($value): array
-    {
-        if (! is_object($value)) {
-            return [$value];
-        }
-
-        if ($value instanceof BackedEnum) {
-            return [$value->value];
-        }
-
-        $valueClass = DefaultProxyClassNameResolver::getClass($value);
-
-        if ($this->em->getMetadataFactory()->isTransient($valueClass)) {
-            return [$value];
-        }
-
-        $class = $this->em->getClassMetadata($valueClass);
-
-        if ($class->isIdentifierComposite) {
-            $newValue = [];
-
-            foreach ($class->getIdentifierValues($value) as $innerValue) {
-                $newValue = array_merge($newValue, $this->getValues($innerValue));
-            }
-
-            return $newValue;
-        }
-
-        return [$this->em->getUnitOfWork()->getSingleIdentifierValue($value)];
     }
 
     /**
