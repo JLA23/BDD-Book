@@ -1,4 +1,4 @@
 #!/bin/bash
-mkdir -p bin
+cd "$(dirname "$0")"
 LIBS=$(find lib -name "*.jar" | paste -sd ":" -)
-javac -cp "$LIBS" -d bin src/Main.java
+java -cp "bin:$LIBS" Main

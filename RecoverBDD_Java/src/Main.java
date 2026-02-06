@@ -177,7 +177,7 @@ public class Main {
     public static void verifyData(Properties prop) throws SQLException, ClassNotFoundException, UnsupportedEncodingException {
         try (
             Connection mysql = "MARIADB".equals(prop.getProperty("TYPEDB"))
-                ? getDBMaria(prop, prop.getProperty("DB_MYSQL_DBNAM"))
+                ? getDBMaria(prop, prop.getProperty("DB_MYSQL_DBNAME"))
                 : getDBMysql(prop, prop.getProperty("DB_MYSQL_DBNAME"));
             Connection mysqlRef = "MARIADB".equals(prop.getProperty("TYPEDB"))
                 ? getDBMaria(prop, prop.getProperty("DB_MYSQL_DBNAMEREF"))
