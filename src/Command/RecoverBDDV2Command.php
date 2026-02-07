@@ -133,7 +133,6 @@ class RecoverBDDV2Command extends Command
                 if(!empty($row['Particularite'])) {
                     $edition = $em->getRepository(\App\Entity\Edition::class)->getEditionByName($row['Categorie']);
                     $lul = $em->getRepository(\App\Entity\LienUserLivre::class)->getLivreByUserAndSeq($user, $row['Seq']);
-                    //$livre = $em->getRepository('App:Livre')->getLivreBySeq($row['Seq'], $user);
                     if ($lul) {
                         $livre = $lul->getLivre();
                         if (($livre->getTitre() != $row['Particularite']) and ($livre->getIsbn() != $row['Classeur'])){
@@ -208,10 +207,11 @@ class RecoverBDDV2Command extends Command
                             $auteur = $em->getRepository(\App\Entity\Auteur::class)->findAuteurIntelligent($nomAuteur);
                             if (!$auteur) {
                                 $auteur = new Auteur();
-                                $auteur->setNom($nomAuteur);
+                                $auteur->setNom(trim($nomAuteur));
                                 $em->persist($auteur);
                                 $em->flush();
                             }
+
                             $lienAuteurLivre = $em->getRepository(\App\Entity\LienAuteurLivre::class)->getLienByAuteurAndLivre($auteur, $livre);
                             if (!$lienAuteurLivre) {
                                 $lienAuteurLivre = new LienAuteurLivre();
@@ -226,7 +226,7 @@ class RecoverBDDV2Command extends Command
                     foreach ($listeAuteursBDD as $la){
                         $trouve = false;
                         foreach ($auteurs as $a) {
-                            if (strtoupper($la->getAuteur()->getNom()) == strtoupper($a)) {
+                            if (strtoupper($la->getAuteur()->getNom()) == trim(strtoupper($a))) {
                                 $trouve = true;
                                 break;
                             }
