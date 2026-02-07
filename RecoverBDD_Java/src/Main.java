@@ -92,6 +92,13 @@ public class Main {
         sAccess = access.createStatement();
         sMysql = mysql.createStatement();
 
+       
+        Connection mysqlRef = "MARIADB".equals(prop.getProperty("TYPEDB"))
+                ? getDBMaria(prop, prop.getProperty("DB_MYSQL_DBNAMEREF"))
+                : getDBMysql(prop, prop.getProperty("DB_MYSQL_DBNAMEREF"));
+        Statement stmt = mysqlRef.createStatement();
+        Statement sMysqlRef = mysqlRef.createStatement();
+
         mysql.createStatement().execute("SET FOREIGN_KEY_CHECKS=0");
         mysql.createStatement().execute("SET GLOBAL sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''))");
 
@@ -111,6 +118,11 @@ public class Main {
                 try (PreparedStatement pstmt = mysql.prepareStatement("INSERT INTO Traitement VALUES (?)")) {
                     pstmt.setTimestamp(1, new Timestamp(currentTime.getTime()));
                     pstmt.execute();
+                }
+                try (PreparedStatement pstmtRef = mysqlRef.prepareStatement("INSERT INTO Traitement VALUES (?)")) {
+                    sMysqlRef.executeUpdate("TRUNCATE TABLE Traitement");
+                    pstmtRef.setTimestamp(1, new Timestamp(currentTime.getTime()));
+                    pstmtRef.execute();
                 }
                 continue;
             }
@@ -172,6 +184,9 @@ public class Main {
         mysql.createStatement().execute("SET FOREIGN_KEY_CHECKS=1");
         access.close();
         mysql.close();
+
+        mysqlRef.createStatement().execute("SET FOREIGN_KEY_CHECKS=1");
+        mysqlRef.close();
     }
 
     public static void verifyData(Properties prop) throws SQLException, ClassNotFoundException, UnsupportedEncodingException {
@@ -189,7 +204,7 @@ public class Main {
             stmt.execute("SET FOREIGN_KEY_CHECKS=0");
             stmt.execute("SET GLOBAL sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''))");
 
-		   ResultSet rsList = sMysql.executeQuery("SELECT DISTINCT SEQ, COL_TYPE FROM Monnaie WHERE SEQ <> 0");
+		   ResultSet rsList = sMysqlRef.executeQuery("SELECT DISTINCT SEQ, COL_TYPE FROM Monnaie WHERE SEQ <> 0");
 			while (rsList.next()) {
 				String seq = rsList.getString("SEQ");
 				String colType = rsList.getString("COL_TYPE");
