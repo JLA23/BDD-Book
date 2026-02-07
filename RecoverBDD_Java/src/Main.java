@@ -204,8 +204,9 @@ public class Main {
             stmt.execute("SET FOREIGN_KEY_CHECKS=0");
             stmt.execute("SET GLOBAL sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''))");
 
-		   ResultSet rsList = sMysqlRef.executeQuery("SELECT DISTINCT SEQ, COL_TYPE FROM Monnaie WHERE SEQ <> 0");
-			while (rsList.next()) {
+            // 🔽 On compare si des éléments on été ajoutés ou modifié
+            ResultSet rsList = sMysql.executeQuery("SELECT DISTINCT SEQ, COL_TYPE FROM Monnaie WHERE SEQ <> 0");
+		    while (rsList.next()) {
 				String seq = rsList.getString("SEQ");
 				String colType = rsList.getString("COL_TYPE");
 				String condition = "WHERE Seq = " + seq + " AND COL_TYPE = '" + colType + "'";
@@ -270,7 +271,50 @@ public class Main {
 						insertOrUpdateRow(mysqlRef, "UPDATE", rowMain);
 					}
 
-				} else if (!inMain && inRef) {
+				} else {
+					sendEmail(prop, "Erreur : entrée introuvable dans les deux bases (SEQ=" + seq + ", COL_TYPE=" + colType + ")");
+				}
+			}
+
+		    // 🔽 On compare si des élements on disparu
+		    ResultSet rsListRef = sMysqlRef.executeQuery("SELECT DISTINCT SEQ, COL_TYPE FROM Monnaie WHERE SEQ <> 0");
+		    while (rsListRef.next()) {
+				String seq = rsListRef.getString("SEQ");
+				String colType = rsListRef.getString("COL_TYPE");
+				String condition = "WHERE Seq = " + seq + " AND COL_TYPE = '" + colType + "'";
+
+				// 🔽 On prépare les maps
+				Map<String, Object> rowMain = new HashMap<>();
+				Map<String, Object> rowRef = new HashMap<>();
+				boolean inMain = false;
+				boolean inRef = false;
+
+				// 🔽 On lit la ligne de la base principale
+				try (Statement stmt1 = mysql.createStatement();
+					ResultSet rsMain = stmt1.executeQuery("SELECT * FROM Monnaie " + condition)) {
+					if (rsMain.next()) {
+						inMain = true;
+						ResultSetMetaData meta = rsMain.getMetaData();
+						for (int i = 1; i <= meta.getColumnCount(); i++) {
+							rowMain.put(meta.getColumnName(i).toUpperCase(), rsMain.getObject(i));
+						}
+					}
+				}
+
+				// 🔽 On lit la ligne de la base de référence
+				try (Statement stmt2 = mysqlRef.createStatement();
+					ResultSet rsRef = stmt2.executeQuery("SELECT * FROM Monnaie " + condition)) {
+					if (rsRef.next()) {
+						inRef = true;
+						ResultSetMetaData meta = rsRef.getMetaData();
+						for (int i = 1; i <= meta.getColumnCount(); i++) {
+							rowRef.put(meta.getColumnName(i).toUpperCase(), rsRef.getObject(i));
+						}
+					}
+				}
+
+				// 🔍 Comparaison et traitement
+				if (!inMain && inRef) {
 					System.out.println("[DELETE logique] " + seq + " - " + colType);
 					String delete = "UPDATE Monnaie SET Traite = -1 WHERE Seq = ? AND COL_TYPE = ?";
 					try (PreparedStatement ps = mysqlRef.prepareStatement(delete)) {
@@ -279,8 +323,6 @@ public class Main {
 						ps.execute();
 					}
 
-				} else {
-					sendEmail(prop, "Erreur : entrée introuvable dans les deux bases (SEQ=" + seq + ", COL_TYPE=" + colType + ")");
 				}
 			}
 
