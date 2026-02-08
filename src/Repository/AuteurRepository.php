@@ -32,13 +32,13 @@ class AuteurRepository extends \Doctrine\ORM\EntityRepository
     /**
      * Normalise un nom pour la comparaison (minuscules, sans accents, trié par mots)
      */
-    private function normalizeForComparison(string $nom): string
+    public function normalizeForComparison(string $nom): array
     {
         $nom = trim(strtolower($nom));
         $nom = Auteur::removeAccents($nom);
         $parts = preg_split('/\s+/', $nom);
         sort($parts);
-        return implode(' ', $parts);
+        return $parts;
     }
 
     /**
@@ -57,12 +57,35 @@ class AuteurRepository extends \Doctrine\ORM\EntityRepository
         
         // Normaliser le nom recherché
         $normalizedSearch = $this->normalizeForComparison($nomComplet);
-        
-        // Récupérer tous les auteurs et comparer
-        $auteurs = $this->findAll();
+
+        // Récupérer les auteurs et comparer
+        $auteurs = $this->createQueryBuilder('a')
+            ->Where("1=1");
+
+        foreach($normalizedSearch as $autSearch){
+            $auteurs->andWhere('a.nom LIKE :nom')
+            ->setParameter('nom', '%' . $autSearch . '%');
+        }    
+        $auteurs = $auteurs->getQuery()
+            ->getResult();
+
+        $countValide = 0;
+        $LengthSearch = count($normalizedSearch);
         foreach ($auteurs as $auteur) {
             $normalizedAuteur = $this->normalizeForComparison($auteur->getNom());
-            if ($normalizedSearch === $normalizedAuteur) {
+            $cloneSearch = $normalizedSearch;
+            foreach ($normalizedAuteur as $na) {
+                if (in_array($na, $cloneSearch)) {
+                    $countValide++;
+                    $pos = array_search($na, $cloneSearch);
+                    unset($cloneSearch[$pos]);
+                }
+                else{
+                    $countValide = 0;
+                    break;
+                }
+            }
+            if($countValide == $LengthSearch){
                 return $auteur;
             }
         }

@@ -199,8 +199,14 @@ class RecoverBDDV2Command extends Command
                     }
                     $em->persist($lienLivreUser);
                     $em->flush();
-
+                        
                     $auteurs = explode(',', $row['Pays']);
+
+                    if(str_contains($row['Pays'], ";")){
+                        $auteurs = str_replace(",", "", $row['Pays']);
+                        $auteurs = explode(';', $auteurs);
+                    }
+                    
                     foreach ($auteurs as $aut){
                         if($aut && trim($aut) <> "") {
                             $nomAuteur = trim($aut);
@@ -223,10 +229,31 @@ class RecoverBDDV2Command extends Command
                         }
                     }
                     $listeAuteursBDD = $em->getRepository(\App\Entity\LienAuteurLivre::class)->getListeAuteur($livre);
+                    $trouve = false;
+                    $countValide = 0;
+                    $LengthSearch = 0;
                     foreach ($listeAuteursBDD as $la){
+                        $auteurNormalized = $em->getRepository(\App\Entity\Auteur::class)->normalizeForComparison($la->getAuteur()->getNom());
                         $trouve = false;
-                        foreach ($auteurs as $a) {
-                            if (strtoupper($la->getAuteur()->getNom()) == trim(strtoupper($a))) {
+                        $LengthSearch = count($auteurNormalized);
+
+                        foreach($auteurs as $a){
+                            $countValide = 0;
+                            $cloneSearch = $auteurNormalized;
+                            $aNormalized = $em->getRepository(\App\Entity\Auteur::class)->normalizeForComparison($la->getAuteur()->getNom());
+                            
+                            foreach ($aNormalized as $na) {
+                                if (in_array($na, $cloneSearch)) {
+                                    $countValide++;
+                                    $pos = array_search($na, $cloneSearch);
+                                    unset($cloneSearch[$pos]);
+                                }
+                                else{
+                                    $countValide = 0;
+                                    break;
+                                }
+                            }
+                            if($countValide == $LengthSearch){
                                 $trouve = true;
                                 break;
                             }
