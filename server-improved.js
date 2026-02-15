@@ -83,80 +83,123 @@ app.get('/scrape/amazon', authenticate, async (req, res) => {
         await page.screenshot({ path: screenshotPath, fullPage: false });
         console.log(`Screenshot sauvegardé: ${screenshotPath}`);
 
-        // Extraire toutes les images pour debug
-        const allImages = await page.evaluate(() => {
-            const images = [];
-            document.querySelectorAll('img').forEach(img => {
-                if (img.src) {
-                    images.push({
-                        src: img.src,
-                        class: img.className,
-                        alt: img.alt
-                    });
-                }
-            });
-            return images;
-        });
-        
-        console.log(`Nombre total d'images trouvées: ${allImages.length}`);
-        console.log('Premières images:', JSON.stringify(allImages.slice(0, 3), null, 2));
-
-        // Extraire l'image du produit
-        const imageUrl = await page.evaluate(() => {
+        // Étape 1 : Trouver et cliquer sur le premier résultat produit
+        const productLink = await page.evaluate(() => {
             const selectors = [
-                'img.s-image',
-                'img[data-image-latency="s-product-image"]',
-                '.s-product-image-container img',
-                'img.s-image[src*="images-amazon"]',
-                'div[data-component-type="s-search-result"] img',
-                '.s-result-item img'
+                'div[data-component-type="s-search-result"] a.a-link-normal.s-no-outline',
+                'div[data-component-type="s-search-result"] .a-link-normal[href*="/dp/"]',
+                'div[data-component-type="s-search-result"] h2 a',
+                '.s-result-item a[href*="/dp/"]'
             ];
-
-            console.log('Recherche avec sélecteurs...');
-            
             for (const selector of selectors) {
-                const imgs = document.querySelectorAll(selector);
-                console.log(`Sélecteur "${selector}": ${imgs.length} trouvé(s)`);
-                
-                for (const img of imgs) {
-                    if (img.src && (img.src.includes('images-amazon') || img.src.includes('media-amazon'))) {
-                        console.log('Image trouvée:', img.src);
-                        let url = img.src;
-                        // Améliorer la qualité
-                        url = url.replace(/\._[A-Z]+[0-9]+_\./, '.');
-                        url = url.replace(/\._[A-Z]{2}[0-9]+,?[0-9]*_\./, '.');
-                        return url;
-                    }
+                const link = document.querySelector(selector);
+                if (link && link.href) {
+                    return link.href;
                 }
             }
-            
-            // Fallback: prendre la première image Amazon
-            const allImgs = document.querySelectorAll('img');
-            for (const img of allImgs) {
-                if (img.src && (img.src.includes('images-amazon') || img.src.includes('media-amazon'))) {
-                    if (!img.src.includes('transparent-pixel') && !img.src.includes('spinner')) {
-                        console.log('Image fallback trouvée:', img.src);
-                        return img.src;
-                    }
-                }
-            }
-            
             return null;
         });
 
+        if (!productLink) {
+            console.log('❌ Aucun résultat trouvé sur Amazon');
+            await browser.close();
+            return res.json({ success: false, message: 'No product found on Amazon', isbn, debug: { screenshot: screenshotPath } });
+        }
+
+        console.log(`📖 Produit trouvé, navigation vers: ${productLink}`);
+        await page.goto(productLink, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // Screenshot page produit
+        const screenshotProduct = `/tmp/amazon-product-${isbn}.png`;
+        await page.screenshot({ path: screenshotProduct, fullPage: false });
+        console.log(`Screenshot produit: ${screenshotProduct}`);
+
+        // Étape 2 : Cliquer sur l'image principale du produit pour ouvrir le viewer
+        const mainImageClicked = await page.evaluate(() => {
+            const selectors = [
+                '#imgBlkFront',
+                '#landingImage',
+                '#ebooksImgBlkFront',
+                '#main-image',
+                '#imgTagWrapperId img',
+                '#imageBlock img'
+            ];
+            for (const selector of selectors) {
+                const img = document.querySelector(selector);
+                if (img) {
+                    img.click();
+                    return true;
+                }
+            }
+            return false;
+        });
+
+        if (mainImageClicked) {
+            console.log('🖱️ Image principale cliquée, attente du viewer...');
+            await new Promise(resolve => setTimeout(resolve, 3000));
+
+            // Screenshot après clic
+            const screenshotViewer = `/tmp/amazon-viewer-${isbn}.png`;
+            await page.screenshot({ path: screenshotViewer, fullPage: false });
+            console.log(`Screenshot viewer: ${screenshotViewer}`);
+        } else {
+            console.log('⚠️ Image principale non trouvée pour clic');
+        }
+
+        // Étape 3 : Chercher l'image HD dans la div #ivLargeImage ou fallback
+        const imageUrl = await page.evaluate(() => {
+            // Priorité 1 : Image dans le viewer #ivLargeImage
+            const largeImageDiv = document.querySelector('#ivLargeImage');
+            if (largeImageDiv) {
+                const img = largeImageDiv.querySelector('img');
+                if (img && img.src) {
+                    return img.src;
+                }
+            }
+
+            // Priorité 2 : Image dans le conteneur d'image large
+            const largeSelectors = [
+                '#ivLargeImage img',
+                '#imgTagWrapperId img',
+                '#landingImage',
+                '#imgBlkFront',
+                '#ebooksImgBlkFront',
+                '#main-image',
+                '#imageBlock img.a-dynamic-image'
+            ];
+
+            for (const selector of largeSelectors) {
+                const img = document.querySelector(selector);
+                if (img && img.src && (img.src.includes('images-amazon') || img.src.includes('media-amazon'))) {
+                    return img.src;
+                }
+            }
+
+            return null;
+        });
+
+        // Améliorer la qualité de l'URL si trouvée
+        let finalImageUrl = imageUrl;
+        if (finalImageUrl) {
+            // Supprimer les suffixes de redimensionnement Amazon pour obtenir l'image originale
+            finalImageUrl = finalImageUrl.replace(/\._[A-Z]+[0-9,_]+_\./, '.');
+        }
+
         await browser.close();
 
-        if (imageUrl) {
-            console.log(`✅ SUCCESS: ${imageUrl}`);
+        if (finalImageUrl) {
+            console.log(`✅ SUCCESS: ${finalImageUrl}`);
             console.log(`[${new Date().toISOString()}] === FIN SCRAPING ===\n`);
             res.json({ 
                 success: true, 
-                imageUrl,
+                imageUrl: finalImageUrl,
                 source: 'Amazon.fr',
                 isbn,
                 debug: {
-                    totalImages: allImages.length,
-                    screenshot: screenshotPath
+                    screenshot: screenshotPath,
+                    screenshotProduct,
+                    mainImageClicked
                 }
             });
         } else {
@@ -167,9 +210,9 @@ app.get('/scrape/amazon', authenticate, async (req, res) => {
                 message: 'No image found',
                 isbn,
                 debug: {
-                    totalImages: allImages.length,
                     screenshot: screenshotPath,
-                    sampleImages: allImages.slice(0, 5)
+                    screenshotProduct,
+                    mainImageClicked
                 }
             });
         }
@@ -354,13 +397,95 @@ app.get('/scrape/all', authenticate, async (req, res) => {
     );
     if (decitreResult) results.push(decitreResult);
 
-    // 4. Amazon
-    const amazonResult = await scrapeSite(
-        'Amazon',
-        `https://www.amazon.fr/s?k=${isbn}`,
-        ['img.s-image', 'img[data-image-latency="s-product-image"]', '.s-product-image-container img']
-    );
-    if (amazonResult) results.push(amazonResult);
+    // 4. Amazon - Version améliorée avec navigation vers la page produit
+    let browserAmazon;
+    try {
+        console.log(`\n🔍 Scraping Amazon (version améliorée)...`);
+        
+        browserAmazon = await puppeteer.launch({
+            headless: 'new',
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+        });
+
+        const pageAmazon = await browserAmazon.newPage();
+        await pageAmazon.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+        
+        await pageAmazon.setRequestInterception(true);
+        pageAmazon.on('request', (request) => {
+            if (['stylesheet', 'font', 'media'].includes(request.resourceType())) {
+                request.abort();
+            } else {
+                request.continue();
+            }
+        });
+
+        // Recherche Amazon
+        await pageAmazon.goto(`https://www.amazon.fr/s?k=${isbn}`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // Trouver le lien du premier produit
+        const productLink = await pageAmazon.evaluate(() => {
+            const selectors = [
+                'div[data-component-type="s-search-result"] a.a-link-normal.s-no-outline',
+                'div[data-component-type="s-search-result"] .a-link-normal[href*="/dp/"]',
+                'div[data-component-type="s-search-result"] h2 a',
+                '.s-result-item a[href*="/dp/"]'
+            ];
+            for (const selector of selectors) {
+                const link = document.querySelector(selector);
+                if (link && link.href) return link.href;
+            }
+            return null;
+        });
+
+        if (productLink) {
+            console.log(`📖 Amazon: Navigation vers ${productLink}`);
+            await pageAmazon.goto(productLink, { waitUntil: 'domcontentloaded', timeout: 15000 });
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            // Cliquer sur l'image principale
+            await pageAmazon.evaluate(() => {
+                const selectors = ['#imgBlkFront', '#landingImage', '#ebooksImgBlkFront', '#imgTagWrapperId img'];
+                for (const selector of selectors) {
+                    const img = document.querySelector(selector);
+                    if (img) { img.click(); return; }
+                }
+            });
+            await new Promise(resolve => setTimeout(resolve, 3000));
+
+            // Récupérer l'image HD
+            let imageUrl = await pageAmazon.evaluate(() => {
+                // Priorité 1 : #ivLargeImage
+                const largeDiv = document.querySelector('#ivLargeImage');
+                if (largeDiv) {
+                    const img = largeDiv.querySelector('img');
+                    if (img && img.src) return img.src;
+                }
+                // Priorité 2 : fallback
+                const selectors = ['#ivLargeImage img', '#landingImage', '#imgBlkFront', '#ebooksImgBlkFront'];
+                for (const sel of selectors) {
+                    const img = document.querySelector(sel);
+                    if (img && img.src && (img.src.includes('images-amazon') || img.src.includes('media-amazon'))) return img.src;
+                }
+                return null;
+            });
+
+            if (imageUrl) {
+                imageUrl = imageUrl.replace(/\._[A-Z]+[0-9,_]+_\./, '.');
+                console.log(`✅ Amazon: ${imageUrl}`);
+                results.push({ url: imageUrl, source: 'Amazon', quality: 'high' });
+            } else {
+                console.log(`❌ Amazon: Aucune image HD trouvée`);
+            }
+        } else {
+            console.log(`❌ Amazon: Aucun produit trouvé`);
+        }
+
+        await browserAmazon.close();
+    } catch (error) {
+        console.error(`❌ Amazon Error:`, error.message);
+        if (browserAmazon) await browserAmazon.close();
+    }
 
     console.log(`\n📊 Total: ${results.length} image(s) trouvée(s)`);
     console.log(`[${new Date().toISOString()}] === FIN SCRAPING ===\n`);
