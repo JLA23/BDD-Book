@@ -63,12 +63,13 @@ class ScrapeCoverCommand extends Command
             ->from(Livre::class, 'l')
             ->join('l.listeUser', 'ul')
             ->where('ul.user = :user')
-            ->andWhere('l.isbn IS NOT NULL and l.isbn != ""')
-            ->setParameter('user', $user);
+            ->andWhere('l.isbn IS NOT NULL and l.isbn != :empty1')
+            ->setParameter('user', $user)
+            ->setParameter('empty1', '');
 
         if (!$force) {
-            $qb->andWhere('(l.image2 IS NULL OR l.image2 = :empty)')
-                ->setParameter('empty', '');
+            $qb->andWhere('(l.image2 IS NULL OR l.image2 = :empty2)')
+                ->setParameter('empty2', '');
         }
 
         if ($limit) {
