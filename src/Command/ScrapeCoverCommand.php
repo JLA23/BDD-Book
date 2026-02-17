@@ -68,7 +68,7 @@ class ScrapeCoverCommand extends Command
             ->setParameter('empty1', '');
 
         if (!$force) {
-            $qb->andWhere('(l.image2 IS NULL OR l.image2 = :empty2)')
+            $qb->andWhere('l.image2 IS NULL OR l.image2 = :empty2')
                 ->setParameter('empty2', '');
         }
 
