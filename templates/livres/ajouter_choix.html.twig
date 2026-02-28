@@ -1,0 +1,81 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Ajouter un livre{% endblock %}
+
+{% block body %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ path('index') }}">Accueil</a></li>
+            <li class="breadcrumb-item active">Ajouter un livre</li>
+        </ol>
+    </nav>
+
+    <h1 class="mb-4"><i class="fas fa-plus-circle text-primary mr-2"></i>Ajouter un livre</h1>
+
+    <div class="row">
+        <!-- Mode 1 : Recherche automatique -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm border-primary">
+                <div class="card-body text-center d-flex flex-column">
+                    <div class="mb-3">
+                        <i class="fas fa-search fa-3x text-primary"></i>
+                    </div>
+                    <h5 class="card-title">Rechercher par ISBN</h5>
+                    <p class="card-text text-muted flex-grow-1">
+                        Rechercher un livre par <strong>ISBN</strong>. 
+                        Le livre est d'abord recherché en base de données, puis les informations sont récupérées automatiquement depuis Google Books, Open Library, Amazon, Babelio et Bedetheque.
+                    </p>
+                    <a href="{{ path('livre_ajouter_recherche') }}" class="btn btn-primary btn-block mt-auto">
+                        <i class="fas fa-barcode mr-1"></i> Rechercher par ISBN
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mode 2 : Depuis une URL -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm border-success">
+                <div class="card-body text-center d-flex flex-column">
+                    <div class="mb-3">
+                        <i class="fas fa-link fa-3x text-success"></i>
+                    </div>
+                    <h5 class="card-title">Depuis une URL</h5>
+                    <p class="card-text text-muted flex-grow-1">
+                        Coller l'URL d'une page produit d'un site supporté. Les informations du livre seront extraites automatiquement.
+                    </p>
+                    <div class="mb-3">
+                        {% for site in supportedSites %}
+                            <span class="badge badge-light border mr-1">
+                                <i class="{{ site.icon }} mr-1"></i>{{ site.name }}
+                            </span>
+                        {% endfor %}
+                    </div>
+                    <a href="{{ path('livre_ajouter_url') }}" class="btn btn-success btn-block mt-auto">
+                        <i class="fas fa-link mr-1"></i> Depuis une URL
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mode 3 : Saisie manuelle -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm border-warning">
+                <div class="card-body text-center d-flex flex-column">
+                    <div class="mb-3">
+                        <i class="fas fa-edit fa-3x text-warning"></i>
+                    </div>
+                    <h5 class="card-title">Saisie manuelle</h5>
+                    <p class="card-text text-muted flex-grow-1">
+                        Remplir manuellement toutes les informations du livre. 
+                        Idéal pour les livres rares ou introuvables en ligne.
+                    </p>
+                    <a href="{{ path('livre_ajouter_formulaire') }}" class="btn btn-warning btn-block mt-auto">
+                        <i class="fas fa-edit mr-1"></i> Saisie manuelle
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Ajouter depuis une URL{% endblock %}
+
+{% block body %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ path('index') }}">Accueil</a></li>
+            <li class="breadcrumb-item"><a href="{{ path('livre_ajouter') }}">Ajouter un livre</a></li>
+            <li class="breadcrumb-item active">Depuis une URL</li>
+        </ol>
+    </nav>
+
+    <h1 class="mb-4"><i class="fas fa-link text-success mr-2"></i>Ajouter depuis une URL</h1>
+
+    {% if error %}
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-circle mr-2"></i>{{ error }}
+        </div>
+    {% endif %}
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="post" action="{{ path('livre_ajouter_url') }}">
+                <div class="form-group">
+                    <label for="url"><strong>URL de la page du livre</strong></label>
+                    <input type="url" name="url" id="url" class="form-control form-control-lg" 
+                           value="{{ url }}"
+                           placeholder="https://www.amazon.fr/dp/..."
+                           required autofocus>
+                    <small class="form-text text-muted">
+                        Collez l'URL de la page produit du livre sur l'un des sites supportés ci-dessous.
+                    </small>
+                </div>
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-download mr-1"></i> Récupérer les informations
+                </button>
+                <a href="{{ path('livre_ajouter') }}" class="btn btn-secondary ml-2">Retour</a>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sites supportés -->
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <i class="fas fa-globe mr-1"></i> Sites supportés
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for site in supportedSites %}
+                    <div class="col-md-3 col-6 mb-3">
+                        <div class="d-flex align-items-center p-2 border rounded">
+                            <i class="{{ site.icon }} fa-lg text-muted mr-2"></i>
+                            <div>
+                                <strong>{{ site.name }}</strong><br>
+                                <small class="text-muted">{{ site.domain }}</small>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            <p class="text-muted small mt-2 mb-0">
+                <i class="fas fa-info-circle mr-1"></i>
+                Pour de meilleurs résultats, utilisez l'URL de la page produit du livre (pas la page de recherche).
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

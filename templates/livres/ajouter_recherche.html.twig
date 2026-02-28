@@ -1,0 +1,187 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Rechercher un livre par ISBN{% endblock %}
+
+{% block body %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ path('index') }}">Accueil</a></li>
+            <li class="breadcrumb-item"><a href="{{ path('livre_ajouter') }}">Ajouter un livre</a></li>
+            <li class="breadcrumb-item active">Rechercher par ISBN</li>
+        </ol>
+    </nav>
+
+    <h1 class="mb-4"><i class="fas fa-barcode text-primary mr-2"></i>Rechercher un livre par ISBN</h1>
+
+    <!-- Formulaire de recherche -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="post" action="{{ path('livre_ajouter_recherche') }}">
+                <div class="row align-items-end">
+                    <div class="col-md-10">
+                        <div class="form-group mb-md-0">
+                            <label>ISBN</label>
+                            <input type="text" name="query" class="form-control" 
+                                   value="{{ query }}" 
+                                   placeholder="Entrez un ISBN (ex: 978-2-07-036822-8)..."
+                                   autofocus>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary btn-block">
+                            <i class="fas fa-search mr-1"></i> Chercher
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Overlay de chargement -->
+    <div id="loadingOverlay" class="d-none">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body text-center py-5">
+                <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
+                    <span class="sr-only">Chargement...</span>
+                </div>
+                <h5 class="mb-3" id="loadingTitle">Recherche en cours...</h5>
+                <p class="text-muted mb-2" id="loadingMessage">Vérification en base de données...</p>
+                <div class="progress mb-3" style="height: 6px; max-width: 400px; margin: 0 auto;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" id="loadingBar" style="width: 0%"></div>
+                </div>
+                <small class="text-muted" id="loadingDetail">
+                    <i class="fas fa-clock mr-1"></i>Cela peut prendre jusqu'à 2 minutes si le livre n'est pas en base...
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Livres existants en base -->
+    {% if existingBooks is defined and existingBooks is not empty %}
+        <div class="alert alert-info">
+            <i class="fas fa-database mr-2"></i>
+            Ce livre existe déjà dans la base de données. Vous pouvez l'associer à votre compte ou créer une nouvelle fiche.
+        </div>
+
+        <div class="row">
+            {% for livre in existingBooks %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100 shadow-sm border-info">
+                        <div class="row no-gutters">
+                            <div class="col-4">
+                                {% if livre.getBestImage %}
+                                    <img src="{{ livre.getBestImage }}" 
+                                         class="card-img p-2" 
+                                         alt="{{ livre.titre }}"
+                                         style="object-fit: contain; max-height: 200px;">
+                                {% else %}
+                                    <div class="d-flex align-items-center justify-content-center h-100 bg-light">
+                                        <i class="fas fa-book fa-3x text-muted"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-8">
+                                <div class="card-body p-3">
+                                    <h6 class="card-title mb-1">{{ livre.titre }}</h6>
+                                    {% if livre.listeAuteur|length > 0 %}
+                                        <p class="card-text text-muted small mb-1">
+                                            <i class="fas fa-user mr-1"></i>
+                                            {% for la in livre.listeAuteur %}{{ la.auteur.nom }}{% if not loop.last %}, {% endif %}{% endfor %}
+                                        </p>
+                                    {% endif %}
+                                    {% if livre.edition %}
+                                        <p class="card-text text-muted small mb-1">
+                                            <i class="fas fa-building mr-1"></i>{{ livre.edition.nom }}
+                                        </p>
+                                    {% endif %}
+                                    {% if livre.annee %}
+                                        <p class="card-text text-muted small mb-1">
+                                            <i class="fas fa-calendar mr-1"></i>{{ livre.annee }}
+                                        </p>
+                                    {% endif %}
+                                    <p class="card-text text-muted small mb-1">
+                                        <i class="fas fa-barcode mr-1"></i>{{ livre.isbn }}
+                                    </p>
+                                    <span class="badge badge-info">
+                                        <i class="fas fa-users mr-1"></i>{{ livre.listeUser|length }} propriétaire{{ livre.listeUser|length > 1 ? 's' : '' }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-white p-2">
+                            <div class="d-flex">
+                                <a href="{{ path('livre_ajouter_associer', {id: livre.id}) }}" class="btn btn-sm btn-success flex-grow-1 mr-1">
+                                    <i class="fas fa-link mr-1"></i> Associer à mon compte
+                                </a>
+                                <a href="{{ path('livreDetail', {id: livre.id}) }}" class="btn btn-sm btn-outline-info">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="text-center mb-4">
+            <a href="{{ path('livre_ajouter_formulaire', {isbn: query}) }}" class="btn btn-outline-warning">
+                <i class="fas fa-plus mr-1"></i> Créer une nouvelle fiche malgré tout
+            </a>
+        </div>
+    {% elseif noResults is defined and noResults %}
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle mr-2"></i>
+            Aucun résultat trouvé pour l'ISBN "<strong>{{ query }}</strong>". 
+            <a href="{{ path('livre_ajouter_formulaire', {isbn: query}) }}">Saisissez le livre manuellement</a>.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        (function() {
+            const form = document.querySelector('form[action*="recherche"]');
+            if (!form) return;
+
+            const steps = [
+                { msg: 'Vérification en base de données...', pct: 5 },
+                { msg: 'Interrogation de Google Books...', pct: 15 },
+                { msg: 'Interrogation de Open Library...', pct: 25 },
+                { msg: 'Lancement du scraping Amazon...', pct: 40 },
+                { msg: 'Recherche sur Babelio...', pct: 60 },
+                { msg: 'Recherche sur Bedetheque...', pct: 80 },
+                { msg: 'Fusion des résultats...', pct: 95 },
+            ];
+
+            form.addEventListener('submit', function() {
+                const query = form.querySelector('input[name="query"]').value.trim();
+                if (!query) return;
+
+                const overlay = document.getElementById('loadingOverlay');
+                overlay.classList.remove('d-none');
+
+                const bar = document.getElementById('loadingBar');
+                const msgEl = document.getElementById('loadingMessage');
+                const submitBtn = form.querySelector('button[type="submit"]');
+
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm mr-1"></span> Recherche...';
+
+                let stepIndex = 0;
+                const interval = setInterval(function() {
+                    if (stepIndex < steps.length) {
+                        msgEl.textContent = steps[stepIndex].msg;
+                        bar.style.width = steps[stepIndex].pct + '%';
+                        stepIndex++;
+                    } else {
+                        msgEl.textContent = 'Patientez, analyse des résultats...';
+                        bar.style.width = '98%';
+                    }
+                }, 6000);
+            });
+        })();
+    </script>
+{% endblock %}

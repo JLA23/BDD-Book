@@ -1,0 +1,298 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Modifier - {{ livre.titre }}{% endblock %}
+
+{% block body %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ path('index') }}">Accueil</a></li>
+            <li class="breadcrumb-item"><a href="{{ path('livreDetail', {id: livre.id}) }}">{{ livre.titre }}</a></li>
+            <li class="breadcrumb-item active">Modifier</li>
+        </ol>
+    </nav>
+
+    <h1 class="mb-4">
+        <i class="fas fa-edit text-primary mr-2"></i>
+        Modifier <small class="text-muted">{{ livre.titre }}</small>
+    </h1>
+
+    {{ form_start(form, {'attr': {'class': 'mt-3', 'enctype': 'multipart/form-data', 'id': 'livreForm'}}) }}
+    <div class="row">
+        <!-- Colonne principale -->
+        <div class="col-lg-8">
+            <!-- Informations générales -->
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-info-circle mr-1"></i> Informations générales
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        {{ form_row(form.titre) }}
+                    </div>
+                    <div class="form-group">
+                        {{ form_row(form.auteurs) }}
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                {{ form_row(form.isbn) }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                {{ form_row(form.annee) }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form_label(form.category) }}
+                                <div class="input-group">
+                                    <div class="flex-grow-1">{{ form_widget(form.category) }}</div>
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-outline-success btn-toggle-new" data-target="newCategory" title="Créer une nouvelle catégorie">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mt-1 d-none" id="newCategory-container">
+                                    {{ form_widget(form.newCategory) }}
+                                    <small class="text-muted">Laisser vide pour utiliser la liste ci-dessus</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form_label(form.collection) }}
+                                <div class="input-group">
+                                    <div class="flex-grow-1">{{ form_widget(form.collection) }}</div>
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-outline-success btn-toggle-new" data-target="newCollection" title="Créer une nouvelle collection">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mt-1 d-none" id="newCollection-container">
+                                    {{ form_widget(form.newCollection) }}
+                                    <small class="text-muted">Laisser vide pour utiliser la liste ci-dessus</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form_label(form.edition) }}
+                                <div class="input-group">
+                                    <div class="flex-grow-1">{{ form_widget(form.edition) }}</div>
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-outline-success btn-toggle-new" data-target="newEdition" title="Créer un nouvel éditeur">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mt-1 d-none" id="newEdition-container">
+                                    {{ form_widget(form.newEdition) }}
+                                    <small class="text-muted">Laisser vide pour utiliser la liste ci-dessus</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Détails -->
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header">
+                    <i class="fas fa-book-open mr-1"></i> Détails
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form_row(form.cycle) }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form_row(form.tome) }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form_row(form.numero) }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form_row(form.pages) }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form_row(form.prixBase) }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form_row(form.monnaie) }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        {{ form_row(form.resume) }}
+                    </div>
+                    <div class="form-group">
+                        {{ form_row(form.amazon) }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mon exemplaire -->
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <i class="fas fa-user-tag mr-1"></i> Mon exemplaire
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Ces informations sont liées à <strong>votre</strong> exemplaire du livre.
+                    </p>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                {{ form_row(form.dateAchat) }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                {{ form_row(form.prixAchat) }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        {{ form_row(form.commentaire) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Colonne image -->
+        <div class="col-lg-4">
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <i class="fas fa-image mr-1"></i> Couverture
+                </div>
+                <div class="card-body text-center">
+                    {% if imageUrl %}
+                        <div class="mb-3" id="previewContainer">
+                            <img src="{{ imageUrl }}" 
+                                 class="img-fluid rounded shadow-sm" 
+                                 alt="Couverture"
+                                 style="max-height: 300px;"
+                                 id="coverPreview">
+                            <p class="small text-success mt-2 mb-0">
+                                <i class="fas fa-check-circle mr-1"></i>Image actuelle
+                            </p>
+                        </div>
+                    {% else %}
+                        <div class="mb-3 p-4 bg-light rounded" id="previewContainer">
+                            <i class="fas fa-image fa-4x text-muted mb-2 d-block"></i>
+                            <p class="text-muted mb-0">Aucune image</p>
+                        </div>
+                    {% endif %}
+
+                    <div class="form-group">
+                        {{ form_row(form.imageFile) }}
+                        <small class="text-muted d-block mb-2">
+                            Formats acceptés : JPEG, PNG, GIF, WEBP. Max 5 Mo.
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        {{ form_row(form.imageUrl) }}
+                        <small class="text-muted d-block">
+                            Ou collez une URL d'image depuis le web
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Boutons d'action -->
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <button type="submit" class="btn btn-primary btn-block btn-lg mb-2">
+                        <i class="fas fa-save mr-1"></i> Enregistrer les modifications
+                    </button>
+                    <a href="{{ path('livreDetail', {id: livre.id}) }}" class="btn btn-secondary btn-block">
+                        <i class="fas fa-arrow-left mr-1"></i> Annuler
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{ form_end(form) }}
+</div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        // Prévisualisation de l'image uploadée
+        document.querySelector('#livre_imageFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const container = document.getElementById('previewContainer');
+                    container.innerHTML = '<img src="' + e.target.result + '" class="img-fluid rounded shadow-sm" alt="Prévisualisation" style="max-height: 300px;">' +
+                        '<p class="small text-info mt-2 mb-0"><i class="fas fa-upload mr-1"></i>Nouvelle image</p>';
+                    document.getElementById('livre_imageUrl').value = '';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Prévisualisation quand on colle une URL d'image
+        const imageUrlInput = document.getElementById('livre_imageUrl');
+        if (imageUrlInput) {
+            imageUrlInput.addEventListener('change', function() {
+                const url = this.value.trim();
+                if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+                    const container = document.getElementById('previewContainer');
+                    const img = new Image();
+                    img.onload = function() {
+                        container.innerHTML = '<img src="' + url + '" class="img-fluid rounded shadow-sm" alt="Prévisualisation" style="max-height: 300px;">' +
+                            '<p class="small text-info mt-2 mb-0"><i class="fas fa-link mr-1"></i>Image depuis URL</p>';
+                    };
+                    img.src = url;
+                }
+            });
+        }
+
+        // Toggle pour les champs "Nouveau" (catégorie, collection, éditeur)
+        document.querySelectorAll('.btn-toggle-new').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const targetId = this.getAttribute('data-target');
+                const container = document.getElementById(targetId + '-container');
+                if (container) {
+                    container.classList.toggle('d-none');
+                    const icon = this.querySelector('i');
+                    if (container.classList.contains('d-none')) {
+                        icon.className = 'fas fa-plus';
+                        this.classList.remove('btn-outline-danger');
+                        this.classList.add('btn-outline-success');
+                        container.querySelector('input').value = '';
+                    } else {
+                        icon.className = 'fas fa-times';
+                        this.classList.remove('btn-outline-success');
+                        this.classList.add('btn-outline-danger');
+                        container.querySelector('input').focus();
+                    }
+                }
+            });
+        });
+    </script>
+{% endblock %}

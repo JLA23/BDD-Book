@@ -2,11 +2,24 @@
 
 {% block body %}
 <div class="container-fluid px-4">
-    <!-- Bouton retour -->
-    <div class="mb-3">
+    <!-- Bouton retour + modifier -->
+    <div class="mb-3 d-flex justify-content-between align-items-center">
         <a href="javascript:history.back()" class="btn btn-outline-secondary btn-sm">
             <i class="fas fa-arrow-left"></i> Retour
         </a>
+        {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+            {% set isOwner = false %}
+            {% for lienUser in livre.listeUser %}
+                {% if lienUser.user.id == app.user.id %}
+                    {% set isOwner = true %}
+                {% endif %}
+            {% endfor %}
+            {% if isOwner %}
+                <a href="{{ path('livre_modifier', {id: livre.id}) }}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-edit"></i> Modifier
+                </a>
+            {% endif %}
+        {% endif %}
     </div>
 
     <!-- Card principale -->
@@ -189,13 +202,17 @@
     </div>
     
     <!-- Propriétaires -->
-    {% if livre.listeUser|length > 0 %}
     <div class="card mt-4 mb-5 shadow-sm">
-        <div class="card-header bg-dark text-white" style="cursor: pointer;" data-toggle="collapse" data-target="#proprietairesCollapse" aria-expanded="false" aria-controls="proprietairesCollapse">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center" style="cursor: pointer;" data-toggle="collapse" data-target="#proprietairesCollapse" aria-expanded="false" aria-controls="proprietairesCollapse">
             <h5 class="mb-0">
                 <i class="fas fa-users"></i> Propriétaires ({{ livre.listeUser|length }})
-                <i class="fas fa-chevron-down float-right"></i>
+                <i class="fas fa-chevron-down float-right ml-2"></i>
             </h5>
+            {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+                <a href="{{ path('livre_ajouter_utilisateur', {id: livre.id}) }}" class="btn btn-sm btn-success" onclick="event.stopPropagation();">
+                    <i class="fas fa-user-plus mr-1"></i> Ajouter
+                </a>
+            {% endif %}
         </div>
         <div id="proprietairesCollapse" class="collapse">
         <div class="card-body p-0">
@@ -206,6 +223,9 @@
                             <th><i class="fas fa-user"></i> Utilisateur</th>
                             <th><i class="fas fa-calendar-alt"></i> Date d'acquisition</th>
                             <th><i class="fas fa-comment"></i> Commentaire</th>
+                            {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+                                <th class="text-right"><i class="fas fa-cogs"></i> Actions</th>
+                            {% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -228,6 +248,19 @@
                                     <span class="text-muted">-</span>
                                 {% endif %}
                             </td>
+                            {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+                                <td class="text-right text-nowrap">
+                                    <a href="{{ path('livre_transferer', {id: livre.id, lienId: lienuserLivre.id}) }}" 
+                                       class="btn btn-sm btn-outline-info" title="Transférer">
+                                        <i class="fas fa-exchange-alt"></i>
+                                    </a>
+                                    <form method="post" action="{{ path('livre_supprimer_utilisateur', {id: livre.id, lienId: lienuserLivre.id}) }}" class="d-inline" onsubmit="return confirm('Retirer {{ lienuserLivre.user.fullName }} des propriétaires de ce livre ?')">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Retirer">
+                                            <i class="fas fa-user-minus"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            {% endif %}
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -236,7 +269,6 @@
         </div>
         </div>
     </div>
-    {% endif %}
 </div>
 
 <!-- The Image Modal -->
