@@ -45,57 +45,55 @@
                             </div>
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                {{ form_label(form.category) }}
-                                <div class="input-group">
-                                    <div class="flex-grow-1">{{ form_widget(form.category) }}</div>
-                                    <div class="input-group-append">
-                                        <button type="button" class="btn btn-outline-success btn-toggle-new" data-target="newCategory" title="Créer une nouvelle catégorie">
-                                            <i class="fas fa-plus"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="mt-1 d-none" id="newCategory-container">
-                                    {{ form_widget(form.newCategory) }}
-                                    <small class="text-muted">Laisser vide pour utiliser la liste ci-dessus</small>
-                                </div>
-                            </div>
+                    <div class="form-group">
+                        <div class="d-flex align-items-center mb-1">
+                            {{ form_label(form.category, null, {'label_attr': {'class': 'mb-0'}}) }}
+                            <button type="button" class="btn btn-sm btn-danger ml-2 btn-clear-select d-none" 
+                                    data-select-id="livre_category" title="Réinitialiser">
+                                <i class="fas fa-undo text-white"></i>
+                            </button>
                         </div>
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                {{ form_label(form.collection) }}
-                                <div class="input-group">
-                                    <div class="flex-grow-1">{{ form_widget(form.collection) }}</div>
-                                    <div class="input-group-append">
-                                        <button type="button" class="btn btn-outline-success btn-toggle-new" data-target="newCollection" title="Créer une nouvelle collection">
-                                            <i class="fas fa-plus"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="mt-1 d-none" id="newCollection-container">
-                                    {{ form_widget(form.newCollection) }}
-                                    <small class="text-muted">Laisser vide pour utiliser la liste ci-dessus</small>
-                                </div>
-                            </div>
+                        <div class="d-flex align-items-center">
+                            <div class="flex-grow-1">{{ form_widget(form.category) }}</div>
+                            <button type="button" class="btn btn-sm btn-outline-primary ml-2 btn-add-entity" 
+                                    data-entity="category" data-label="Catégorie" data-select-id="livre_category"
+                                    title="Ajouter une catégorie">
+                                <i class="fas fa-plus"></i>
+                            </button>
                         </div>
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                {{ form_label(form.edition) }}
-                                <div class="input-group">
-                                    <div class="flex-grow-1">{{ form_widget(form.edition) }}</div>
-                                    <div class="input-group-append">
-                                        <button type="button" class="btn btn-outline-success btn-toggle-new" data-target="newEdition" title="Créer un nouvel éditeur">
-                                            <i class="fas fa-plus"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="mt-1 d-none" id="newEdition-container">
-                                    {{ form_widget(form.newEdition) }}
-                                    <small class="text-muted">Laisser vide pour utiliser la liste ci-dessus</small>
-                                </div>
-                            </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="d-flex align-items-center mb-1">
+                            {{ form_label(form.collection, null, {'label_attr': {'class': 'mb-0'}}) }}
+                            <button type="button" class="btn btn-sm btn-danger ml-2 btn-clear-select d-none" 
+                                    data-select-id="livre_collection" title="Réinitialiser">
+                                <i class="fas fa-undo text-white"></i>
+                            </button>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div class="flex-grow-1">{{ form_widget(form.collection) }}</div>
+                            <button type="button" class="btn btn-sm btn-outline-primary ml-2 btn-add-entity" 
+                                    data-entity="collection" data-label="Collection" data-select-id="livre_collection"
+                                    title="Ajouter une collection">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="d-flex align-items-center mb-1">
+                            {{ form_label(form.edition, null, {'label_attr': {'class': 'mb-0'}}) }}
+                            <button type="button" class="btn btn-sm btn-danger ml-2 btn-clear-select d-none" 
+                                    data-select-id="livre_edition" title="Réinitialiser">
+                                <i class="fas fa-undo text-white"></i>
+                            </button>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div class="flex-grow-1">{{ form_widget(form.edition) }}</div>
+                            <button type="button" class="btn btn-sm btn-outline-primary ml-2 btn-add-entity" 
+                                    data-entity="edition" data-label="Éditeur" data-select-id="livre_edition"
+                                    title="Ajouter un éditeur">
+                                <i class="fas fa-plus"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -108,19 +106,14 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <div class="form-group">
                                 {{ form_row(form.cycle) }}
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <div class="form-group">
                                 {{ form_row(form.tome) }}
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                {{ form_row(form.numero) }}
                             </div>
                         </div>
                     </div>
@@ -161,14 +154,19 @@
                         Ces informations sont liées à <strong>votre</strong> exemplaire du livre.
                     </p>
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="form-group">
                                 {{ form_row(form.dateAchat) }}
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="form-group">
                                 {{ form_row(form.prixAchat) }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form_row(form.monnaieAchat) }}
                             </div>
                         </div>
                     </div>
@@ -235,11 +233,212 @@
     </div>
     {{ form_end(form) }}
 </div>
+
+<!-- Modal pour ajouter une entité -->
+<div class="modal fade" id="addEntityModal" tabindex="-1" role="dialog" aria-labelledby="addEntityModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="addEntityModalLabel">
+                    <i class="fas fa-plus-circle mr-2"></i><span id="modalEntityLabel">Ajouter</span>
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Fermer">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="newEntityName" id="newEntityNameLabel">Nom</label>
+                    <input type="text" class="form-control" id="newEntityName" placeholder="Entrez le nom..." autofocus>
+                    <div class="invalid-feedback" id="entityError"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <i class="fas fa-times mr-1"></i>Annuler
+                </button>
+                <button type="button" class="btn btn-primary" id="saveEntityBtn">
+                    <i class="fas fa-save mr-1"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+    <style>
+        .select2-container--bootstrap-5 .select2-selection {
+            min-height: 38px;
+            border-color: #ced4da;
+            display: flex;
+            align-items: center;
+        }
+        .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+            line-height: 38px;
+            padding-top: 0;
+            padding-bottom: 0;
+            display: flex;
+            align-items: center;
+        }
+        .btn-add-entity {
+            height: 38px;
+            width: 38px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .btn-add-entity:hover {
+            background-color: #0d6efd;
+            color: white;
+        }
+        .btn-clear-select {
+            padding: 0 0.5rem;
+            font-size: 1rem;
+        }
+        .btn-clear-select:hover {
+            color: #dc3545 !important;
+        }
+    </style>
 {% endblock %}
 
 {% block javascripts %}
     {{ parent() }}
+    <!-- Select2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    
     <script>
+    $(document).ready(function() {
+        // Initialiser Select2 sur les selects d'entités
+        $('.select2-entity').select2({
+            theme: 'bootstrap-5',
+            placeholder: '-- Choisir --',
+            allowClear: false,
+            width: '100%'
+        });
+
+        // Fonction pour mettre à jour la visibilité des boutons clear
+        function updateClearButtons() {
+            $('.btn-clear-select').each(function() {
+                const selectId = $(this).data('select-id');
+                const $select = $('#' + selectId);
+                const hasValue = $select.val() && $select.val() !== '';
+                $(this).toggleClass('d-none', !hasValue);
+            });
+        }
+
+        // Mettre à jour au chargement
+        updateClearButtons();
+
+        // Mettre à jour quand un select change
+        $('.select2-entity').on('change', function() {
+            updateClearButtons();
+        });
+
+        // Bouton pour effacer la sélection
+        $('.btn-clear-select').on('click', function() {
+            const selectId = $(this).data('select-id');
+            $('#' + selectId).val('').trigger('change');
+            $(this).addClass('d-none');
+        });
+
+        // Variables pour la modal
+        let currentEntity = null;
+        let currentSelectId = null;
+
+        // Ouvrir la modal d'ajout
+        $('.btn-add-entity').on('click', function() {
+            currentEntity = $(this).data('entity');
+            currentSelectId = $(this).data('select-id');
+            const label = $(this).data('label');
+            
+            $('#modalEntityLabel').text('Ajouter : ' + label);
+            $('#newEntityNameLabel').text('Nom de la ' + label.toLowerCase());
+            $('#newEntityName').val('').removeClass('is-invalid');
+            $('#entityError').text('');
+            
+            $('#addEntityModal').modal('show');
+            
+            $('#addEntityModal').on('shown.bs.modal', function() {
+                $('#newEntityName').focus();
+            });
+        });
+
+        // Enregistrer via AJAX
+        $('#saveEntityBtn').on('click', function() {
+            saveEntity();
+        });
+
+        // Enregistrer avec Entrée
+        $('#newEntityName').on('keypress', function(e) {
+            if (e.which === 13) {
+                e.preventDefault();
+                saveEntity();
+            }
+        });
+
+        function saveEntity() {
+            const nom = $('#newEntityName').val().trim();
+            
+            if (!nom) {
+                $('#newEntityName').addClass('is-invalid');
+                $('#entityError').text('Le nom est obligatoire');
+                return;
+            }
+
+            $('#saveEntityBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Enregistrement...');
+
+            $.ajax({
+                url: '/api/' + currentEntity,
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ nom: nom }),
+                success: function(response) {
+                    if (response.success) {
+                        const $select = $('#' + currentSelectId);
+                        
+                        if ($select.find('option[value="' + response.id + '"]').length === 0) {
+                            const newOption = new Option(response.nom, response.id, true, true);
+                            $select.append(newOption);
+                        }
+                        
+                        $select.val(response.id).trigger('change');
+                        $('#addEntityModal').modal('hide');
+                        showToast('success', response.message || 'Ajouté avec succès !');
+                    } else {
+                        $('#newEntityName').addClass('is-invalid');
+                        $('#entityError').text(response.error || 'Erreur lors de l\'enregistrement');
+                    }
+                },
+                error: function(xhr) {
+                    const error = xhr.responseJSON?.error || 'Erreur de connexion';
+                    $('#newEntityName').addClass('is-invalid');
+                    $('#entityError').text(error);
+                },
+                complete: function() {
+                    $('#saveEntityBtn').prop('disabled', false).html('<i class="fas fa-save mr-1"></i>Enregistrer');
+                }
+            });
+        }
+
+        function showToast(type, message) {
+            const bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+            const toast = $('<div class="position-fixed" style="top: 20px; right: 20px; z-index: 9999;">' +
+                '<div class="toast show ' + bgClass + ' text-white" role="alert">' +
+                '<div class="toast-body d-flex align-items-center">' +
+                '<i class="fas fa-check-circle mr-2"></i>' + message +
+                '<button type="button" class="ml-auto close text-white" data-dismiss="toast">&times;</button>' +
+                '</div></div></div>');
+            $('body').append(toast);
+            setTimeout(function() { toast.fadeOut(function() { $(this).remove(); }); }, 3000);
+        }
+
         // Prévisualisation de l'image uploadée
         document.querySelector('#livre_imageFile').addEventListener('change', function(e) {
             const file = e.target.files[0];
@@ -271,28 +470,6 @@
                 }
             });
         }
-
-        // Toggle pour les champs "Nouveau" (catégorie, collection, éditeur)
-        document.querySelectorAll('.btn-toggle-new').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                const targetId = this.getAttribute('data-target');
-                const container = document.getElementById(targetId + '-container');
-                if (container) {
-                    container.classList.toggle('d-none');
-                    const icon = this.querySelector('i');
-                    if (container.classList.contains('d-none')) {
-                        icon.className = 'fas fa-plus';
-                        this.classList.remove('btn-outline-danger');
-                        this.classList.add('btn-outline-success');
-                        container.querySelector('input').value = '';
-                    } else {
-                        icon.className = 'fas fa-times';
-                        this.classList.remove('btn-outline-success');
-                        this.classList.add('btn-outline-danger');
-                        container.querySelector('input').focus();
-                    }
-                }
-            });
-        });
+    });
     </script>
 {% endblock %}

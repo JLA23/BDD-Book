@@ -89,7 +89,7 @@ class AjoutLivreController extends AbstractController
             // 2. Sinon, scraper les sources externes
             $merged = $this->scraperService->searchByIsbn($query);
             if ($merged) {
-                return $this->redirectToFormWithData($merged);
+                return $this->redirectToFormWithData($merged, $request);
             }
             $noResults = true;
         }
@@ -125,7 +125,7 @@ class AjoutLivreController extends AbstractController
         }
 
         if ($data) {
-            return $this->redirectToFormWithData($data);
+            return $this->redirectToFormWithData($data, $request);
         }
 
         return $this->render('livres/ajouter_url.html.twig', [
@@ -146,8 +146,25 @@ class AjoutLivreController extends AbstractController
         $livre = new Livre();
         $forceNew = $request->get('force_new', false);
 
+        // Définir la monnaie par défaut (Euros)
+        $monnaieEuros = $this->em->getRepository(\App\Entity\Monnaie::class)->findOneBy(['libelle' => 'Euros']);
+        if (!$monnaieEuros) {
+            $monnaieEuros = $this->em->getRepository(\App\Entity\Monnaie::class)->findOneBy(['libelle' => 'Euro']);
+        }
+        if ($monnaieEuros) {
+            $livre->setMonnaie($monnaieEuros);
+        }
+
         // Pré-remplir depuis les paramètres GET (données scrapées)
         $prefill = $request->query->all();
+        
+        // Récupérer le résumé complet depuis la session (stocké car trop long pour l'URL)
+        $sessionResume = $request->getSession()->get('livre_prefill_resume');
+        if ($sessionResume) {
+            $prefill['resume'] = $sessionResume;
+            $request->getSession()->remove('livre_prefill_resume');
+        }
+        
         if (!empty($prefill)) {
             $this->prefillLivre($livre, $prefill);
         }
@@ -161,9 +178,13 @@ class AjoutLivreController extends AbstractController
         if (!empty($prefill['imageUrl'])) {
             $form->get('imageUrl')->setData($prefill['imageUrl']);
         }
-        // Si l'éditeur scrapé n'existe pas en base, pré-remplir le champ newEdition
-        if (!empty($prefill['editeur']) && !$livre->getEdition()) {
-            $form->get('newEdition')->setData($prefill['editeur']);
+        
+        // Pré-remplir le prix d'achat et la monnaie avec les valeurs du livre
+        if ($livre->getPrixBase()) {
+            $form->get('prixAchat')->setData($livre->getPrixBase());
+        }
+        if ($livre->getMonnaie()) {
+            $form->get('monnaieAchat')->setData($livre->getMonnaie());
         }
 
         $form->handleRequest($request);
@@ -267,20 +288,21 @@ class AjoutLivreController extends AbstractController
 
         $data = $request->request->all();
 
-        return $this->redirectToFormWithData($data);
+        return $this->redirectToFormWithData($data, $request);
     }
 
     // ===================== PRIVATE METHODS =====================
 
-    private function redirectToFormWithData(array $data): Response
+    private function redirectToFormWithData(array $data, Request $request = null): Response
     {
         $params = [];
 
         if (!empty($data['titre'])) $params['titre'] = $data['titre'];
+        if (!empty($data['tome'])) $params['tome'] = $data['tome'];
         if (!empty($data['isbn'])) $params['isbn'] = $data['isbn'];
         if (!empty($data['annee'])) $params['annee'] = $data['annee'];
         if (!empty($data['pages'])) $params['pages'] = $data['pages'];
-        if (!empty($data['resume'])) $params['resume'] = mb_substr($data['resume'], 0, 500);
+        if (!empty($data['prix'])) $params['prix'] = $data['prix'];
         if (!empty($data['image'])) $params['imageUrl'] = $data['image'];
         if (!empty($data['imageUrl'])) $params['imageUrl'] = $data['imageUrl'];
         if (!empty($data['editeur'])) $params['editeur'] = $data['editeur'];
@@ -296,15 +318,22 @@ class AjoutLivreController extends AbstractController
             }
         }
 
+        // Stocker le résumé complet en session (trop long pour l'URL)
+        if (!empty($data['resume']) && $request) {
+            $request->getSession()->set('livre_prefill_resume', $data['resume']);
+        }
+
         return $this->redirectToRoute('livre_ajouter_formulaire', $params);
     }
 
     private function prefillLivre(Livre $livre, array $data): void
     {
         if (!empty($data['titre'])) $livre->setTitre($data['titre']);
+        if (!empty($data['tome'])) $livre->setTome((int) $data['tome']);
         if (!empty($data['isbn'])) $livre->setIsbn($data['isbn']);
         if (!empty($data['annee'])) $livre->setAnnee((int) $data['annee']);
         if (!empty($data['pages'])) $livre->setPages((int) $data['pages']);
+        if (!empty($data['prix'])) $livre->setPrixBase((float) $data['prix']);
         if (!empty($data['resume'])) $livre->setResume($data['resume']);
         if (!empty($data['sourceUrl'])) $livre->setAmazon($data['sourceUrl']);
 
@@ -366,7 +395,6 @@ class AjoutLivreController extends AbstractController
             'amazon' => $livre->getAmazon(),
             'cycle' => $livre->getCycle(),
             'tome' => $livre->getTome(),
-            'numero' => $livre->getNumero(),
             'prixBase' => $livre->getPrixBase(),
             'category_id' => $livre->getCategory() ? $livre->getCategory()->getId() : null,
             'collection_id' => $livre->getCollection() ? $livre->getCollection()->getId() : null,
@@ -376,6 +404,7 @@ class AjoutLivreController extends AbstractController
             'imageUrl' => $form->get('imageUrl')->getData(),
             'dateAchat' => $form->get('dateAchat')->getData() ? $form->get('dateAchat')->getData()->format('Y-m-d') : null,
             'prixAchat' => $form->get('prixAchat')->getData(),
+            'monnaieAchat' => $form->get('monnaieAchat')->getData() ? $form->get('monnaieAchat')->getData()->getId() : null,
             'commentaire' => $form->get('commentaire')->getData(),
         ];
     }
@@ -437,6 +466,16 @@ class AjoutLivreController extends AbstractController
         if (!empty($data['prixAchat'])) {
             $lienUser->setPrixAchat((float) $data['prixAchat']);
         }
+        if (!empty($data['monnaieAchat'])) {
+            if ($data['monnaieAchat'] instanceof \App\Entity\Monnaie) {
+                $lienUser->setMonnaie($data['monnaieAchat']);
+            } elseif (is_numeric($data['monnaieAchat'])) {
+                $monnaie = $this->em->getRepository(\App\Entity\Monnaie::class)->find($data['monnaieAchat']);
+                if ($monnaie) {
+                    $lienUser->setMonnaie($monnaie);
+                }
+            }
+        }
         if (!empty($data['commentaire'])) {
             $lienUser->setCommentaire($data['commentaire']);
         }
@@ -446,9 +485,6 @@ class AjoutLivreController extends AbstractController
 
     private function saveLivre($form, Livre $livre): Response
     {
-        // Gérer les nouvelles catégorie/collection/éditeur
-        $this->handleNewEntities($form, $livre);
-
         // Gérer l'image uploadée ou URL
         $imageFile = $form->get('imageFile')->getData();
         $imageUrl = $form->get('imageUrl')->getData();
@@ -475,6 +511,7 @@ class AjoutLivreController extends AbstractController
         $this->createLienUser($livre, [
             'dateAchat' => $form->get('dateAchat')->getData(),
             'prixAchat' => $form->get('prixAchat')->getData(),
+            'monnaieAchat' => $form->get('monnaieAchat')->getData(),
             'commentaire' => $form->get('commentaire')->getData(),
         ]);
 
@@ -483,53 +520,5 @@ class AjoutLivreController extends AbstractController
         $this->addFlash('warning', 'Le livre "' . $livre->getTitre() . '" a été ajouté avec succès !');
 
         return $this->redirectToRoute('livreDetail', ['id' => $livre->getId()]);
-    }
-
-    /**
-     * Gère la création de nouvelles catégories, collections et éditeurs depuis le formulaire
-     */
-    private function handleNewEntities($form, Livre $livre): void
-    {
-        // Nouvelle catégorie
-        $newCat = $form->get('newCategory')->getData();
-        if (!empty($newCat)) {
-            $existing = $this->em->getRepository(Category::class)->findOneBy(['nom' => trim($newCat)]);
-            if ($existing) {
-                $livre->setCategory($existing);
-            } else {
-                $cat = new Category();
-                $cat->setNom(trim($newCat));
-                $this->em->persist($cat);
-                $livre->setCategory($cat);
-            }
-        }
-
-        // Nouvelle collection
-        $newColl = $form->get('newCollection')->getData();
-        if (!empty($newColl)) {
-            $existing = $this->em->getRepository(Collection::class)->findOneBy(['nom' => trim($newColl)]);
-            if ($existing) {
-                $livre->setCollection($existing);
-            } else {
-                $coll = new Collection();
-                $coll->setNom(trim($newColl));
-                $this->em->persist($coll);
-                $livre->setCollection($coll);
-            }
-        }
-
-        // Nouvel éditeur
-        $newEd = $form->get('newEdition')->getData();
-        if (!empty($newEd)) {
-            $existing = $this->em->getRepository(Edition::class)->findOneBy(['nom' => trim($newEd)]);
-            if ($existing) {
-                $livre->setEdition($existing);
-            } else {
-                $ed = new Edition();
-                $ed->setNom(trim($newEd));
-                $this->em->persist($ed);
-                $livre->setEdition($ed);
-            }
-        }
     }
 }

@@ -63,9 +63,8 @@ class EditLivreController extends AbstractController
         }
         $form->get('auteurs')->setData(implode(', ', $auteurNoms));
 
-        if ($livre->getImage2()) {
-            $form->get('imageUrl')->setData('/uploads/covers/' . $livre->getImage2());
-        }
+        // Ne pas pré-remplir imageUrl avec le chemin local - laisser vide
+        // L'image actuelle est affichée via la variable imageUrl du template
 
         // Pré-remplir les champs LienUserLivre
         if ($lienUser->getDateAchat()) {
@@ -76,6 +75,9 @@ class EditLivreController extends AbstractController
         }
         if ($lienUser->getCommentaire()) {
             $form->get('commentaire')->setData($lienUser->getCommentaire());
+        }
+        if ($lienUser->getMonnaie()) {
+            $form->get('monnaieAchat')->setData($lienUser->getMonnaie());
         }
 
         $form->handleRequest($request);
@@ -97,9 +99,6 @@ class EditLivreController extends AbstractController
 
     private function saveEdit($form, Livre $livre, LienUserLivre $lienUser): Response
     {
-        // Gérer les nouvelles catégorie/collection/éditeur
-        $this->handleNewEntities($form, $livre);
-
         // Gérer l'image uploadée ou URL
         $imageFile = $form->get('imageFile')->getData();
         $imageUrl = $form->get('imageUrl')->getData();
@@ -162,55 +161,13 @@ class EditLivreController extends AbstractController
         $commentaire = $form->get('commentaire')->getData();
         $lienUser->setCommentaire($commentaire);
 
+        $monnaieAchat = $form->get('monnaieAchat')->getData();
+        $lienUser->setMonnaie($monnaieAchat);
+
         $this->em->flush();
 
         $this->addFlash('warning', 'Le livre "' . $livre->getTitre() . '" a été modifié avec succès !');
 
         return $this->redirectToRoute('livreDetail', ['id' => $livre->getId()]);
-    }
-
-    /**
-     * Gère la création de nouvelles catégories, collections et éditeurs depuis le formulaire
-     */
-    private function handleNewEntities($form, Livre $livre): void
-    {
-        $newCat = $form->get('newCategory')->getData();
-        if (!empty($newCat)) {
-            $existing = $this->em->getRepository(Category::class)->findOneBy(['nom' => trim($newCat)]);
-            if ($existing) {
-                $livre->setCategory($existing);
-            } else {
-                $cat = new Category();
-                $cat->setNom(trim($newCat));
-                $this->em->persist($cat);
-                $livre->setCategory($cat);
-            }
-        }
-
-        $newColl = $form->get('newCollection')->getData();
-        if (!empty($newColl)) {
-            $existing = $this->em->getRepository(Collection::class)->findOneBy(['nom' => trim($newColl)]);
-            if ($existing) {
-                $livre->setCollection($existing);
-            } else {
-                $coll = new Collection();
-                $coll->setNom(trim($newColl));
-                $this->em->persist($coll);
-                $livre->setCollection($coll);
-            }
-        }
-
-        $newEd = $form->get('newEdition')->getData();
-        if (!empty($newEd)) {
-            $existing = $this->em->getRepository(Edition::class)->findOneBy(['nom' => trim($newEd)]);
-            if ($existing) {
-                $livre->setEdition($existing);
-            } else {
-                $ed = new Edition();
-                $ed->setNom(trim($newEd));
-                $this->em->persist($ed);
-                $livre->setEdition($ed);
-            }
-        }
     }
 }

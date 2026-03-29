@@ -126,16 +126,7 @@ class BookInfoScraperService
 
         $results = [];
 
-        $data = $this->fetchGoogleBooks("isbn:{$isbn}");
-        if ($data) {
-            $results[] = $data;
-        }
-
-        $data = $this->fetchOpenLibrary($isbn);
-        if ($data) {
-            $results[] = $data;
-        }
-
+        // Recherche via Puppeteer (Amazon, Bedetheque)
         $puppeteerResults = $this->callPuppeteerSearch($isbn);
         if (!empty($puppeteerResults)) {
             $results = array_merge($results, $puppeteerResults);
@@ -155,6 +146,7 @@ class BookInfoScraperService
     {
         $merged = [
             'titre' => null,
+            'tome' => null,
             'auteurs' => [],
             'editeur' => null,
             'isbn' => null,
@@ -162,6 +154,7 @@ class BookInfoScraperService
             'pages' => null,
             'resume' => null,
             'image' => null,
+            'prix' => null,
             'source' => null,
             'sourceUrl' => null,
             'categories' => [],
@@ -170,10 +163,24 @@ class BookInfoScraperService
         $sources = [];
         $bestImageScore = 0;
 
+        // Trier les résultats pour mettre Amazon en premier
+        usort($results, function($a, $b) {
+            $aIsAmazon = isset($a['source']) && stripos($a['source'], 'Amazon') !== false;
+            $bIsAmazon = isset($b['source']) && stripos($b['source'], 'Amazon') !== false;
+            if ($aIsAmazon && !$bIsAmazon) return -1;
+            if (!$aIsAmazon && $bIsAmazon) return 1;
+            return 0;
+        });
+
         foreach ($results as $r) {
-            // Titre : prendre le plus long (généralement le plus complet)
-            if (!empty($r['titre']) && (empty($merged['titre']) || mb_strlen($r['titre']) > mb_strlen($merged['titre']))) {
+            // Titre : prendre le premier non-vide (Amazon en priorité grâce au tri)
+            if (empty($merged['titre']) && !empty($r['titre'])) {
                 $merged['titre'] = $r['titre'];
+            }
+
+            // Tome : prendre le premier non-vide
+            if (empty($merged['tome']) && !empty($r['tome'])) {
+                $merged['tome'] = $r['tome'];
             }
 
             // ISBN
@@ -196,37 +203,38 @@ class BookInfoScraperService
                 $merged['editeur'] = $r['editeur'];
             }
 
-            // Résumé : prendre le plus long
-            if (!empty($r['resume']) && (empty($merged['resume']) || mb_strlen($r['resume']) > mb_strlen($merged['resume']))) {
+            // Résumé : prendre le premier non-vide (Amazon en priorité)
+            if (empty($merged['resume']) && !empty($r['resume'])) {
                 $merged['resume'] = $r['resume'];
             }
 
-            // Auteurs : fusionner et dédupliquer
+            // Auteurs : prendre ceux d'Amazon en priorité, sinon fusionner
             if (!empty($r['auteurs']) && is_array($r['auteurs'])) {
-                foreach ($r['auteurs'] as $auteur) {
-                    $auteurNorm = mb_strtolower(trim($auteur));
-                    $found = false;
-                    foreach ($merged['auteurs'] as $existing) {
-                        if (mb_strtolower(trim($existing)) === $auteurNorm) {
-                            $found = true;
-                            break;
+                $isAmazon = isset($r['source']) && stripos($r['source'], 'Amazon') !== false;
+                if ($isAmazon && empty($merged['auteurs'])) {
+                    // Prendre directement les auteurs Amazon
+                    foreach ($r['auteurs'] as $auteur) {
+                        if (!empty(trim($auteur))) {
+                            $merged['auteurs'][] = trim($auteur);
                         }
                     }
-                    if (!$found && !empty(trim($auteur))) {
-                        $merged['auteurs'][] = trim($auteur);
+                } elseif (empty($merged['auteurs'])) {
+                    // Sinon prendre les premiers auteurs trouvés
+                    foreach ($r['auteurs'] as $auteur) {
+                        if (!empty(trim($auteur))) {
+                            $merged['auteurs'][] = trim($auteur);
+                        }
                     }
                 }
             }
 
-            // Image : scorer par qualité (Amazon HD > autres)
+            // Image : scorer par qualité (Amazon HD > Bedetheque > autres)
             if (!empty($r['image'])) {
                 $score = 1;
                 if (strpos($r['image'], 'media-amazon.com') !== false) {
                     $score = strpos($r['image'], 'SL1500') !== false ? 10 : 5;
                 } elseif (strpos($r['image'], 'bedetheque.com') !== false) {
-                    $score = 3;
-                } elseif (strpos($r['image'], 'books.google') !== false) {
-                    $score = 2;
+                    $score = 4;
                 }
                 if ($score > $bestImageScore) {
                     $bestImageScore = $score;
@@ -234,14 +242,22 @@ class BookInfoScraperService
                 }
             }
 
-            // SourceUrl
-            if (empty($merged['sourceUrl']) && !empty($r['sourceUrl'])) {
-                $merged['sourceUrl'] = $r['sourceUrl'];
+            // SourceUrl : prendre Amazon en priorité
+            if (!empty($r['sourceUrl'])) {
+                $isAmazon = stripos($r['sourceUrl'], 'amazon') !== false;
+                if ($isAmazon || empty($merged['sourceUrl'])) {
+                    $merged['sourceUrl'] = $r['sourceUrl'];
+                }
             }
 
             // Catégories
             if (!empty($r['categories']) && is_array($r['categories'])) {
                 $merged['categories'] = array_unique(array_merge($merged['categories'], $r['categories']));
+            }
+
+            // Prix : prendre le premier non-vide (Amazon en priorité)
+            if (empty($merged['prix']) && !empty($r['prix'])) {
+                $merged['prix'] = $r['prix'];
             }
 
             // Collecter les sources
@@ -334,7 +350,7 @@ class BookInfoScraperService
 
     /**
      * Scrape les informations d'un livre depuis une URL via Puppeteer
-     * Sites supportés : Amazon, Fnac, Babelio, Bedetheque
+     * Sites supportés : Amazon, Bedetheque, Decitre, Excalibur Comics
      */
     public function scrapeFromUrl(string $url): ?array
     {
@@ -348,9 +364,9 @@ class BookInfoScraperService
     {
         return [
             ['name' => 'Amazon.fr', 'domain' => 'amazon.fr', 'icon' => 'fab fa-amazon'],
-            ['name' => 'Fnac', 'domain' => 'fnac.com', 'icon' => 'fas fa-store'],
-            ['name' => 'Babelio', 'domain' => 'babelio.com', 'icon' => 'fas fa-book-reader'],
             ['name' => 'Bedetheque', 'domain' => 'bedetheque.com', 'icon' => 'fas fa-book-open'],
+            ['name' => 'Decitre', 'domain' => 'decitre.fr', 'icon' => 'fas fa-book'],
+            ['name' => 'Excalibur Comics', 'domain' => 'excaliburcomics.fr', 'icon' => 'fas fa-mask'],
         ];
     }
 
@@ -359,7 +375,7 @@ class BookInfoScraperService
      */
     public function isUrlSupported(string $url): bool
     {
-        $supportedDomains = ['amazon.fr', 'amazon.com', 'fnac.com', 'babelio.com', 'bedetheque.com', 'bdgest.com'];
+        $supportedDomains = ['amazon.fr', 'amazon.com', 'bedetheque.com', 'bdgest.com', 'decitre.fr', 'excaliburcomics.fr', 'excalibur'];
         foreach ($supportedDomains as $domain) {
             if (stripos($url, $domain) !== false) {
                 return true;
@@ -374,9 +390,9 @@ class BookInfoScraperService
     public function getSiteNameFromUrl(string $url): string
     {
         if (stripos($url, 'amazon') !== false) return 'Amazon';
-        if (stripos($url, 'fnac') !== false) return 'Fnac';
-        if (stripos($url, 'babelio') !== false) return 'Babelio';
         if (stripos($url, 'bedetheque') !== false || stripos($url, 'bdgest') !== false) return 'Bedetheque';
+        if (stripos($url, 'decitre') !== false) return 'Decitre';
+        if (stripos($url, 'excalibur') !== false) return 'Excalibur Comics';
         return 'Inconnu';
     }
 

@@ -42,7 +42,10 @@ class LivreType extends AbstractType
                 'label' => 'Catégorie',
                 'required' => false,
                 'placeholder' => '-- Choisir --',
-                'attr' => ['class' => 'form-control'],
+                'query_builder' => function (\App\Repository\CategoryRepository $repo) {
+                    return $repo->createQueryBuilder('c')->orderBy('c.nom', 'ASC');
+                },
+                'attr' => ['class' => 'form-control select2-entity', 'data-entity' => 'category'],
             ])
             ->add('collection', EntityType::class, [
                 'class' => Collection::class,
@@ -50,7 +53,10 @@ class LivreType extends AbstractType
                 'label' => 'Collection',
                 'required' => false,
                 'placeholder' => '-- Choisir --',
-                'attr' => ['class' => 'form-control'],
+                'query_builder' => function (\App\Repository\CollectionRepository $repo) {
+                    return $repo->createQueryBuilder('c')->orderBy('c.nom', 'ASC');
+                },
+                'attr' => ['class' => 'form-control select2-entity', 'data-entity' => 'collection'],
             ])
             ->add('edition', EntityType::class, [
                 'class' => Edition::class,
@@ -58,12 +64,10 @@ class LivreType extends AbstractType
                 'label' => 'Éditeur',
                 'required' => false,
                 'placeholder' => '-- Choisir --',
-                'attr' => ['class' => 'form-control'],
-            ])
-            ->add('numero', IntegerType::class, [
-                'label' => 'Numéro',
-                'required' => false,
-                'attr' => ['class' => 'form-control'],
+                'query_builder' => function (\App\Repository\EditionRepository $repo) {
+                    return $repo->createQueryBuilder('e')->orderBy('e.nom', 'ASC');
+                },
+                'attr' => ['class' => 'form-control select2-entity', 'data-entity' => 'edition'],
             ])
             ->add('annee', IntegerType::class, [
                 'label' => 'Année',
@@ -88,11 +92,15 @@ class LivreType extends AbstractType
             ->add('prixBase', NumberType::class, [
                 'label' => 'Prix de base',
                 'required' => false,
-                'attr' => ['class' => 'form-control'],
+                'scale' => 2,
+                'html5' => true,
+                'attr' => ['class' => 'form-control', 'step' => '0.01'],
             ])
             ->add('monnaie', EntityType::class, [
                 'class' => Monnaie::class,
-                'choice_label' => 'libelle',
+                'choice_label' => function (Monnaie $monnaie) {
+                    return $monnaie->getLibelle() . ' (' . $monnaie->getSymbole() . ')';
+                },
                 'label' => 'Monnaie',
                 'required' => false,
                 'placeholder' => '-- Choisir --',
@@ -125,7 +133,9 @@ class LivreType extends AbstractType
                 'label' => 'Prix d\'achat',
                 'mapped' => false,
                 'required' => false,
-                'attr' => ['class' => 'form-control'],
+                'scale' => 2,
+                'html5' => true,
+                'attr' => ['class' => 'form-control', 'step' => '0.01'],
             ])
             ->add('commentaire', TextareaType::class, [
                 'label' => 'Commentaire',
@@ -133,23 +143,16 @@ class LivreType extends AbstractType
                 'required' => false,
                 'attr' => ['class' => 'form-control', 'rows' => 3, 'placeholder' => 'État, particularités, notes personnelles...'],
             ])
-            ->add('newCategory', TextType::class, [
-                'label' => 'Nouvelle catégorie',
+            ->add('monnaieAchat', EntityType::class, [
+                'class' => Monnaie::class,
+                'choice_label' => function (Monnaie $monnaie) {
+                    return $monnaie->getLibelle() . ' (' . $monnaie->getSymbole() . ')';
+                },
+                'label' => 'Monnaie',
                 'mapped' => false,
                 'required' => false,
-                'attr' => ['class' => 'form-control', 'placeholder' => 'Nom de la nouvelle catégorie'],
-            ])
-            ->add('newCollection', TextType::class, [
-                'label' => 'Nouvelle collection',
-                'mapped' => false,
-                'required' => false,
-                'attr' => ['class' => 'form-control', 'placeholder' => 'Nom de la nouvelle collection'],
-            ])
-            ->add('newEdition', TextType::class, [
-                'label' => 'Nouvel éditeur',
-                'mapped' => false,
-                'required' => false,
-                'attr' => ['class' => 'form-control', 'placeholder' => 'Nom du nouvel éditeur'],
+                'placeholder' => '-- Choisir --',
+                'attr' => ['class' => 'form-control'],
             ])
             ->add('imageUrl', TextType::class, [
                 'label' => 'URL de l\'image',
