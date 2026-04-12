@@ -1,0 +1,350 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Recherche par référence - BDD-Brick{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-sm">
+                <div class="card-header" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
+                    <h5 class="mb-0 text-white">
+                        <i class="fas fa-search"></i> Recherche par référence
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if not rebrickableConfigured and not bricksetConfigured %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> <strong>Aucune API configurée</strong>
+                        <p class="mb-0 small">Ajoutez REBRICKABLE_API_KEY et/ou BRICKSET_API_KEY dans votre fichier .env</p>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info small">
+                        <i class="fas fa-info-circle"></i> APIs actives: 
+                        {% if rebrickableConfigured %}<span class="badge badge-success">Rebrickable</span>{% endif %}
+                        {% if bricksetConfigured %}<span class="badge badge-primary">Brickset</span>{% endif %}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="form-group">
+                        <label for="referenceInput"><i class="fas fa-barcode"></i> Référence du set</label>
+                        <div class="input-group">
+                            <input type="text" id="referenceInput" class="form-control form-control-lg" placeholder="Ex: 75192, 42143...">
+                            <div class="input-group-append">
+                                <button type="button" id="searchBtn" class="btn btn-warning btn-lg">
+                                    <i class="fas fa-search"></i> Rechercher
+                                </button>
+                            </div>
+                        </div>
+                        <small class="text-muted">Entrez le numéro de set (avec ou sans le suffixe -1)</small>
+                    </div>
+                    
+                    <div id="searchResults" class="mt-4" style="display: none;">
+                        <div id="loadingSpinner" class="text-center py-4">
+                            <div class="spinner-border text-warning" role="status"></div>
+                            <p class="mt-2 text-muted">Recherche en cours...</p>
+                        </div>
+                        
+                        <div id="duplicateWarning" class="alert alert-warning" style="display: none;">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <i class="fas fa-exclamation-triangle"></i> <strong>Ce set existe déjà dans votre base !</strong>
+                                    <span id="duplicateSetName" class="ml-2"></span>
+                                </div>
+                                <div>
+                                    <a href="#" id="duplicateLink" class="btn btn-sm btn-primary mr-2">
+                                        <i class="fas fa-eye"></i> Voir le set
+                                    </a>
+                                    <a href="#" id="duplicateAddToCollection" class="btn btn-sm btn-success">
+                                        <i class="fas fa-user-plus"></i> Ajouter à ma collection
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="setResult" style="display: none;">
+                            <div class="card border-warning">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-4 text-center">
+                                            <img id="resultImage" src="" alt="" class="img-fluid rounded" style="max-height: 250px; object-fit: contain;">
+                                        </div>
+                                        <div class="col-md-8">
+                                            <h4 id="resultNom"></h4>
+                                            <p class="mb-2">
+                                                <span class="badge badge-warning" id="resultReference"></span>
+                                                <span class="badge badge-info" id="resultTheme"></span>
+                                            </p>
+                                            <p class="mb-1"><i class="fas fa-calendar"></i> Année: <strong id="resultAnnee"></strong></p>
+                                            <p class="mb-1"><i class="fas fa-puzzle-piece"></i> Pièces: <strong id="resultPieces"></strong></p>
+                                            <p class="mb-1"><i class="fas fa-euro-sign"></i> Prix: <strong id="resultPrix"></strong></p>
+                                            
+                                            <hr>
+                                            
+                                            <button type="button" id="importSetBtn" class="btn btn-success">
+                                                <i class="fas fa-plus"></i> Importer ce set
+                                            </button>
+                                            <a href="{{ path('brick_new') }}" class="btn btn-outline-secondary">
+                                                <i class="fas fa-edit"></i> Créer manuellement
+                                            </a>
+                                            
+                                            <input type="hidden" id="formNom">
+                                            <input type="hidden" id="formReference">
+                                            <input type="hidden" id="formAnnee">
+                                            <input type="hidden" id="formPieces">
+                                            <input type="hidden" id="formPrix">
+                                            <input type="hidden" id="formTheme">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="imagesSection" class="mt-4" style="display: none;">
+                                <h5><i class="fas fa-images"></i> Images disponibles <small class="text-muted">(cochez celles à importer)</small></h5>
+                                <div class="alert alert-light border small mb-2">
+                                    <i class="fas fa-info-circle text-info"></i> 
+                                    Pour plus d'images, visitez 
+                                    <a href="#" id="rebrickableLink" target="_blank" class="alert-link">Rebrickable <i class="fas fa-external-link-alt"></i></a>
+                                    ou
+                                    <a href="#" id="bricksetLink" target="_blank" class="alert-link">Brickset <i class="fas fa-external-link-alt"></i></a>
+                                </div>
+                                <div class="mb-2">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="selectAllImages">
+                                        <i class="fas fa-check-square"></i> Tout sélectionner
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="deselectAllImages">
+                                        <i class="fas fa-square"></i> Tout désélectionner
+                                    </button>
+                                    <span class="ml-2 text-muted" id="selectedCount">0 image(s)</span>
+                                </div>
+                                <div id="imagesGrid" class="row"></div>
+                            </div>
+                        </div>
+                        
+                        <div id="multipleResults" style="display: none;">
+                            <p class="text-muted">Plusieurs sets correspondent :</p>
+                            <div id="resultsGrid" class="row"></div>
+                        </div>
+                        
+                        <div id="noResult" class="alert alert-warning" style="display: none;">
+                            <i class="fas fa-exclamation-triangle"></i> Aucun set trouvé.
+                            <a href="{{ path('brick_new') }}" class="alert-link">Créer manuellement</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-3">
+                <a href="{{ path('brick_list') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Retour à la liste
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+$(document).ready(function() {
+    $('#searchBtn').click(function() {
+        var reference = $('#referenceInput').val().trim();
+        if (!reference) { alert('Veuillez saisir une référence'); return; }
+        
+        $('#searchResults').show();
+        $('#loadingSpinner').show();
+        $('#setResult, #multipleResults, #noResult, #duplicateWarning').hide();
+        
+        $.ajax({
+            url: '{{ path("brick_api_search") }}',
+            method: 'GET',
+            data: { reference: reference },
+            success: function(response) {
+                $('#loadingSpinner').hide();
+                
+                // Si le set existe déjà, afficher l'alerte avec les options
+                if (response.exists && response.duplicate) {
+                    $('#duplicateWarning').show();
+                    $('#duplicateSetName').text(response.duplicate.nom);
+                    $('#duplicateLink').attr('href', '/brick/set/' + response.duplicate.id);
+                    $('#duplicateAddToCollection').attr('href', '/brick/set/' + response.duplicate.id + '/ajouter-proprietaire');
+                    return;
+                }
+                
+                if (response.set) {
+                    showSetResult(response.set, response.images || []);
+                } else if (response.results && response.results.length > 0) {
+                    showMultipleResults(response.results);
+                } else {
+                    $('#noResult').show();
+                }
+            },
+            error: function(xhr) {
+                $('#loadingSpinner').hide();
+                var msg = 'Erreur lors de la recherche';
+                if (xhr.responseJSON && xhr.responseJSON.error) msg = xhr.responseJSON.error;
+                alert(msg);
+            }
+        });
+    });
+    
+    $('#referenceInput').keypress(function(e) { if (e.which == 13) $('#searchBtn').click(); });
+    
+    function showSetResult(set, images) {
+        $('#resultNom').text(set.nom);
+        $('#resultReference').text(set.reference);
+        $('#resultTheme').text(set.theme || 'Non classé');
+        $('#resultAnnee').text(set.annee || '-');
+        $('#resultPieces').text(set.nbPieces || '-');
+        $('#resultPrix').text(set.prix ? set.prix + ' €' : '-');
+        
+        if (set.image) {
+            $('#resultImage').attr('src', set.image).show();
+        } else {
+            $('#resultImage').hide();
+        }
+        
+        $('#formNom').val(set.nom);
+        $('#formReference').val(set.reference);
+        $('#formAnnee').val(set.annee || '');
+        $('#formPieces').val(set.nbPieces || '');
+        $('#formPrix').val(set.prix || '');
+        $('#formTheme').val(set.theme || '');
+        
+        var ref = set.reference.replace(/-\d+$/, '');
+        $('#rebrickableLink').attr('href', 'https://rebrickable.com/sets/' + set.reference + '/');
+        $('#bricksetLink').attr('href', 'https://brickset.com/sets/' + ref);
+        
+        if (images.length > 0) {
+            var grid = $('#imagesGrid').empty();
+            images.forEach(function(img, index) {
+                var isMain = img.type === 'main';
+                grid.append(
+                    '<div class="col-md-3 col-6 mb-3 image-card-wrapper">' +
+                    '<div class="card ' + (isMain ? 'border-warning' : '') + '" data-index="' + index + '">' +
+                    '<div class="position-relative">' +
+                    '<img src="' + img.url + '" class="card-img-top" style="height: 150px; object-fit: contain; background: #f8f9fa; cursor: pointer;" onclick="setMainImage(' + index + ')" onerror="this.closest(\'.image-card-wrapper\').remove(); updateSelectedCount();">' +
+                    '<div class="custom-control custom-checkbox position-absolute" style="top: 5px; left: 10px;">' +
+                    '<input type="checkbox" class="custom-control-input image-checkbox" id="imgCheck' + index + '" data-url="' + img.url + '" data-source="' + img.source + '" data-index="' + index + '" ' + (isMain ? 'checked' : '') + '>' +
+                    '<label class="custom-control-label" for="imgCheck' + index + '"></label>' +
+                    '</div>' +
+                    '<div class="main-image-badge position-absolute" style="top: 5px; right: 5px; display: ' + (isMain ? 'block' : 'none') + ';">' +
+                    '<span class="badge badge-warning"><i class="fas fa-star"></i> Principale</span>' +
+                    '</div>' +
+                    '</div>' +
+                    '<div class="card-body p-2 text-center">' +
+                    '<small class="text-muted d-block">' + img.source + '</small>' +
+                    '<button type="button" class="btn btn-xs btn-outline-warning mt-1 set-main-btn" onclick="setMainImage(' + index + ')" style="font-size: 10px; padding: 2px 6px;">' +
+                    '<i class="fas fa-star"></i> Principale' +
+                    '</button>' +
+                    '</div>' +
+                    '</div></div>'
+                );
+            });
+            $('#imagesSection').show();
+            updateSelectedCount();
+        } else {
+            $('#imagesSection').hide();
+        }
+        
+        $('#setResult').show();
+    }
+    
+    function updateSelectedCount() {
+        var count = $('.image-checkbox:checked').length;
+        $('#selectedCount').text(count + ' image(s) sélectionnée(s)');
+    }
+    
+    $('#selectAllImages').click(function() { $('.image-checkbox').prop('checked', true); updateSelectedCount(); });
+    $('#deselectAllImages').click(function() { $('.image-checkbox').prop('checked', false); updateSelectedCount(); });
+    $(document).on('change', '.image-checkbox', updateSelectedCount);
+    
+    $('#importSetBtn').click(function() {
+        var selectedImages = [];
+        var mainImageIndex = null;
+        
+        // Trouver l'image principale
+        $('.main-image-badge:visible').each(function() {
+            mainImageIndex = $(this).closest('.card').data('index');
+        });
+        
+        // Ajouter d'abord l'image principale si elle est sélectionnée
+        if (mainImageIndex !== null) {
+            var mainCheckbox = $('#imgCheck' + mainImageIndex);
+            if (mainCheckbox.is(':checked')) {
+                selectedImages.push({ 
+                    url: mainCheckbox.data('url'), 
+                    source: mainCheckbox.data('source'),
+                    isMain: true 
+                });
+            }
+        }
+        
+        // Ajouter les autres images sélectionnées
+        $('.image-checkbox:checked').each(function() {
+            var idx = $(this).data('index');
+            if (idx !== mainImageIndex) {
+                selectedImages.push({ url: $(this).data('url'), source: $(this).data('source') });
+            }
+        });
+        
+        $.ajax({
+            url: '{{ path("brick_api_store_images") }}',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ images: selectedImages }),
+            success: function() {
+                var params = new URLSearchParams();
+                params.append('prefill', '1');
+                params.append('nom', $('#formNom').val() || '');
+                params.append('reference', $('#formReference').val() || '');
+                params.append('annee', $('#formAnnee').val() || '');
+                params.append('nbPieces', $('#formPieces').val() || '');
+                params.append('prix', $('#formPrix').val() || '');
+                params.append('theme', $('#formTheme').val() || '');
+                window.location.href = '{{ path("brick_new") }}?' + params.toString();
+            },
+            error: function() { alert('Erreur'); }
+        });
+    });
+    
+    function showMultipleResults(results) {
+        var grid = $('#resultsGrid').empty();
+        results.forEach(function(set) {
+            grid.append(
+                '<div class="col-md-4 col-6 mb-3">' +
+                '<div class="card h-100" style="cursor: pointer;" onclick="selectSet(\'' + set.reference + '\')">' +
+                '<img src="' + (set.image || '/images/brick-default.svg') + '" class="card-img-top" style="height: 150px; object-fit: contain;">' +
+                '<div class="card-body p-2">' +
+                '<h6 class="card-title mb-1">' + set.nom + '</h6>' +
+                '<span class="badge badge-warning">' + set.reference + '</span>' +
+                '<p class="small text-muted mb-0">' + (set.annee || '') + ' · ' + (set.nbPieces || '?') + ' pièces</p>' +
+                '</div></div></div>'
+            );
+        });
+        $('#multipleResults').show();
+    }
+});
+
+function selectSet(reference) {
+    $('#referenceInput').val(reference);
+    $('#searchBtn').click();
+}
+
+function setMainImage(index) {
+    // Retirer le badge de toutes les images
+    $('.main-image-badge').hide();
+    $('#imagesGrid .card').removeClass('border-warning');
+    
+    // Ajouter le badge à l'image sélectionnée
+    var card = $('#imagesGrid .card[data-index="' + index + '"]');
+    card.addClass('border-warning');
+    card.find('.main-image-badge').show();
+    
+    // S'assurer que l'image est cochée
+    $('#imgCheck' + index).prop('checked', true);
+    updateSelectedCount();
+}
+</script>
+{% endblock %}

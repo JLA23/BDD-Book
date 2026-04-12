@@ -1,0 +1,143 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}BDD-Brick - Base de données de sets{% endblock %}
+
+{% block body %}
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h1 class="display-4" style="color: #ff6b35;">
+            <i class="fas fa-cubes"></i> BDD-Brick
+        </h1>
+        <p class="lead text-muted">Base de données de sets de construction de la famille Lefebvre</p>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
+            <h5 class="mb-0 text-white"><i class="fas fa-search"></i> Rechercher un set</h5>
+        </div>
+        <div class="card-body">
+            <form action="{{ path('brick_list') }}" method="get">
+                <div class="row">
+                    <div class="col-md-5 mb-3">
+                        <label class="form-label"><strong>Que recherchez-vous ?</strong></label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text bg-white"><i class="fas fa-cubes text-warning"></i></span>
+                            </div>
+                            <input type="text" name="search" class="form-control" placeholder="Nom du set ou référence...">
+                        </div>
+                        <small class="text-muted">Recherche par nom ou numéro de référence</small>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label"><strong>Marque</strong></label>
+                        <select name="marque" class="form-control">
+                            <option value="">Toutes</option>
+                            {% for marque in marques %}
+                                <option value="{{ marque.id }}">{{ marque.nom }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label"><strong>Collection</strong></label>
+                        <select name="collection" class="form-control">
+                            <option value="">Toutes</option>
+                            {% for collection in collections %}
+                                <option value="{{ collection.id }}">{{ collection.nom }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <button type="submit" class="btn btn-warning btn-lg px-5">
+                        <i class="fas fa-search"></i> Rechercher
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+    <div class="text-center mb-4">
+        <a href="{{ path('brick_new') }}" class="btn btn-success btn-lg">
+            <i class="fas fa-plus"></i> Ajouter un set
+        </a>
+        <a href="{{ path('brick_search_reference') }}" class="btn btn-info btn-lg ml-2">
+            <i class="fas fa-barcode"></i> Rechercher par référence (API)
+        </a>
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <a href="{{ path('brick_list') }}" class="text-decoration-none">
+                <div class="card h-100 text-center py-4 shadow-sm hover-card">
+                    <div class="card-body">
+                        <i class="fas fa-cubes fa-3x mb-3" style="color: #ff6b35;"></i>
+                        <h5 class="card-title">Tous les sets</h5>
+                        <p class="card-text text-muted">Parcourir le catalogue complet</p>
+                        <span class="badge badge-warning badge-pill px-3 py-2">{{ totalSets }} set(s)</span>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-4 mb-4">
+            <a href="{{ path('brick_collections') }}" class="text-decoration-none">
+                <div class="card h-100 text-center py-4 shadow-sm hover-card">
+                    <div class="card-body">
+                        <i class="fas fa-layer-group fa-3x mb-3 text-info"></i>
+                        <h5 class="card-title">Collections / Thèmes</h5>
+                        <p class="card-text text-muted">Star Wars, Technic, City...</p>
+                        <span class="badge badge-info badge-pill px-3 py-2">{{ totalCollections }} collection(s)</span>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-4 mb-4">
+            <a href="{{ path('brick_marques') }}" class="text-decoration-none">
+                <div class="card h-100 text-center py-4 shadow-sm hover-card">
+                    <div class="card-body">
+                        <i class="fas fa-trademark fa-3x mb-3 text-secondary"></i>
+                        <h5 class="card-title">Marques</h5>
+                        <p class="card-text text-muted">LEGO, Mega Bloks, Cobi...</p>
+                        <span class="badge badge-secondary badge-pill px-3 py-2">{{ totalMarques }} marque(s)</span>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    {% if users|length > 0 %}
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0"><i class="fas fa-users"></i> Collections par utilisateur</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for user in users %}
+                <div class="col-md-3 col-6 mb-3">
+                    <a href="{{ path('brick_list', {user: user.id}) }}" class="text-decoration-none">
+                        <div class="card text-center py-3 hover-card">
+                            <div class="card-body p-2">
+                                {% if user.logo %}
+                                <img src="/uploads/avatars/{{ user.logo }}" alt="{{ user.name }}" class="rounded-circle mb-2" style="width: 50px; height: 50px; object-fit: cover;">
+                                {% else %}
+                                <i class="fas fa-user-circle fa-3x mb-2 text-success"></i>
+                                {% endif %}
+                                <h6 class="card-title mb-1">{{ user.name }} {{ user.lastName }}</h6>
+                                <span class="badge badge-success">{{ user.setsCount }} set(s)</span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .hover-card { transition: transform 0.2s, box-shadow 0.2s; border: 1px solid #dee2e6; }
+    .hover-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important; }
+</style>
+{% endblock %}

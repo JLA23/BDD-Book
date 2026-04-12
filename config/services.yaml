@@ -37,3 +37,8 @@ services:
     App\Command\ScrapeCoverCommand:
         arguments:
             $projectDir: '%kernel.project_dir%'
+
+    App\Service\BrickApiService:
+        arguments:
+            $rebrickableApiKey: '%env(default::REBRICKABLE_API_KEY)%'
+            $bricksetApiKey: '%env(default::BRICKSET_API_KEY)%'

@@ -1,0 +1,33 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{% if isEdit %}Modifier{% else %}Nouvelle{% endif %} marque - BDD-Brick{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
+                    <h5 class="mb-0 text-white">
+                        <i class="fas fa-trademark"></i> {% if isEdit %}Modifier{% else %}Nouvelle{% endif %} marque
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {{ form_start(form) }}
+                    {{ form_widget(form) }}
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ path('brick_marques') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Annuler
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Enregistrer
+                        </button>
+                    </div>
+                    {{ form_end(form) }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
