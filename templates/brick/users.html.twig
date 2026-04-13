@@ -1,0 +1,61 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Collections par utilisateur - BDD-Brick{% endblock %}
+
+{% block body %}
+<div class="container py-5">
+    <div class="mb-4">
+        <a href="{{ path('brick_index') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> Retour
+        </a>
+    </div>
+
+    <div class="text-center mb-5">
+        <h1 class="display-5" style="color: #ff6b35;">
+            <i class="fas fa-users"></i> Collections par utilisateur
+        </h1>
+        <p class="lead text-muted">Découvrez les sets de chaque membre de la famille</p>
+    </div>
+
+    {% if users|length > 0 %}
+    <div class="row justify-content-center">
+        {% for user in users %}
+        <div class="col-lg-4 col-md-6 mb-4">
+            <a href="{{ path('brick_list', {user: user.id}) }}" class="text-decoration-none">
+                <div class="card h-100 shadow-sm hover-card">
+                    <div class="card-body text-center py-4">
+                        {% if user.logo %}
+                        <img src="/uploads/avatars/{{ user.logo }}" alt="{{ user.name }}" 
+                             class="rounded-circle mb-3 shadow" style="width: 80px; height: 80px; object-fit: cover;">
+                        {% else %}
+                        <div class="rounded-circle bg-success d-inline-flex align-items-center justify-content-center mb-3 shadow" 
+                             style="width: 80px; height: 80px;">
+                            <i class="fas fa-user fa-2x text-white"></i>
+                        </div>
+                        {% endif %}
+                        <h4 class="card-title mb-2">{{ user.name }} {{ user.lastName }}</h4>
+                        <p class="text-muted mb-3">
+                            <i class="fas fa-cubes"></i> {{ user.setsCount }} set(s)
+                        </p>
+                        <span class="btn btn-outline-warning">
+                            <i class="fas fa-eye"></i> Voir la collection
+                        </span>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-users fa-4x text-muted mb-3"></i>
+        <p class="lead text-muted">Aucun utilisateur n'a encore de sets dans sa collection.</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .hover-card { transition: transform 0.2s, box-shadow 0.2s; }
+    .hover-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important; }
+</style>
+{% endblock %}

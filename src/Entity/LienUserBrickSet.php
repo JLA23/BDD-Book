@@ -60,20 +60,6 @@ class LienUserBrickSet
      */
     private $commentaire;
 
-    /**
-     * @var bool
-     *
-     * @ORM\Column(name="est_monte", type="boolean")
-     */
-    private $estMonte = false;
-
-    /**
-     * @var bool
-     *
-     * @ORM\Column(name="est_complet", type="boolean")
-     */
-    private $estComplet = true;
-
     public function getId(): ?int
     {
         return $this->id;
@@ -142,28 +128,6 @@ class LienUserBrickSet
     public function setCommentaire(?string $commentaire): self
     {
         $this->commentaire = $commentaire;
-        return $this;
-    }
-
-    public function getEstMonte(): bool
-    {
-        return $this->estMonte;
-    }
-
-    public function setEstMonte(bool $estMonte): self
-    {
-        $this->estMonte = $estMonte;
-        return $this;
-    }
-
-    public function getEstComplet(): bool
-    {
-        return $this->estComplet;
-    }
-
-    public function setEstComplet(bool $estComplet): self
-    {
-        $this->estComplet = $estComplet;
         return $this;
     }
 }

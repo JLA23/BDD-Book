@@ -63,6 +63,24 @@ class BrickController extends AbstractController
         ]);
     }
 
+    #[Route('/utilisateurs', name: 'brick_users')]
+    public function users(UserRepository $userRepo, LienUserBrickSetRepository $lienRepo): Response
+    {
+        $users = $userRepo->findAll();
+        $usersWithCount = [];
+        foreach ($users as $user) {
+            $count = $lienRepo->count(['user' => $user]);
+            if ($count > 0) {
+                $user->setsCount = $count;
+                $usersWithCount[] = $user;
+            }
+        }
+
+        return $this->render('brick/users.html.twig', [
+            'users' => $usersWithCount,
+        ]);
+    }
+
     #[Route('/liste', name: 'brick_list')]
     public function list(Request $request, PaginatorInterface $paginator, BrickSetRepository $setRepo, BrickCollectionRepository $collectionRepo, BrickMarqueRepository $marqueRepo, UserRepository $userRepo): Response
     {
@@ -274,8 +292,6 @@ class BrickController extends AbstractController
                     $lien->setPrixAchat((float) $prixAchat);
                 }
                 
-                $lien->setEstMonte($request->request->getBoolean('est_monte'));
-                $lien->setEstComplet($request->request->getBoolean('est_complet', true));
                 $lien->setCommentaire($request->request->get('commentaire_lien'));
                 
                 $this->em->persist($lien);
@@ -609,8 +625,6 @@ class BrickController extends AbstractController
             }
 
             $lien->setCommentaire($request->request->get('commentaire'));
-            $lien->setEstMonte($request->request->getBoolean('est_monte'));
-            $lien->setEstComplet($request->request->getBoolean('est_complet', true));
 
             $this->em->persist($lien);
             $this->em->flush();
@@ -655,8 +669,6 @@ class BrickController extends AbstractController
             }
 
             $lien->setCommentaire($request->request->get('commentaire'));
-            $lien->setEstMonte($request->request->getBoolean('est_monte'));
-            $lien->setEstComplet($request->request->getBoolean('est_complet'));
 
             $this->em->flush();
 

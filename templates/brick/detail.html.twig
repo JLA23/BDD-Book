@@ -140,7 +140,7 @@
                             <tr>
                                 <th><i class="fas fa-user"></i> Utilisateur</th>
                                 <th><i class="fas fa-calendar-alt"></i> Date d'acquisition</th>
-                                <th><i class="fas fa-check-circle"></i> État</th>
+                                <th><i class="fas fa-euro-sign"></i> Prix</th>
                                 <th><i class="fas fa-comment"></i> Commentaire</th>
                                 {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
                                     <th class="text-right"><i class="fas fa-cogs"></i></th>
@@ -151,14 +151,8 @@
                             {% for lien in set.listeUser %}
                             <tr>
                                 <td><strong>{{ lien.user.name }} {{ lien.user.lastName }}</strong></td>
-                                <td>
-                                    {% if lien.dateAchat %}{{ lien.dateAchat|date('d/m/Y') }}{% else %}<span class="text-muted">-</span>{% endif %}
-                                    {% if lien.prixAchat %}<br><small class="text-success">{{ lien.prixAchat|number_format(2) }} €</small>{% endif %}
-                                </td>
-                                <td>
-                                    {% if lien.estMonte %}<span class="badge badge-success"><i class="fas fa-check"></i> Monté</span>{% else %}<span class="badge badge-secondary">Non monté</span>{% endif %}
-                                    {% if lien.estComplet %}<span class="badge badge-info">Complet</span>{% else %}<span class="badge badge-warning">Incomplet</span>{% endif %}
-                                </td>
+                                <td>{% if lien.dateAchat %}{{ lien.dateAchat|date('d/m/Y') }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                                <td>{% if lien.prixAchat %}<span class="text-success">{{ lien.prixAchat|number_format(2) }} €</span>{% else %}<span class="text-muted">-</span>{% endif %}</td>
                                 <td>{% if lien.commentaire %}{{ lien.commentaire|length > 50 ? lien.commentaire|slice(0, 50) ~ '...' : lien.commentaire }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
                                 {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
                                     <td class="text-right text-nowrap">
