@@ -2,11 +2,24 @@
 
 {% block body %}
 <div class="container-fluid px-4">
-    <!-- Bouton retour -->
-    <div class="mb-3">
+    <!-- Bouton retour + modifier -->
+    <div class="mb-3 d-flex justify-content-between align-items-center">
         <a href="javascript:history.back()" class="btn btn-outline-secondary btn-sm">
             <i class="fas fa-arrow-left"></i> Retour
         </a>
+        {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+            {% set isOwner = false %}
+            {% for lienUser in livre.listeUser %}
+                {% if lienUser.user.id == app.user.id %}
+                    {% set isOwner = true %}
+                {% endif %}
+            {% endfor %}
+            {% if isOwner %}
+                <a href="{{ path('livre_modifier', {id: livre.id}) }}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-edit"></i> Modifier
+                </a>
+            {% endif %}
+        {% endif %}
     </div>
 
     <!-- Card principale -->
@@ -24,75 +37,20 @@
             <div class="row">
                 <!-- Colonne Image -->
                 <div class="col-md-4 text-center mb-4">
-                    <div class="livre-cover-container">
+                    <div class="livre-cover-container position-relative">
                         <img id='img-{{ livre.id }}' 
                              class="img-fluid rounded shadow clickable-image" 
                              alt="{{ livre.titre }}" 
                              src="{{ livre.getBestImage }}"
                              style="max-height: 400px; object-fit: contain; cursor: pointer;" />
-                    </div>
-                    
-                    {% if is_granted('IS_AUTHENTICATED_FULLY') %}
-                    <div class="mt-3">
-                        {% if livre.isbn %}
-                        <button type="button" id="scrapeCoverBtn" class="btn btn-primary btn-sm mb-2" data-livre-id="{{ livre.id }}">
-                            <i class="fas fa-magic"></i> Scraper des images
+                        {% if is_granted('IS_AUTHENTICATED_FULLY') %}
+                        <button type="button" class="btn btn-light btn-sm edit-cover-btn" data-toggle="modal" data-target="#editCoverModal" title="Modifier la couverture">
+                            <i class="fas fa-edit"></i>
                         </button>
-                        <br>
                         {% endif %}
-                        
-                        {% if livre.getImage2 %}
-                            <span class="badge badge-info mb-2"><i class="fas fa-link"></i> Image externe</span>
-                            <br>
-                            <button type="button" id="removeCoverUrlBtn" class="btn btn-outline-danger btn-sm">
-                                <i class="fas fa-undo"></i> Image originale
-                            </button>
-                        {% else %}
-                            <div class="mb-2">
-                                <label for="uploadCoverInput" class="btn btn-outline-primary btn-sm mb-0" style="cursor: pointer;">
-                                    <i class="fas fa-upload"></i> Uploader une couverture
-                                </label>
-                                <input type="file" id="uploadCoverInput" accept="image/*" style="display: none;" data-livre-id="{{ livre.id }}">
-                            </div>
-                            <button type="button" id="manualUrlBtn" class="btn btn-outline-secondary btn-sm">
-                                <i class="fas fa-link"></i> URL manuelle
-                            </button>
-                        {% endif %}
-                        
-                        <div id="uploadPreview" class="mt-2" style="display: none;">
-                            <img id="uploadPreviewImg" class="img-thumbnail" style="max-height: 150px;" alt="Prévisualisation">
-                            <div class="mt-2">
-                                <button type="button" id="confirmUploadBtn" class="btn btn-success btn-sm">
-                                    <i class="fas fa-check"></i> Confirmer
-                                </button>
-                                <button type="button" id="cancelUploadBtn" class="btn btn-secondary btn-sm">
-                                    <i class="fas fa-times"></i> Annuler
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div id="manualUrlForm" class="mt-3 text-left" style="display: none;">
-                            <p class="small text-muted mb-2">
-                                Rechercher sur : 
-                                {% if livre.amazon %}
-                                <a href="{{ livre.amazon }}" target="_blank" class="badge badge-warning"><i class="fas fa-external-link-alt"></i> Produit</a>
-                                {% endif %}
-                                {% if livre.isbn %}
-                                <a href="https://www.amazon.fr/s?k={{ livre.isbn }}" target="_blank" class="badge badge-secondary">Amazon</a>
-                                <a href="https://www.google.com/search?tbm=isch&q={{ livre.isbn }}+couverture" target="_blank" class="badge badge-success">Google</a>
-                                {% endif %}
-                            </p>
-                            <div class="input-group input-group-sm">
-                                <input type="url" id="manualUrlInput" class="form-control" placeholder="URL de l'image...">
-                                <div class="input-group-append">
-                                    <button type="button" id="previewManualUrlBtn" class="btn btn-primary">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div id="manualPreview" class="mt-2"></div>
-                        </div>
                     </div>
+                    {% if livre.getImage2 and is_granted('IS_AUTHENTICATED_FULLY') %}
+                    <span class="badge badge-info mt-2"><i class="fas fa-link"></i> Image externe</span>
                     {% endif %}
                 </div>
                 
@@ -189,13 +147,17 @@
     </div>
     
     <!-- Propriétaires -->
-    {% if livre.listeUser|length > 0 %}
     <div class="card mt-4 mb-5 shadow-sm">
-        <div class="card-header bg-dark text-white" style="cursor: pointer;" data-toggle="collapse" data-target="#proprietairesCollapse" aria-expanded="false" aria-controls="proprietairesCollapse">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center" style="cursor: pointer;" data-toggle="collapse" data-target="#proprietairesCollapse" aria-expanded="false" aria-controls="proprietairesCollapse">
             <h5 class="mb-0">
                 <i class="fas fa-users"></i> Propriétaires ({{ livre.listeUser|length }})
-                <i class="fas fa-chevron-down float-right"></i>
+                <i class="fas fa-chevron-down float-right ml-2"></i>
             </h5>
+            {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+                <a href="{{ path('livre_ajouter_utilisateur', {id: livre.id}) }}" class="btn btn-sm btn-success" onclick="event.stopPropagation();">
+                    <i class="fas fa-user-plus mr-1"></i> Ajouter
+                </a>
+            {% endif %}
         </div>
         <div id="proprietairesCollapse" class="collapse">
         <div class="card-body p-0">
@@ -206,6 +168,9 @@
                             <th><i class="fas fa-user"></i> Utilisateur</th>
                             <th><i class="fas fa-calendar-alt"></i> Date d'acquisition</th>
                             <th><i class="fas fa-comment"></i> Commentaire</th>
+                            {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+                                <th class="text-right"><i class="fas fa-cogs"></i> Actions</th>
+                            {% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -228,6 +193,19 @@
                                     <span class="text-muted">-</span>
                                 {% endif %}
                             </td>
+                            {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+                                <td class="text-right text-nowrap">
+                                    <a href="{{ path('livre_transferer', {id: livre.id, lienId: lienuserLivre.id}) }}" 
+                                       class="btn btn-sm btn-outline-info" title="Transférer">
+                                        <i class="fas fa-exchange-alt"></i>
+                                    </a>
+                                    <form method="post" action="{{ path('livre_supprimer_utilisateur', {id: livre.id, lienId: lienuserLivre.id}) }}" class="d-inline" onsubmit="return confirm('Retirer {{ lienuserLivre.user.fullName }} des propriétaires de ce livre ?')">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Retirer">
+                                            <i class="fas fa-user-minus"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            {% endif %}
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -236,7 +214,6 @@
         </div>
         </div>
     </div>
-    {% endif %}
 </div>
 
 <!-- The Image Modal -->
@@ -245,6 +222,172 @@
     <img class="image-modal-content" id="img01">
     <div id="caption"></div>
 </div>
+
+<!-- Modale d'édition de couverture -->
+{% if is_granted('IS_AUTHENTICATED_FULLY') %}
+<div class="modal fade" id="editCoverModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <h5 class="modal-title text-white">
+                    <i class="fas fa-image"></i> Modifier la couverture
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Image actuelle -->
+                <div class="text-center mb-4">
+                    <img src="{{ livre.getBestImage }}" class="img-thumbnail" style="max-height: 200px;" alt="Couverture actuelle">
+                    {% if livre.getImage2 %}
+                    <div class="mt-2">
+                        <span class="badge badge-info"><i class="fas fa-link"></i> Image externe</span>
+                        <br>
+                        <small class="text-muted text-break">{{ livre.getImage2 }}</small>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <hr>
+                
+                <!-- Options d'édition -->
+                <div class="row">
+                    {% if livre.isbn %}
+                    <!-- Scraper des images -->
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100 border-primary">
+                            <div class="card-body text-center">
+                                <i class="fas fa-magic fa-2x text-primary mb-2"></i>
+                                <h6>Recherche automatique</h6>
+                                <p class="small text-muted">Rechercher des images sur Amazon, Bedetheque, Decitre</p>
+                                <button type="button" id="scrapeCoverBtn" class="btn btn-primary btn-sm" data-livre-id="{{ livre.id }}">
+                                    <i class="fas fa-search"></i> Scraper des images
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Upload manuel -->
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100 border-success">
+                            <div class="card-body text-center">
+                                <i class="fas fa-upload fa-2x text-success mb-2"></i>
+                                <h6>Uploader une image</h6>
+                                <p class="small text-muted">Depuis votre ordinateur</p>
+                                <button type="button" id="openUploadModalBtn" class="btn btn-success btn-sm">
+                                    <i class="fas fa-file-image"></i> Choisir un fichier
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- URL manuelle -->
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100 border-secondary">
+                            <div class="card-body text-center">
+                                <i class="fas fa-link fa-2x text-secondary mb-2"></i>
+                                <h6>URL manuelle</h6>
+                                <p class="small text-muted">Coller l'URL d'une image</p>
+                                <button type="button" id="openUrlModalBtn" class="btn btn-secondary btn-sm">
+                                    <i class="fas fa-paste"></i> Saisir une URL
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if livre.getImage2 %}
+                    <!-- Revenir à l'image originale -->
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100 border-danger">
+                            <div class="card-body text-center">
+                                <i class="fas fa-undo fa-2x text-danger mb-2"></i>
+                                <h6>Image originale</h6>
+                                <p class="small text-muted">Supprimer l'image externe</p>
+                                <button type="button" id="removeCoverUrlBtn" class="btn btn-outline-danger btn-sm">
+                                    <i class="fas fa-trash"></i> Revenir à l'originale
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modale Upload d'image -->
+<div class="modal fade" id="uploadCoverModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                <h5 class="modal-title text-white">
+                    <i class="fas fa-upload"></i> Uploader une image
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body text-center">
+                <p class="text-muted mb-3">Sélectionnez une image depuis votre ordinateur</p>
+                
+                <label for="uploadCoverInput" class="btn btn-success btn-lg mb-3" style="cursor: pointer;">
+                    <i class="fas fa-file-image"></i> Choisir un fichier
+                </label>
+                <input type="file" id="uploadCoverInput" accept="image/*" style="display: none;" data-livre-id="{{ livre.id }}">
+                
+                <!-- Zone de prévisualisation -->
+                <div id="uploadPreview" style="display: none;">
+                    <hr>
+                    <h6><i class="fas fa-eye"></i> Prévisualisation</h6>
+                    <img id="uploadPreviewImg" class="img-thumbnail" style="max-height: 250px;" alt="Prévisualisation">
+                    <div class="mt-3">
+                        <button type="button" id="confirmUploadBtn" class="btn btn-success">
+                            <i class="fas fa-check"></i> Confirmer
+                        </button>
+                        <button type="button" id="cancelUploadBtn" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Annuler
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modale URL manuelle -->
+<div class="modal fade" id="manualUrlModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #6c757d 0%, #495057 100%);">
+                <h5 class="modal-title text-white">
+                    <i class="fas fa-link"></i> URL manuelle
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-3">Collez l'URL d'une image de couverture</p>
+                
+                <div class="input-group mb-3">
+                    <input type="url" id="manualUrlInput" class="form-control" placeholder="https://exemple.com/image.jpg">
+                    <div class="input-group-append">
+                        <button type="button" id="previewManualUrlBtn" class="btn btn-primary">
+                            <i class="fas fa-eye"></i> Prévisualiser
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Zone de prévisualisation -->
+                <div id="manualPreview" class="text-center"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <!-- Modale de sélection d'images scrapées -->
 <div class="modal fade" id="scrapedImagesModal" tabindex="-1" role="dialog">
@@ -261,7 +404,7 @@
             <div class="modal-body">
                 <div id="scrapedImagesLoading" class="text-center py-5">
                     <i class="fas fa-spinner fa-spin fa-3x text-primary"></i>
-                    <p class="mt-3">Recherche en cours sur BDGuest, Fnac, Decitre, Amazon...</p>
+                    <p class="mt-3">Recherche en cours sur Amazon, Bedetheque, Decitre...</p>
                     <small class="text-muted">Cela peut prendre jusqu'à 2 minutes</small>
                 </div>
                 <div id="scrapedImagesContent" style="display: none;">
@@ -289,6 +432,26 @@
         background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         padding: 20px;
         border-radius: 10px;
+    }
+    .edit-cover-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        opacity: 0.7;
+        transition: all 0.3s;
+        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    .edit-cover-btn:hover {
+        opacity: 1;
+        transform: scale(1.1);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     }
     .scraped-image-card {
         cursor: pointer;
@@ -320,6 +483,19 @@
     $(document).ready(function() {
         var livreId = {{ livre.id }};
         var selectedFile = null;
+        var foundImageUrl = null;
+        
+        // Ouvrir la modale Upload depuis la modale principale
+        $('#openUploadModalBtn').on('click', function() {
+            $('#editCoverModal').modal('hide');
+            $('#uploadCoverModal').modal('show');
+        });
+        
+        // Ouvrir la modale URL depuis la modale principale
+        $('#openUrlModalBtn').on('click', function() {
+            $('#editCoverModal').modal('hide');
+            $('#manualUrlModal').modal('show');
+        });
         
         // Gestion de l'upload de fichier
         $('#uploadCoverInput').on('change', function(e) {
@@ -339,7 +515,6 @@
             reader.onload = function(e) {
                 $('#uploadPreviewImg').attr('src', e.target.result);
                 $('#uploadPreview').show();
-                $('#manualUrlForm').hide();
             };
             reader.readAsDataURL(file);
         });
@@ -411,12 +586,7 @@
             });
         });
         
-        // Saisie manuelle d'URL
-        $('#manualUrlBtn').on('click', function() {
-            $('#manualUrlForm').toggle();
-            $('#coverSearchResult').hide();
-        });
-        
+        // Prévisualisation URL manuelle
         $('#previewManualUrlBtn').on('click', function() {
             var url = $('#manualUrlInput').val().trim();
             if (!url) {
@@ -460,7 +630,8 @@
         $('#scrapeCoverBtn').on('click', function() {
             var livreId = $(this).data('livre-id');
             
-            // Ouvrir la modale
+            // Fermer la modale d'édition et ouvrir la modale des images
+            $('#editCoverModal').modal('hide');
             $('#scrapedImagesModal').modal('show');
             
             // Réinitialiser l'état

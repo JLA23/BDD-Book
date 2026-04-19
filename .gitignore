@@ -26,3 +26,9 @@ composer.lock
 symfony.lock
 /public/uploads/
 /RecoverBDD_Java/config/config.properties
+
+###> Database backups ###
+/var/backups/
+
+scripts/clone_database.sh
+scripts/db_commands.sh

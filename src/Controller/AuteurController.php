@@ -93,9 +93,7 @@ class AuteurController extends AbstractController
         foreach ($liens as $lien) {
             $livre = $lien->getLivre();
             $livres[] = $livre;
-            if ($livre->getImage()) {
-                $images[$livre->getId()] = base64_encode(stream_get_contents($livre->getImage()));
-            }
+            $images[$livre->getId()] = ['type' => 'url', 'data' => $livre->getBestImage()];
         }
         
         return $this->render('auteurs/detail.html.twig', [

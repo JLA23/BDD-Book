@@ -27,6 +27,15 @@
                         <a class="dropdown-item" href="{{ path('magazines_list') }}">
                             <i class="fas fa-newspaper mr-2 text-success"></i>BDD-Magazines
                         </a>
+                        {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="{{ path('livre_ajouter') }}">
+                            <i class="fas fa-plus-circle mr-2 text-primary"></i>Ajouter un livre
+                        </a>
+                        <a class="dropdown-item" href="{{ path('magazine_new') }}">
+                            <i class="fas fa-plus-circle mr-2 text-success"></i>Ajouter un magazine
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>

@@ -1,0 +1,83 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Ajouter un propriétaire - {{ livre.titre }}{% endblock %}
+
+{% block body %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ path('index') }}">Accueil</a></li>
+            <li class="breadcrumb-item"><a href="{{ path('livreDetail', {id: livre.id}) }}">{{ livre.titre }}</a></li>
+            <li class="breadcrumb-item active">Ajouter un propriétaire</li>
+        </ol>
+    </nav>
+
+    <h1 class="mb-4">
+        <i class="fas fa-user-plus text-success mr-2"></i>Ajouter un propriétaire
+    </h1>
+
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <img src="{{ livre.getBestImage }}" class="img-fluid rounded mb-3" alt="{{ livre.titre }}" style="max-height: 200px; object-fit: contain;">
+                    <h5>{{ livre.titre }}</h5>
+                    {% if livre.isbn %}<p class="text-muted small"><i class="fas fa-barcode mr-1"></i>{{ livre.isbn }}</p>{% endif %}
+                    <hr>
+                    <p class="small text-muted mb-1"><strong>Propriétaires actuels :</strong></p>
+                    {% for lu in livre.listeUser %}
+                        <span class="badge badge-primary mr-1">{{ lu.user.fullName }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            {% if availableUsers|length > 0 %}
+                <div class="card shadow-sm">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-user-plus mr-2"></i>Choisir un utilisateur</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" action="{{ path('livre_ajouter_utilisateur', {id: livre.id}) }}">
+                            <div class="form-group">
+                                <label for="user_id">Utilisateur</label>
+                                <select name="user_id" id="user_id" class="form-control" required>
+                                    <option value="">-- Sélectionner un utilisateur --</option>
+                                    {% for user in availableUsers %}
+                                        <option value="{{ user.id }}">{{ user.fullName }} ({{ user.username }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="dateAchat">Date d'acquisition <small class="text-muted">(optionnel)</small></label>
+                                <input type="date" name="dateAchat" id="dateAchat" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label for="commentaire">Commentaire <small class="text-muted">(optionnel)</small></label>
+                                <textarea name="commentaire" id="commentaire" class="form-control" rows="2" placeholder="Notes, état, particularités..."></textarea>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <a href="{{ path('livreDetail', {id: livre.id}) }}" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left mr-1"></i> Annuler
+                                </a>
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-user-plus mr-1"></i> Ajouter comme propriétaire
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Tous les utilisateurs possèdent déjà ce livre.
+                </div>
+                <a href="{{ path('livreDetail', {id: livre.id}) }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left mr-1"></i> Retour
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,598 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{% if source %}Ajouter - {{ source }}{% else %}Ajouter un livre{% endif %}{% endblock %}
+
+{% block body %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ path('index') }}">Accueil</a></li>
+            <li class="breadcrumb-item"><a href="{{ path('livre_ajouter') }}">Ajouter un livre</a></li>
+            <li class="breadcrumb-item active">Formulaire</li>
+        </ol>
+    </nav>
+
+    <h1 class="mb-4">
+        <i class="fas fa-plus-circle text-primary mr-2"></i>
+        {% if source %}
+            Ajouter un livre <small class="text-muted">(depuis {{ source }})</small>
+        {% else %}
+            Nouveau livre
+        {% endif %}
+    </h1>
+
+    {{ form_start(form, {'attr': {'class': 'mt-3', 'enctype': 'multipart/form-data', 'id': 'livreForm'}}) }}
+    <div class="row">
+        <!-- Colonne principale -->
+        <div class="col-lg-8">
+            <!-- Informations générales -->
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-info-circle mr-1"></i> Informations générales
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        {{ form_row(form.titre) }}
+                    </div>
+                    <div class="form-group">
+                        {{ form_row(form.auteurs) }}
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                {{ form_row(form.isbn) }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                {{ form_row(form.annee) }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="d-flex align-items-center mb-1">
+                            {{ form_label(form.category, null, {'label_attr': {'class': 'mb-0'}}) }}
+                            <button type="button" class="btn btn-sm btn-danger ml-2 btn-clear-select d-none" 
+                                    data-select-id="livre_category" title="Réinitialiser">
+                                <i class="fas fa-undo text-white"></i>
+                            </button>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div class="flex-grow-1">{{ form_widget(form.category) }}</div>
+                            <button type="button" class="btn btn-sm btn-outline-primary ml-2 btn-add-entity" 
+                                    data-entity="category" data-label="Catégorie" data-select-id="livre_category"
+                                    title="Ajouter une catégorie">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="d-flex align-items-center mb-1">
+                            {{ form_label(form.collection, null, {'label_attr': {'class': 'mb-0'}}) }}
+                            <button type="button" class="btn btn-sm btn-danger ml-2 btn-clear-select d-none" 
+                                    data-select-id="livre_collection" title="Réinitialiser">
+                                <i class="fas fa-undo text-white"></i>
+                            </button>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div class="flex-grow-1">{{ form_widget(form.collection) }}</div>
+                            <button type="button" class="btn btn-sm btn-outline-primary ml-2 btn-add-entity" 
+                                    data-entity="collection" data-label="Collection" data-select-id="livre_collection"
+                                    title="Ajouter une collection">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="d-flex align-items-center mb-1">
+                            {{ form_label(form.edition, null, {'label_attr': {'class': 'mb-0'}}) }}
+                            <button type="button" class="btn btn-sm btn-danger ml-2 btn-clear-select d-none" 
+                                    data-select-id="livre_edition" title="Réinitialiser">
+                                <i class="fas fa-undo text-white"></i>
+                            </button>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div class="flex-grow-1">{{ form_widget(form.edition) }}</div>
+                            <button type="button" class="btn btn-sm btn-outline-primary ml-2 btn-add-entity" 
+                                    data-entity="edition" data-label="Éditeur" data-select-id="livre_edition"
+                                    title="Ajouter un éditeur">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Détails -->
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header">
+                    <i class="fas fa-book-open mr-1"></i> Détails
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                {{ form_row(form.cycle) }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                {{ form_row(form.tome) }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form_row(form.pages) }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form_row(form.prixBase) }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form_row(form.monnaie) }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        {{ form_row(form.resume) }}
+                    </div>
+                    <div class="form-group">
+                        {{ form_row(form.amazon) }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mon exemplaire -->
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <i class="fas fa-user-tag mr-1"></i> Mon exemplaire
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Ces informations sont liées à <strong>votre</strong> exemplaire du livre (pas à la fiche du livre elle-même).
+                    </p>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form_row(form.dateAchat) }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form_row(form.prixAchat) }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form_row(form.monnaieAchat) }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        {{ form_row(form.commentaire) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Colonne image -->
+        <div class="col-lg-4">
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <i class="fas fa-image mr-1"></i> Couverture
+                </div>
+                <div class="card-body text-center">
+                    {% if imageUrl %}
+                        <div class="mb-3" id="previewContainer">
+                            <img src="{{ imageUrl }}" 
+                                 class="img-fluid rounded shadow-sm" 
+                                 alt="Couverture"
+                                 style="max-height: 300px;"
+                                 id="coverPreview">
+                            <p class="small text-success mt-2 mb-0">
+                                <i class="fas fa-check-circle mr-1"></i>Image récupérée automatiquement
+                            </p>
+                        </div>
+                    {% else %}
+                        <div class="mb-3 p-4 bg-light rounded" id="previewContainer">
+                            <i class="fas fa-image fa-4x text-muted mb-2 d-block"></i>
+                            <p class="text-muted mb-0">Aucune image</p>
+                        </div>
+                    {% endif %}
+
+                    <div class="form-group">
+                        {{ form_row(form.imageFile) }}
+                        <small class="text-muted d-block mb-2">
+                            Formats acceptés : JPEG, PNG, GIF, WEBP. Max 5 Mo.
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        {{ form_row(form.imageUrl) }}
+                        <small class="text-muted d-block">
+                            Ou collez une URL d'image depuis le web
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Boutons d'action -->
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <button type="submit" class="btn btn-primary btn-block btn-lg mb-2">
+                        <i class="fas fa-save mr-1"></i> Enregistrer le livre
+                    </button>
+                    <a href="{{ path('livre_ajouter') }}" class="btn btn-secondary btn-block">
+                        <i class="fas fa-arrow-left mr-1"></i> Retour
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{ form_end(form) }}
+</div>
+
+<!-- Modal pour ajouter une entité -->
+<div class="modal fade" id="addEntityModal" tabindex="-1" role="dialog" aria-labelledby="addEntityModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="addEntityModalLabel">
+                    <i class="fas fa-plus-circle mr-2"></i><span id="modalEntityLabel">Ajouter</span>
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Fermer">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="newEntityName" id="newEntityNameLabel">Nom</label>
+                    <input type="text" class="form-control" id="newEntityName" placeholder="Entrez le nom..." autofocus>
+                    <div class="invalid-feedback" id="entityError"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <i class="fas fa-times mr-1"></i>Annuler
+                </button>
+                <button type="button" class="btn btn-primary" id="saveEntityBtn">
+                    <i class="fas fa-save mr-1"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+    <style>
+        .select2-container--bootstrap-5 .select2-selection {
+            min-height: 38px;
+            border-color: #ced4da;
+            display: flex;
+            align-items: center;
+        }
+        .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+            line-height: 38px;
+            padding-top: 0;
+            padding-bottom: 0;
+            display: flex;
+            align-items: center;
+        }
+        .btn-add-entity {
+            height: 38px;
+            width: 38px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .btn-add-entity:hover {
+            background-color: #0d6efd;
+            color: white;
+        }
+        .btn-clear-select {
+            padding: 0 0.5rem;
+            font-size: 1rem;
+        }
+        .btn-clear-select:hover {
+            color: #dc3545 !important;
+        }
+    </style>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <!-- Select2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    
+    <script>
+    $(document).ready(function() {
+        // ==================== VALIDATION ISBN ====================
+        
+        // Nettoyer l'ISBN (enlever tirets, espaces et autres caractères non numériques sauf X)
+        function cleanIsbn(isbn) {
+            return isbn.replace(/[^0-9Xx]/g, '').toUpperCase();
+        }
+        
+        // Valider ISBN-10 (checksum)
+        function validateIsbn10(isbn) {
+            if (isbn.length !== 10) return false;
+            
+            let sum = 0;
+            for (let i = 0; i < 9; i++) {
+                if (!/\d/.test(isbn[i])) return false;
+                sum += parseInt(isbn[i]) * (10 - i);
+            }
+            
+            // Le dernier caractère peut être un chiffre ou X (=10)
+            const lastChar = isbn[9];
+            if (lastChar === 'X') {
+                sum += 10;
+            } else if (/\d/.test(lastChar)) {
+                sum += parseInt(lastChar);
+            } else {
+                return false;
+            }
+            
+            return sum % 11 === 0;
+        }
+        
+        // Valider ISBN-13 (checksum)
+        function validateIsbn13(isbn) {
+            if (isbn.length !== 13) return false;
+            if (!/^\d{13}$/.test(isbn)) return false;
+            
+            let sum = 0;
+            for (let i = 0; i < 12; i++) {
+                sum += parseInt(isbn[i]) * (i % 2 === 0 ? 1 : 3);
+            }
+            
+            const checkDigit = (10 - (sum % 10)) % 10;
+            return checkDigit === parseInt(isbn[12]);
+        }
+        
+        // Valider un ISBN (10 ou 13)
+        function validateIsbn(isbn) {
+            const cleaned = cleanIsbn(isbn);
+            if (cleaned.length === 10) {
+                return { valid: validateIsbn10(cleaned), type: 'ISBN-10', cleaned: cleaned };
+            } else if (cleaned.length === 13) {
+                return { valid: validateIsbn13(cleaned), type: 'ISBN-13', cleaned: cleaned };
+            } else if (cleaned.length === 0) {
+                return { valid: true, type: null, cleaned: '' }; // Champ vide = OK
+            } else {
+                return { valid: false, type: null, cleaned: cleaned };
+            }
+        }
+        
+        // Appliquer la validation sur le champ ISBN
+        const $isbnInput = $('#livre_isbn');
+        const $isbnFeedback = $('<div class="invalid-feedback"></div>');
+        const $isbnSuccess = $('<small class="form-text text-success d-none"><i class="fas fa-check-circle mr-1"></i><span></span></small>');
+        
+        $isbnInput.after($isbnFeedback).after($isbnSuccess);
+        
+        // Nettoyer et valider à la perte de focus
+        $isbnInput.on('blur', function() {
+            const rawValue = $(this).val();
+            if (!rawValue.trim()) {
+                $(this).removeClass('is-invalid is-valid');
+                $isbnSuccess.addClass('d-none');
+                return;
+            }
+            
+            const result = validateIsbn(rawValue);
+            
+            // Remplacer par la version nettoyée
+            $(this).val(result.cleaned);
+            
+            if (result.valid) {
+                $(this).removeClass('is-invalid').addClass('is-valid');
+                $isbnFeedback.text('');
+                if (result.type) {
+                    $isbnSuccess.removeClass('d-none').find('span').text(result.type + ' valide');
+                }
+            } else {
+                $(this).removeClass('is-valid').addClass('is-invalid');
+                $isbnSuccess.addClass('d-none');
+                if (result.cleaned.length === 10 || result.cleaned.length === 13) {
+                    $isbnFeedback.text('Le checksum de l\'ISBN est invalide');
+                } else {
+                    $isbnFeedback.text('L\'ISBN doit contenir 10 ou 13 chiffres (actuellement ' + result.cleaned.length + ')');
+                }
+            }
+        });
+        
+        // Nettoyer en temps réel (enlever caractères invalides sauf tirets/espaces pour la saisie)
+        $isbnInput.on('input', function() {
+            // Permettre la saisie avec tirets/espaces mais les nettoyer visuellement
+            const val = $(this).val();
+            // Enlever tout sauf chiffres, X, tirets et espaces
+            const cleaned = val.replace(/[^0-9Xx\-\s]/g, '');
+            if (val !== cleaned) {
+                $(this).val(cleaned);
+            }
+        });
+        
+        // ==================== FIN VALIDATION ISBN ====================
+
+        // Initialiser Select2 sur les selects d'entités (sans le bouton clear intégré)
+        $('.select2-entity').select2({
+            theme: 'bootstrap-5',
+            placeholder: '-- Choisir --',
+            allowClear: false,
+            width: '100%'
+        });
+
+        // Fonction pour mettre à jour la visibilité des boutons clear
+        function updateClearButtons() {
+            $('.btn-clear-select').each(function() {
+                const selectId = $(this).data('select-id');
+                const $select = $('#' + selectId);
+                const hasValue = $select.val() && $select.val() !== '';
+                $(this).toggleClass('d-none', !hasValue);
+            });
+        }
+
+        // Mettre à jour au chargement
+        updateClearButtons();
+
+        // Mettre à jour quand un select change
+        $('.select2-entity').on('change', function() {
+            updateClearButtons();
+        });
+
+        // Bouton pour effacer la sélection
+        $('.btn-clear-select').on('click', function() {
+            const selectId = $(this).data('select-id');
+            $('#' + selectId).val('').trigger('change');
+            $(this).addClass('d-none');
+        });
+
+        // Variables pour la modal
+        let currentEntity = null;
+        let currentSelectId = null;
+
+        // Ouvrir la modal d'ajout
+        $('.btn-add-entity').on('click', function() {
+            currentEntity = $(this).data('entity');
+            currentSelectId = $(this).data('select-id');
+            const label = $(this).data('label');
+            
+            $('#modalEntityLabel').text('Ajouter : ' + label);
+            $('#newEntityNameLabel').text('Nom de la ' + label.toLowerCase());
+            $('#newEntityName').val('').removeClass('is-invalid');
+            $('#entityError').text('');
+            
+            $('#addEntityModal').modal('show');
+            
+            // Focus sur le champ après ouverture
+            $('#addEntityModal').on('shown.bs.modal', function() {
+                $('#newEntityName').focus();
+            });
+        });
+
+        // Enregistrer via AJAX
+        $('#saveEntityBtn').on('click', function() {
+            saveEntity();
+        });
+
+        // Enregistrer avec Entrée
+        $('#newEntityName').on('keypress', function(e) {
+            if (e.which === 13) {
+                e.preventDefault();
+                saveEntity();
+            }
+        });
+
+        function saveEntity() {
+            const nom = $('#newEntityName').val().trim();
+            
+            if (!nom) {
+                $('#newEntityName').addClass('is-invalid');
+                $('#entityError').text('Le nom est obligatoire');
+                return;
+            }
+
+            $('#saveEntityBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Enregistrement...');
+
+            $.ajax({
+                url: '/api/' + currentEntity,
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ nom: nom }),
+                success: function(response) {
+                    if (response.success) {
+                        // Ajouter l'option au select et la sélectionner
+                        const $select = $('#' + currentSelectId);
+                        
+                        // Vérifier si l'option existe déjà
+                        if ($select.find('option[value="' + response.id + '"]').length === 0) {
+                            // Ajouter la nouvelle option
+                            const newOption = new Option(response.nom, response.id, true, true);
+                            $select.append(newOption);
+                        }
+                        
+                        // Sélectionner l'option
+                        $select.val(response.id).trigger('change');
+                        
+                        // Fermer la modal
+                        $('#addEntityModal').modal('hide');
+                        
+                        // Notification de succès
+                        showToast('success', response.message || 'Ajouté avec succès !');
+                    } else {
+                        $('#newEntityName').addClass('is-invalid');
+                        $('#entityError').text(response.error || 'Erreur lors de l\'enregistrement');
+                    }
+                },
+                error: function(xhr) {
+                    const error = xhr.responseJSON?.error || 'Erreur de connexion';
+                    $('#newEntityName').addClass('is-invalid');
+                    $('#entityError').text(error);
+                },
+                complete: function() {
+                    $('#saveEntityBtn').prop('disabled', false).html('<i class="fas fa-save mr-1"></i>Enregistrer');
+                }
+            });
+        }
+
+        // Toast notification simple
+        function showToast(type, message) {
+            const bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+            const toast = $('<div class="position-fixed" style="top: 20px; right: 20px; z-index: 9999;">' +
+                '<div class="toast show ' + bgClass + ' text-white" role="alert">' +
+                '<div class="toast-body d-flex align-items-center">' +
+                '<i class="fas fa-check-circle mr-2"></i>' + message +
+                '<button type="button" class="ml-auto close text-white" data-dismiss="toast">&times;</button>' +
+                '</div></div></div>');
+            $('body').append(toast);
+            setTimeout(function() { toast.fadeOut(function() { $(this).remove(); }); }, 3000);
+        }
+
+        // Prévisualisation de l'image uploadée
+        document.querySelector('#livre_imageFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const container = document.getElementById('previewContainer');
+                    container.innerHTML = '<img src="' + e.target.result + '" class="img-fluid rounded shadow-sm" alt="Prévisualisation" style="max-height: 300px;">' +
+                        '<p class="small text-info mt-2 mb-0"><i class="fas fa-upload mr-1"></i>Image uploadée</p>';
+                    document.getElementById('livre_imageUrl').value = '';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Prévisualisation quand on colle une URL d'image
+        const imageUrlInput = document.getElementById('livre_imageUrl');
+        if (imageUrlInput) {
+            imageUrlInput.addEventListener('change', function() {
+                const url = this.value.trim();
+                if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+                    const container = document.getElementById('previewContainer');
+                    const img = new Image();
+                    img.onload = function() {
+                        container.innerHTML = '<img src="' + url + '" class="img-fluid rounded shadow-sm" alt="Prévisualisation" style="max-height: 300px;">' +
+                            '<p class="small text-info mt-2 mb-0"><i class="fas fa-link mr-1"></i>Image depuis URL</p>';
+                    };
+                    img.src = url;
+                }
+            });
+        }
+    });
+    </script>
+{% endblock %}

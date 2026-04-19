@@ -1,0 +1,80 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Transférer un livre - {{ livre.titre }}{% endblock %}
+
+{% block body %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ path('index') }}">Accueil</a></li>
+            <li class="breadcrumb-item"><a href="{{ path('livreDetail', {id: livre.id}) }}">{{ livre.titre }}</a></li>
+            <li class="breadcrumb-item active">Transférer</li>
+        </ol>
+    </nav>
+
+    <h1 class="mb-4">
+        <i class="fas fa-exchange-alt text-info mr-2"></i>Transférer un livre
+    </h1>
+
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <img src="{{ livre.getBestImage }}" class="img-fluid rounded mb-3" alt="{{ livre.titre }}" style="max-height: 200px; object-fit: contain;">
+                    <h5>{{ livre.titre }}</h5>
+                    {% if livre.isbn %}<p class="text-muted small"><i class="fas fa-barcode mr-1"></i>{{ livre.isbn }}</p>{% endif %}
+                    <hr>
+                    <p class="small text-muted mb-1"><strong>Propriétaire actuel :</strong></p>
+                    <span class="badge badge-primary" style="font-size: 1rem;">
+                        <i class="fas fa-user mr-1"></i>{{ currentUser.fullName }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            {% if availableUsers|length > 0 %}
+                <div class="card shadow-sm">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-exchange-alt mr-2"></i>Transférer à</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            Le transfert va retirer <strong>{{ currentUser.fullName }}</strong> des propriétaires et ajouter le nouvel utilisateur sélectionné à sa place.
+                        </div>
+
+                        <form method="post" action="{{ path('livre_transferer', {id: livre.id, lienId: lien.id}) }}">
+                            <div class="form-group">
+                                <label for="target_user_id">Nouvel utilisateur</label>
+                                <select name="target_user_id" id="target_user_id" class="form-control" required>
+                                    <option value="">-- Sélectionner un utilisateur --</option>
+                                    {% for user in availableUsers %}
+                                        <option value="{{ user.id }}">{{ user.fullName }} ({{ user.username }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <a href="{{ path('livreDetail', {id: livre.id}) }}" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left mr-1"></i> Annuler
+                                </a>
+                                <button type="submit" class="btn btn-info" onclick="return confirm('Confirmer le transfert de ce livre ?')">
+                                    <i class="fas fa-exchange-alt mr-1"></i> Transférer
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Aucun autre utilisateur disponible pour le transfert. Tous les utilisateurs possèdent déjà ce livre.
+                </div>
+                <a href="{{ path('livreDetail', {id: livre.id}) }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left mr-1"></i> Retour
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
