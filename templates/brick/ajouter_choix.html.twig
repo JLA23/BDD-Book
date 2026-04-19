@@ -1,0 +1,70 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Ajouter un set{% endblock %}
+
+{% block body %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ path('brick_index') }}">BDD-Brick</a></li>
+            <li class="breadcrumb-item active">Ajouter un set</li>
+        </ol>
+    </nav>
+
+    <h1 class="mb-4"><i class="fas fa-plus-circle mr-2" style="color: #ff6b35;"></i>Ajouter un set</h1>
+
+    <div class="row justify-content-center">
+        <!-- Mode 1 : Recherche par référence -->
+        <div class="col-md-5 mb-4">
+            <div class="card h-100 shadow-sm" style="border-color: #ff6b35;">
+                <div class="card-body text-center d-flex flex-column">
+                    <div class="mb-3">
+                        <i class="fas fa-barcode fa-3x" style="color: #ff6b35;"></i>
+                    </div>
+                    <h5 class="card-title">Rechercher par référence</h5>
+                    <p class="card-text text-muted flex-grow-1">
+                        Rechercher un set par son <strong>numéro de référence</strong> via l'API Brickset.
+                        Les informations seront récupérées automatiquement (nom, année, nombre de pièces, images...).
+                    </p>
+                    {% if rebrickableConfigured or bricksetConfigured %}
+                        <div class="mb-3">
+                            {% if bricksetConfigured %}
+                                <span class="badge badge-light border mr-1">
+                                    <i class="fas fa-cube mr-1"></i>Brickset
+                                </span>
+                            {% endif %}
+                            {% if rebrickableConfigured %}
+                                <span class="badge badge-light border mr-1">
+                                    <i class="fas fa-cubes mr-1"></i>Rebrickable
+                                </span>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                    <a href="{{ path('brick_search_reference') }}" class="btn btn-block mt-auto text-white" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
+                        <i class="fas fa-search mr-1"></i> Rechercher par référence
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mode 2 : Saisie manuelle -->
+        <div class="col-md-5 mb-4">
+            <div class="card h-100 shadow-sm border-warning">
+                <div class="card-body text-center d-flex flex-column">
+                    <div class="mb-3">
+                        <i class="fas fa-edit fa-3x text-warning"></i>
+                    </div>
+                    <h5 class="card-title">Saisie manuelle</h5>
+                    <p class="card-text text-muted flex-grow-1">
+                        Remplir manuellement toutes les informations du set.
+                        Idéal pour les sets rares, anciens ou non référencés dans les bases de données.
+                    </p>
+                    <a href="{{ path('brick_new') }}" class="btn btn-warning btn-block mt-auto">
+                        <i class="fas fa-edit mr-1"></i> Saisie manuelle
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

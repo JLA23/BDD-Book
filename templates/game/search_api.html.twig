@@ -237,34 +237,65 @@ $('#addGameBtn').click(function() {
 });
 
 function platformToConsole(slug) {
+    // Normaliser le slug (minuscules, sans espaces)
+    slug = slug.toLowerCase().replace(/\s+/g, '');
+    
     var mapping = {
+        // PlayStation
         'playstation5': 'PS5',
+        'ps5': 'PS5',
         'playstation4': 'PS4',
+        'ps4': 'PS4',
         'playstation3': 'PS3',
+        'ps3': 'PS3',
         'playstation2': 'PS2',
+        'ps2': 'PS2',
+        'playstation': 'PS1',
         'playstation1': 'PS1',
-        'ps-vita': 'PSVita',
+        'ps1': 'PS1',
+        'playstationvita': 'PSVita',
+        'psvita': 'PSVita',
+        'vita': 'PSVita',
+        'playstationportable': 'PSP',
         'psp': 'PSP',
-        'xbox-series-x': 'XSX',
-        'xbox-one': 'XOne',
+        // Xbox
+        'xboxseriesx|s': 'XSX',
+        'xboxseriesx': 'XSX',
+        'xboxseries': 'XSX',
+        'xboxone': 'XOne',
         'xbox360': 'X360',
-        'xbox-old': 'Xbox',
-        'nintendo-switch': 'Switch',
-        'wii-u': 'WiiU',
+        'xbox': 'Xbox',
+        // Nintendo
+        'nintendoswitch': 'Switch',
+        'switch': 'Switch',
+        'wiiu': 'WiiU',
         'wii': 'Wii',
+        'nintendogamecube': 'GameCube',
         'gamecube': 'GameCube',
-        'nintendo-64': 'N64',
-        'nintendo-3ds': '3DS',
-        'nintendo-ds': 'DS',
-        'game-boy-advance': 'GBA',
-        'game-boy': 'GB',
+        'nintendo64': 'N64',
+        'n64': 'N64',
+        'nintendo3ds': '3DS',
+        '3ds': '3DS',
+        'nintendods': 'DS',
+        'ds': 'DS',
+        'gameboyadvance': 'GBA',
+        'gba': 'GBA',
+        'gameboycolor': 'GB',
+        'gameboy': 'GB',
+        'gb': 'GB',
+        // PC
+        'pc(microsoft windows)': 'PC',
+        'pc(windows)': 'PC',
+        'pcwindows': 'PC',
+        'windows': 'PC',
         'pc': 'PC',
+        'mac': 'Mac',
         'macos': 'Mac',
         'linux': 'Linux',
         'android': 'Android',
         'ios': 'iOS'
     };
-    return mapping[slug] || 'Autre';
+    return mapping[slug] || slug.charAt(0).toUpperCase() + slug.slice(1);
 }
 </script>
 

@@ -20,6 +20,6 @@ class IndexController extends AbstractController
     public function index(UserRepository $userRepository): Response
     {
         $users = $userRepository->findAll();
-        return $this->render('pages/index.html.twig', ['users' => $users]);
+        return $this->render('pages/hub.html.twig', ['users' => $users]);
     }
 }

@@ -102,6 +102,17 @@ class GameController extends AbstractController
         ]);
     }
 
+    #[Route('/ajouter', name: 'game_ajouter')]
+    public function ajouter(): Response
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+        $this->permissionService->denyAccessUnlessCanRegister('games');
+
+        return $this->render('game/ajouter_choix.html.twig', [
+            'apiConfigured' => $this->gameApi->isConfigured(),
+        ]);
+    }
+
     #[Route('/nouveau', name: 'game_new')]
     public function new(Request $request, GameRepository $gameRepo, SluggerInterface $slugger): Response
     {
@@ -179,38 +190,26 @@ class GameController extends AbstractController
                 ]);
             }
 
+            // Gérer l'upload de la jaquette
+            $coverUpload = $request->files->get('cover_upload');
+            if ($coverUpload) {
+                $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/games';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+                
+                $extension = $coverUpload->guessExtension() ?? 'jpg';
+                $filename = 'game_' . uniqid() . '.' . $extension;
+                
+                try {
+                    $coverUpload->move($uploadDir, $filename);
+                    $game->setCoverUrl('/uploads/games/' . $filename);
+                } catch (\Exception $e) {
+                    $this->addFlash('warning', 'Erreur lors de l\'upload de la jaquette: ' . $e->getMessage());
+                }
+            }
+
             $this->em->persist($game);
-
-            $position = 0;
-            $addedUrls = [];
-
-            // Images par URL
-            $imageUrls = $request->request->all('image_urls') ?? [];
-            foreach ($imageUrls as $url) {
-                if (!empty($url) && filter_var($url, FILTER_VALIDATE_URL) && !in_array($url, $addedUrls)) {
-                    $image = new GameImage();
-                    $image->setUrl($url);
-                    $image->setPosition($position++);
-                    $image->setSource('URL');
-                    $image->setGame($game);
-                    $this->em->persist($image);
-                    $addedUrls[] = $url;
-                }
-            }
-
-            // Images de session (API)
-            $sessionImages = $session->get('game_prefill_images', []);
-            foreach ($sessionImages as $imgData) {
-                if (!empty($imgData['url']) && !in_array($imgData['url'], $addedUrls)) {
-                    $image = new GameImage();
-                    $image->setUrl($imgData['url']);
-                    $image->setPosition($position++);
-                    $image->setSource($imgData['source'] ?? 'API');
-                    $image->setGame($game);
-                    $this->em->persist($image);
-                    $addedUrls[] = $imgData['url'];
-                }
-            }
 
             // Images uploadées
             $uploadedFiles = $request->files->get('uploaded_images', []);
@@ -318,6 +317,34 @@ class GameController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            // Gérer l'upload de la jaquette
+            $coverUpload = $request->files->get('cover_upload');
+            if ($coverUpload) {
+                $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/games';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+                
+                // Supprimer l'ancienne image si c'est un fichier local
+                $oldCover = $game->getCoverUrl();
+                if ($oldCover && str_starts_with($oldCover, '/uploads/games/')) {
+                    $oldPath = $this->getParameter('kernel.project_dir') . '/public' . $oldCover;
+                    if (file_exists($oldPath)) {
+                        @unlink($oldPath);
+                    }
+                }
+                
+                $extension = $coverUpload->guessExtension() ?? 'jpg';
+                $filename = 'game_' . uniqid() . '.' . $extension;
+                
+                try {
+                    $coverUpload->move($uploadDir, $filename);
+                    $game->setCoverUrl('/uploads/games/' . $filename);
+                } catch (\Exception $e) {
+                    $this->addFlash('warning', 'Erreur lors de l\'upload de la jaquette: ' . $e->getMessage());
+                }
+            }
+            
             $this->em->flush();
             $this->addFlash('success', 'Jeu modifié avec succès');
             return $this->redirectToRoute('game_detail', ['id' => $game->getId()]);
@@ -360,6 +387,57 @@ class GameController extends AbstractController
         }
 
         return $this->redirectToRoute('game_list');
+    }
+
+    #[Route('/jeu/{id}/update-cover', name: 'game_update_cover', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function updateCover(int $id, Request $request, GameRepository $gameRepo): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+
+        $game = $gameRepo->find($id);
+        if (!$game) {
+            return $this->json(['success' => false, 'message' => 'Jeu non trouvé'], 404);
+        }
+
+        // Upload de fichier
+        $coverUpload = $request->files->get('cover_upload');
+        if ($coverUpload) {
+            $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/games';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+            
+            // Supprimer l'ancienne image si c'est un fichier local
+            $oldCover = $game->getCoverUrl();
+            if ($oldCover && str_starts_with($oldCover, '/uploads/games/')) {
+                $oldPath = $this->getParameter('kernel.project_dir') . '/public' . $oldCover;
+                if (file_exists($oldPath)) {
+                    @unlink($oldPath);
+                }
+            }
+            
+            $extension = $coverUpload->guessExtension() ?? 'jpg';
+            $filename = 'game_' . uniqid() . '.' . $extension;
+            
+            try {
+                $coverUpload->move($uploadDir, $filename);
+                $game->setCoverUrl('/uploads/games/' . $filename);
+                $this->em->flush();
+                return $this->json(['success' => true]);
+            } catch (\Exception $e) {
+                return $this->json(['success' => false, 'message' => $e->getMessage()], 500);
+            }
+        }
+        
+        // URL manuelle
+        $coverUrl = $request->request->get('cover_url');
+        if ($coverUrl) {
+            $game->setCoverUrl($coverUrl);
+            $this->em->flush();
+            return $this->json(['success' => true]);
+        }
+        
+        return $this->json(['success' => false, 'message' => 'Aucune image fournie'], 400);
     }
 
     #[Route('/recherche-api', name: 'game_search_api')]
@@ -415,14 +493,11 @@ class GameController extends AbstractController
             return $this->json(['error' => 'Jeu non trouvé (details null)'], 404);
         }
 
-        // Stocker les screenshots en session
+        // Stocker uniquement la cover en session (pas les screenshots)
         $session = $request->getSession();
         $images = [];
         if (!empty($details['cover'])) {
             $images[] = ['url' => $details['cover'], 'source' => 'API'];
-        }
-        foreach ($details['screenshots'] ?? [] as $screenshot) {
-            $images[] = ['url' => $screenshot, 'source' => 'API'];
         }
         $session->set('game_prefill_images', $images);
 

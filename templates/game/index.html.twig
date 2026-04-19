@@ -64,7 +64,7 @@
         </div>
 
         <div class="row">
-            <div class="col-md-{{ is_granted('IS_AUTHENTICATED_REMEMBERED') ? '3' : '4' }} mb-3">
+            <div class="col-md-4 mb-3">
                 <a href="{{ path('game_list') }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
                     <div class="card-body text-center py-4">
                         <div class="mb-3">
@@ -75,7 +75,7 @@
                     </div>
                 </a>
             </div>
-            <div class="col-md-{{ is_granted('IS_AUTHENTICATED_REMEMBERED') ? '3' : '4' }} mb-3">
+            <div class="col-md-4 mb-3">
                 <a href="{{ path('game_users') }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
                     <div class="card-body text-center py-4">
                         <div class="mb-3">
@@ -86,26 +86,15 @@
                     </div>
                 </a>
             </div>
-            {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
-            <div class="col-md-3 mb-3">
-                <a href="{{ path('game_search_api') }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
-                    <div class="card-body text-center py-4">
-                        <div class="mb-3">
-                            <i class="fas fa-search fa-3x text-info"></i>
-                        </div>
-                        <h5 class="card-title text-dark">Recherche API</h5>
-                        <p class="card-text text-muted small">Rechercher via JVN</p>
-                    </div>
-                </a>
-            </div>
-            <div class="col-md-3 mb-3">
-                <a href="{{ path('game_new') }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+            {% if is_granted('IS_AUTHENTICATED_REMEMBERED') and app.user.canRegisterInSection('games') %}
+            <div class="col-md-4 mb-3">
+                <a href="{{ path('game_ajouter') }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
                     <div class="card-body text-center py-4">
                         <div class="mb-3">
                             <i class="fas fa-plus-circle fa-3x" style="color: #6f42c1;"></i>
                         </div>
                         <h5 class="card-title text-dark">Ajouter un jeu</h5>
-                        <p class="card-text text-muted small">Ajouter manuellement</p>
+                        <p class="card-text text-muted small">Ajouter un jeu à la base</p>
                     </div>
                 </a>
             </div>

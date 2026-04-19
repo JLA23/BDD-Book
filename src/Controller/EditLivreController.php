@@ -33,7 +33,7 @@ class EditLivreController extends AbstractController
     /**
      * Éditer un livre (uniquement si propriétaire)
      */
-    #[Route('/livre/{id}/modifier', name: 'livre_modifier', methods: ['GET', 'POST'])]
+    #[Route('/books/{id}/modifier', name: 'livre_modifier', methods: ['GET', 'POST'])]
     public function modifier(int $id, Request $request): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');

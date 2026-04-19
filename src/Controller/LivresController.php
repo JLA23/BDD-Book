@@ -10,8 +10,10 @@ use App\Service\BookCoverService;
 use Symfony\Component\HttpFoundation\Request;
 use Knp\Component\Pager\PaginatorInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Repository\UserRepository;
+use App\Entity\LienUserLivre;
 
-
+#[Route('/books')]
 class LivresController extends AbstractController
 {
     private BookCoverService $bookCoverService;
@@ -22,7 +24,15 @@ class LivresController extends AbstractController
         $this->bookCoverService = $bookCoverService;
         $this->em = $em;
     }
-    #[Route('/listelivre', name: 'listesLivres')]
+
+    #[Route('/', name: 'books_index')]
+    public function index(UserRepository $userRepo): Response
+    {
+        $users = $userRepo->findAll();
+        return $this->render('pages/index.html.twig', ['users' => $users]);
+    }
+
+    #[Route('/liste', name: 'listesLivres')]
     public function listesLivres(Request $request, PaginatorInterface $paginator)
     {
         $detect = new \Mobile_Detect;
@@ -58,7 +68,7 @@ class LivresController extends AbstractController
 
     }
 
-    #[Route('/livre/{id}', name: 'livreDetail')]
+    #[Route('/{id}', name: 'livreDetail', requirements: ['id' => '\d+'])]
     public function livreDetail(string $id, Request $request)
     {
         $detect = new \Mobile_Detect;
@@ -70,7 +80,7 @@ class LivresController extends AbstractController
 
 }
 
-    #[Route('/recherche', name: 'searchBook')]
+    #[Route('/recherche', name: 'books_search')]
     public function searchBook(Request $request, PaginatorInterface $paginator)
     {
         $em = $this->em;
@@ -160,7 +170,7 @@ class LivresController extends AbstractController
         return $this->redirectToRoute('index');
     }
 
-    #[Route('/listelivreUser/{id}', name: 'listelivreUser')]
+    #[Route('/utilisateur/{id}', name: 'books_user', requirements: ['id' => '\d+'])]
     public function listesLivresbyUser(string $id, Request $request, PaginatorInterface $paginator)
     {
         $em = $this->em;
@@ -191,7 +201,7 @@ class LivresController extends AbstractController
 
     }
 
-    #[Route('/livre/{id}/rechercher-couverture', name: 'livre_search_cover', requirements: ['id' => '\d+'])]
+    #[Route('/{id}/rechercher-couverture', name: 'livre_search_cover', requirements: ['id' => '\d+'])]
     public function searchCover(int $id): JsonResponse
     {
         $livre = $this->em->getRepository(Livre::class)->find($id);
@@ -234,7 +244,7 @@ class LivresController extends AbstractController
         ]);
     }
 
-    #[Route('/livre/{id}/upload-cover', name: 'livre_upload_cover', methods: ['POST'], requirements: ['id' => '\d+'])]
+    #[Route('/{id}/upload-cover', name: 'livre_upload_cover', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function uploadCover(int $id, Request $request): JsonResponse
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
@@ -302,7 +312,7 @@ class LivresController extends AbstractController
         }
     }
 
-    #[Route('/livre/{id}/supprimer-url-couverture', name: 'livre_remove_cover_url', methods: ['POST'], requirements: ['id' => '\d+'])]
+    #[Route('/{id}/supprimer-url-couverture', name: 'livre_remove_cover_url', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function removeCoverUrl(int $id): JsonResponse
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
@@ -332,7 +342,7 @@ class LivresController extends AbstractController
         ]);
     }
 
-    #[Route('/livre/{id}/scrape-covers', name: 'livre_scrape_covers')]
+    #[Route('/{id}/scrape-covers', name: 'livre_scrape_covers', requirements: ['id' => '\d+'])]
     public function scrapeCovers(string $id): JsonResponse
     {
         $livre = $this->em->getRepository(Livre::class)->findOneById($id);
@@ -357,7 +367,7 @@ class LivresController extends AbstractController
         ]);
     }
 
-    #[Route('/livre/{id}/update-cover-url', name: 'livre_update_cover_url', methods: ['POST'])]
+    #[Route('/{id}/update-cover-url', name: 'livre_update_cover_url', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function updateCoverUrl(string $id, Request $request): Response
     {
         $livre = $this->em->getRepository(Livre::class)->findOneById($id);

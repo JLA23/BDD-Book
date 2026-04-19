@@ -4,240 +4,482 @@
 
 {% block body %}
 <div class="container-fluid px-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 style="color: #6f42c1;"><i class="fas fa-gamepad"></i> {{ game.titre }}</h2>
-        <div>
-            <a href="{{ path('game_list') }}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left"></i> Retour
+    <!-- Bouton retour + modifier -->
+    <div class="mb-3 d-flex justify-content-between align-items-center">
+        <a href="javascript:history.back()" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> Retour
+        </a>
+        {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+            <a href="{{ path('game_edit', {id: game.id}) }}" class="btn btn-sm" style="background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%); color: white;">
+                <i class="fas fa-edit"></i> Modifier
             </a>
-            {% if is_granted('IS_AUTHENTICATED_FULLY') %}
-                <a href="{{ path('game_edit', {id: game.id}) }}" class="btn btn-warning">
-                    <i class="fas fa-edit"></i> Modifier
+        {% endif %}
+    </div>
+
+    <!-- Card principale -->
+    <div class="card shadow-sm">
+        <div class="card-header" style="background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);">
+            <h4 class="mb-0 text-white">
+                <i class="fas fa-gamepad"></i> {{ game.titre }}
+                {% if game.console %}
+                    <span class="badge badge-light ml-2">{{ game.console }}</span>
+                {% endif %}
+            </h4>
+        </div>
+        
+        <div class="card-body">
+            <div class="row">
+                <!-- Colonne Image -->
+                <div class="col-md-4 text-center mb-4">
+                    <div class="game-cover-container position-relative">
+                        {% if game.coverUrl %}
+                            <img id="gameCover" 
+                                 class="img-fluid rounded shadow clickable-image" 
+                                 alt="{{ game.titre }}" 
+                                 src="{{ game.coverUrl }}"
+                                 style="max-height: 400px; object-fit: contain; cursor: pointer;" />
+                        {% else %}
+                            <div class="d-flex align-items-center justify-content-center" style="height: 300px;">
+                                <i class="fas fa-gamepad fa-5x text-muted"></i>
+                            </div>
+                        {% endif %}
+                        {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+                        <button type="button" class="btn btn-light btn-sm edit-cover-btn" data-toggle="modal" data-target="#editCoverModal" title="Modifier la jaquette">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Colonne Informations -->
+                <div class="col-md-8">
+                    <!-- Infos principales -->
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <div class="info-item mb-3">
+                                <small class="text-muted d-block"><i class="fas fa-tv"></i> Console</small>
+                                <strong>{{ game.console|default('-') }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="info-item mb-3">
+                                <small class="text-muted d-block"><i class="fas fa-calendar"></i> Année</small>
+                                <strong>{{ game.annee|default('-') }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="info-item mb-3">
+                                <small class="text-muted d-block"><i class="fas fa-building"></i> Éditeur</small>
+                                <strong>{{ game.editeur|default('-') }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="info-item mb-3">
+                                <small class="text-muted d-block"><i class="fas fa-code"></i> Développeur</small>
+                                <strong>{{ game.developpeur|default('-') }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="info-item mb-3">
+                                <small class="text-muted d-block"><i class="fas fa-tags"></i> Genre</small>
+                                <strong>{{ game.genre|default('-') }}</strong>
+                            </div>
+                        </div>
+                        {% if game.classification %}
+                        <div class="col-sm-6">
+                            <div class="info-item mb-3">
+                                <small class="text-muted d-block"><i class="fas fa-shield-alt"></i> Classification</small>
+                                <span class="badge badge-warning">{{ game.classification }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Description -->
+                    {% if game.description %}
+                    <div class="mt-3">
+                        <h6 class="text-muted mb-2"><i class="fas fa-align-left"></i> Description</h6>
+                        <div class="bg-light p-3 rounded" style="max-height: 200px; overflow-y: auto;">
+                            {{ game.description|nl2br }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Propriétaires -->
+    <div class="card mt-4 mb-5 shadow-sm">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center" style="cursor: pointer;" data-toggle="collapse" data-target="#proprietairesCollapse" aria-expanded="true">
+            <h5 class="mb-0">
+                <i class="fas fa-users"></i> Propriétaires ({{ owners|length }})
+                <i class="fas fa-chevron-down float-right ml-2"></i>
+            </h5>
+            {% if is_granted('IS_AUTHENTICATED_REMEMBERED') and not userHasGame %}
+                <a href="{{ path('game_add_owner', {id: game.id}) }}" class="btn btn-sm btn-success" onclick="event.stopPropagation();">
+                    <i class="fas fa-user-plus mr-1"></i> Ajouter à ma collection
                 </a>
             {% endif %}
         </div>
-    </div>
-
-    <div class="row">
-        <div class="col-lg-4 mb-4">
-            <div class="card shadow-sm">
-                <div class="position-relative">
-                    {% set mainImage = game.mainImage %}
-                    {% if mainImage %}
-                        <img src="{{ mainImage }}" class="card-img-top" alt="{{ game.titre }}" style="max-height: 400px; object-fit: contain; background: #f8f9fa; cursor: pointer;" onclick="openLightbox(0)">
-                    {% else %}
-                        <div class="d-flex align-items-center justify-content-center bg-light" style="height: 300px;">
-                            <i class="fas fa-gamepad fa-5x text-muted"></i>
-                        </div>
-                    {% endif %}
+        <div id="proprietairesCollapse" class="collapse show">
+        <div class="card-body p-0">
+            {% if owners|length == 0 %}
+                <div class="p-3 text-center text-muted">
+                    <i class="fas fa-info-circle"></i> Aucun propriétaire pour ce jeu.
                 </div>
-                
-                {% if game.images|length > 1 %}
-                <div class="card-body p-2">
-                    <div class="d-flex flex-wrap">
-                        {% for image in game.images %}
-                        <div class="m-1" style="cursor: pointer;" onclick="openLightbox({{ loop.index0 }})">
-                            <img src="{{ image.displayUrl }}" alt="Image {{ loop.index }}" class="rounded border" style="height: 60px; width: 60px; object-fit: cover;">
-                        </div>
+            {% else %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="thead-light">
+                        <tr>
+                            <th><i class="fas fa-user"></i> Utilisateur</th>
+                            <th><i class="fas fa-box"></i> Édition</th>
+                            <th><i class="fas fa-tag"></i> Type</th>
+                            <th><i class="fas fa-comment"></i> Commentaire</th>
+                            {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+                                <th class="text-right"><i class="fas fa-cogs"></i> Actions</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for lien in owners %}
+                        <tr>
+                            <td>
+                                <strong>{{ lien.user.name }} {{ lien.user.lastName }}</strong>
+                            </td>
+                            <td>
+                                {{ lien.nomEdition|default('Standard') }}
+                            </td>
+                            <td>
+                                {% if lien.typeEdition == 'physique' %}
+                                    <span class="badge badge-primary"><i class="fas fa-box"></i> Physique</span>
+                                {% else %}
+                                    <span class="badge badge-info"><i class="fas fa-cloud"></i> Numérique</span>
+                                    {% if lien.store %}
+                                        <small class="text-muted ml-1">({{ lien.store }})</small>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if lien.commentaire %}
+                                    {{ lien.commentaire|u.truncate(50, '...') }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+                                <td class="text-right text-nowrap">
+                                    {% if lien.user == app.user %}
+                                        <a href="{{ path('game_edit_owner', {id: game.id, lienId: lien.id}) }}" class="btn btn-sm btn-outline-primary" title="Modifier">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <form action="{{ path('game_remove_owner', {id: game.id, lienId: lien.id}) }}" method="post" class="d-inline" onsubmit="return confirm('Retirer ce jeu de votre collection ?');">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ lien.id) }}">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Retirer">
+                                                <i class="fas fa-user-minus"></i>
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </td>
+                            {% endif %}
+                        </tr>
                         {% endfor %}
-                    </div>
-                </div>
-                {% endif %}
+                    </tbody>
+                </table>
             </div>
+            {% endif %}
         </div>
-
-        <div class="col-lg-8">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header" style="background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);">
-                    <h5 class="mb-0 text-white"><i class="fas fa-info-circle"></i> Informations</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p><strong><i class="fas fa-tv"></i> Console:</strong> {{ game.console }}</p>
-                            {% if game.annee %}
-                            <p><strong><i class="fas fa-calendar"></i> Année:</strong> {{ game.annee }}</p>
-                            {% endif %}
-                            {% if game.editeur %}
-                            <p><strong><i class="fas fa-building"></i> Éditeur:</strong> {{ game.editeur }}</p>
-                            {% endif %}
-                            {% if game.developpeur %}
-                            <p><strong><i class="fas fa-code"></i> Développeur:</strong> {{ game.developpeur }}</p>
-                            {% endif %}
-                        </div>
-                        <div class="col-md-6">
-                            {% if game.genre %}
-                            <p><strong><i class="fas fa-tags"></i> Genre:</strong> {{ game.genre }}</p>
-                            {% endif %}
-                            {% if game.classification %}
-                            <p><strong><i class="fas fa-shield-alt"></i> Classification:</strong> 
-                                <span class="badge badge-secondary">{{ game.classification }}</span>
-                            </p>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% if game.description %}
-                    <hr>
-                    <p class="mb-0">{{ game.description|nl2br }}</p>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);">
-                    <h5 class="mb-0 text-white"><i class="fas fa-users"></i> Propriétaires ({{ owners|length }})</h5>
-                    {% if is_granted('IS_AUTHENTICATED_FULLY') and not userHasGame %}
-                        <a href="{{ path('game_add_owner', {id: game.id}) }}" class="btn btn-sm btn-light">
-                            <i class="fas fa-plus"></i> Ajouter à ma collection
-                        </a>
-                    {% endif %}
-                </div>
-                <div class="card-body p-0">
-                    {% if owners|length == 0 %}
-                        <div class="p-3 text-center text-muted">
-                            <i class="fas fa-info-circle"></i> Aucun propriétaire pour ce jeu.
-                        </div>
-                    {% else %}
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0">
-                                <thead class="thead-light">
-                                    <tr>
-                                        <th>Utilisateur</th>
-                                        <th>Édition</th>
-                                        <th>Type</th>
-                                        <th>Store/Support</th>
-                                        <th>Commentaire</th>
-                                        {% if is_granted('IS_AUTHENTICATED_FULLY') %}
-                                        <th class="text-center">Actions</th>
-                                        {% endif %}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for lien in owners %}
-                                    <tr>
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                {% if lien.user.avatar %}
-                                                    <img src="/uploads/avatars/{{ lien.user.avatar }}" alt="Avatar" class="rounded-circle mr-2" style="width: 30px; height: 30px; object-fit: cover;">
-                                                {% else %}
-                                                    <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center mr-2" style="width: 30px; height: 30px;">
-                                                        <i class="fas fa-user fa-sm"></i>
-                                                    </div>
-                                                {% endif %}
-                                                {{ lien.user.name }} {{ lien.user.lastName }}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            {{ lien.nomEdition|default('Standard') }}
-                                            {% if lien.displayImage %}
-                                                <img src="{{ lien.displayImage }}" alt="Photo" class="ml-2 rounded" style="height: 30px; cursor: pointer;" onclick="window.open('{{ lien.displayImage }}', '_blank')">
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if lien.typeEdition == 'physique' %}
-                                                <span class="badge badge-primary"><i class="fas fa-box"></i> Physique</span>
-                                            {% else %}
-                                                <span class="badge badge-info"><i class="fas fa-cloud"></i> Numérique</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if lien.typeEdition == 'numerique' and lien.store %}
-                                                {{ lien.store }}
-                                            {% elseif lien.typeEdition == 'physique' %}
-                                                <span class="text-muted">-</span>
-                                            {% else %}
-                                                <span class="text-muted">-</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>{{ lien.commentaire|default('-')|u.truncate(50, '...') }}</td>
-                                        {% if is_granted('IS_AUTHENTICATED_FULLY') %}
-                                        <td class="text-center">
-                                            {% if lien.user == app.user %}
-                                                <a href="{{ path('game_edit_owner', {id: game.id, lienId: lien.id}) }}" class="btn btn-sm btn-outline-primary" title="Modifier">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                                <form action="{{ path('game_remove_owner', {id: game.id, lienId: lien.id}) }}" method="post" class="d-inline" onsubmit="return confirm('Retirer ce jeu de votre collection ?');">
-                                                    <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ lien.id) }}">
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Retirer">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </form>
-                                            {% endif %}
-                                        </td>
-                                        {% endif %}
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
         </div>
     </div>
 </div>
 
-<!-- Lightbox Modal -->
-<div class="modal fade" id="lightboxModal" tabindex="-1">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
-        <div class="modal-content bg-dark">
-            <div class="modal-header border-0">
-                <span class="text-white" id="lightboxCounter"></span>
+<!-- Modal Image -->
+<div id="imageModal" class="image-modal">
+    <span class="image-modal-close">&times;</span>
+    <img class="image-modal-content" id="modalImage">
+</div>
+
+<!-- Modale d'édition de jaquette -->
+{% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+<div class="modal fade" id="editCoverModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);">
+                <h5 class="modal-title text-white">
+                    <i class="fas fa-image"></i> Modifier la jaquette
+                </h5>
                 <button type="button" class="close text-white" data-dismiss="modal">
                     <span>&times;</span>
                 </button>
             </div>
-            <div class="modal-body text-center p-0">
-                <img id="lightboxImage" src="" class="img-fluid" style="max-height: 80vh;">
-            </div>
-            <div class="modal-footer border-0 justify-content-center">
-                <button type="button" class="btn btn-outline-light" onclick="prevImage()">
-                    <i class="fas fa-chevron-left"></i> Précédent
-                </button>
-                <button type="button" class="btn btn-outline-light" onclick="nextImage()">
-                    Suivant <i class="fas fa-chevron-right"></i>
-                </button>
+            <div class="modal-body">
+                <!-- Image actuelle -->
+                <div class="text-center mb-4">
+                    {% if game.coverUrl %}
+                        <img src="{{ game.coverUrl }}" class="img-thumbnail" style="max-height: 200px;" alt="Jaquette actuelle">
+                    {% else %}
+                        <div class="d-flex align-items-center justify-content-center bg-light rounded" style="height: 150px; width: 150px; margin: 0 auto;">
+                            <i class="fas fa-gamepad fa-3x text-muted"></i>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <hr>
+                
+                <!-- Options d'édition -->
+                <div class="row">
+                    <!-- Upload manuel -->
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100 border-success">
+                            <div class="card-body text-center">
+                                <i class="fas fa-upload fa-2x text-success mb-2"></i>
+                                <h6>Uploader une image</h6>
+                                <p class="small text-muted">Depuis votre ordinateur</p>
+                                <label for="uploadCoverInput" class="btn btn-success btn-sm" style="cursor: pointer;">
+                                    <i class="fas fa-file-image"></i> Choisir un fichier
+                                </label>
+                                <input type="file" id="uploadCoverInput" accept="image/*" style="display: none;">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- URL manuelle -->
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100 border-secondary">
+                            <div class="card-body text-center">
+                                <i class="fas fa-link fa-2x text-secondary mb-2"></i>
+                                <h6>URL manuelle</h6>
+                                <p class="small text-muted">Coller l'URL d'une image</p>
+                                <button type="button" id="openUrlModalBtn" class="btn btn-secondary btn-sm">
+                                    <i class="fas fa-paste"></i> Saisir une URL
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Zone de prévisualisation upload -->
+                <div id="uploadPreview" class="text-center mt-3" style="display: none;">
+                    <hr>
+                    <h6><i class="fas fa-eye"></i> Prévisualisation</h6>
+                    <img id="uploadPreviewImg" class="img-thumbnail" style="max-height: 200px;" alt="Prévisualisation">
+                    <div class="mt-3">
+                        <button type="button" id="confirmUploadBtn" class="btn btn-success">
+                            <i class="fas fa-check"></i> Confirmer
+                        </button>
+                        <button type="button" id="cancelUploadBtn" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Annuler
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Zone URL manuelle -->
+                <div id="urlInputSection" class="mt-3" style="display: none;">
+                    <hr>
+                    <div class="input-group mb-3">
+                        <input type="url" id="manualUrlInput" class="form-control" placeholder="https://exemple.com/image.jpg">
+                        <div class="input-group-append">
+                            <button type="button" id="previewManualUrlBtn" class="btn btn-primary">
+                                <i class="fas fa-eye"></i> Prévisualiser
+                            </button>
+                        </div>
+                    </div>
+                    <div id="manualPreview" class="text-center"></div>
+                </div>
             </div>
         </div>
     </div>
 </div>
+{% endif %}
 
+<style>
+    .info-item {
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 3px solid #6f42c1;
+    }
+    .game-cover-container {
+        background: linear-gradient(135deg, #f5f7fa 0%, #e8d5f5 100%);
+        padding: 20px;
+        border-radius: 10px;
+    }
+    .edit-cover-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        opacity: 0.7;
+        transition: all 0.3s;
+        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    .edit-cover-btn:hover {
+        opacity: 1;
+        transform: scale(1.1);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+    .image-modal {
+        display: none;
+        position: fixed;
+        z-index: 9999;
+        padding-top: 50px;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.9);
+    }
+    .image-modal-content {
+        margin: auto;
+        display: block;
+        max-width: 90%;
+        max-height: 90%;
+    }
+    .image-modal-close {
+        position: absolute;
+        top: 15px;
+        right: 35px;
+        color: #f1f1f1;
+        font-size: 40px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
 <script>
-var images = [
-    {% if game.coverUrl %}'{{ game.coverUrl }}',{% endif %}
-    {% for image in game.images %}'{{ image.displayUrl }}'{% if not loop.last %},{% endif %}{% endfor %}
-];
-var currentIndex = 0;
-
-function openLightbox(index) {
-    currentIndex = index;
-    updateLightbox();
-    $('#lightboxModal').modal('show');
-}
-
-function updateLightbox() {
-    if (images.length > 0) {
-        $('#lightboxImage').attr('src', images[currentIndex]);
-        $('#lightboxCounter').text((currentIndex + 1) + ' / ' + images.length);
-    }
-}
-
-function prevImage() {
-    currentIndex = (currentIndex - 1 + images.length) % images.length;
-    updateLightbox();
-}
-
-function nextImage() {
-    currentIndex = (currentIndex + 1) % images.length;
-    updateLightbox();
-}
-
-$(document).keydown(function(e) {
-    if ($('#lightboxModal').hasClass('show')) {
-        if (e.keyCode == 37) prevImage();
-        if (e.keyCode == 39) nextImage();
-        if (e.keyCode == 27) $('#lightboxModal').modal('hide');
-    }
+$(document).ready(function() {
+    var gameId = {{ game.id }};
+    var selectedFile = null;
+    
+    // Modal image simple
+    $('.clickable-image').on('click', function() {
+        var src = $(this).attr('src');
+        $('#modalImage').attr('src', src);
+        $('#imageModal').fadeIn();
+    });
+    
+    $('.image-modal-close, #imageModal').on('click', function(e) {
+        if (e.target === this || $(e.target).hasClass('image-modal-close')) {
+            $('#imageModal').fadeOut();
+        }
+    });
+    
+    $(document).keydown(function(e) {
+        if (e.keyCode === 27) {
+            $('#imageModal').fadeOut();
+        }
+    });
+    
+    // Ouvrir section URL
+    $('#openUrlModalBtn').on('click', function() {
+        $('#urlInputSection').toggle();
+    });
+    
+    // Gestion de l'upload de fichier
+    $('#uploadCoverInput').on('change', function(e) {
+        var file = e.target.files[0];
+        if (!file) return;
+        
+        if (!file.type.match('image.*')) {
+            alert('Veuillez sélectionner un fichier image');
+            return;
+        }
+        
+        selectedFile = file;
+        
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            $('#uploadPreviewImg').attr('src', e.target.result);
+            $('#uploadPreview').show();
+        };
+        reader.readAsDataURL(file);
+    });
+    
+    // Confirmer l'upload
+    $('#confirmUploadBtn').on('click', function() {
+        if (!selectedFile) return;
+        
+        var btn = $(this);
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Upload...');
+        
+        var formData = new FormData();
+        formData.append('cover_upload', selectedFile);
+        
+        $.ajax({
+            url: '{{ path("game_update_cover", {id: game.id}) }}',
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    location.reload();
+                } else {
+                    alert('Erreur: ' + (response.message || 'Erreur inconnue'));
+                    btn.prop('disabled', false).html('<i class="fas fa-check"></i> Confirmer');
+                }
+            },
+            error: function(xhr) {
+                alert('Erreur lors de l\'upload');
+                btn.prop('disabled', false).html('<i class="fas fa-check"></i> Confirmer');
+            }
+        });
+    });
+    
+    // Annuler l'upload
+    $('#cancelUploadBtn').on('click', function() {
+        $('#uploadPreview').hide();
+        $('#uploadCoverInput').val('');
+        selectedFile = null;
+    });
+    
+    // Prévisualisation URL manuelle
+    $('#previewManualUrlBtn').on('click', function() {
+        var url = $('#manualUrlInput').val().trim();
+        if (!url) {
+            alert('Veuillez saisir une URL');
+            return;
+        }
+        
+        $('#manualPreview').html(
+            '<img src="' + url + '" class="img-thumbnail" style="max-height: 200px;" alt="Prévisualisation" onerror="this.parentElement.innerHTML=\'<span class=text-danger>Image non accessible</span>\'">' +
+            '<br><button type="button" id="applyManualUrlBtn" class="btn btn-success btn-sm mt-2" data-url="' + url + '"><i class="fas fa-check"></i> Utiliser cette image</button>'
+        );
+    });
+    
+    $(document).on('click', '#applyManualUrlBtn', function() {
+        var url = $(this).data('url');
+        var btn = $(this);
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Enregistrement...');
+        
+        $.ajax({
+            url: '{{ path("game_update_cover", {id: game.id}) }}',
+            method: 'POST',
+            data: { cover_url: url },
+            success: function(response) {
+                if (response.success) {
+                    location.reload();
+                } else {
+                    alert('Erreur: ' + (response.message || 'Erreur inconnue'));
+                    btn.prop('disabled', false).html('<i class="fas fa-check"></i> Utiliser cette image');
+                }
+            },
+            error: function() {
+                alert('Erreur lors de l\'enregistrement');
+                btn.prop('disabled', false).html('<i class="fas fa-check"></i> Utiliser cette image');
+            }
+        });
+    });
 });
 </script>
 {% endblock %}

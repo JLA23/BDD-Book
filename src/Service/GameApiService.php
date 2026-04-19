@@ -74,10 +74,12 @@ class GameApiService
 
         try {
             $response = $this->httpClient->request('POST', 'https://api-free.deepl.com/v2/translate', [
-                'body' => [
-                    'auth_key' => $this->deeplApiKey,
-                    'text' => $text,
-                    'source_lang' => 'EN',
+                'headers' => [
+                    'Authorization' => 'DeepL-Auth-Key ' . $this->deeplApiKey,
+                    'Content-Type' => 'application/json',
+                ],
+                'json' => [
+                    'text' => [$text],
                     'target_lang' => 'FR',
                 ],
             ]);
@@ -85,6 +87,8 @@ class GameApiService
             $data = $response->toArray();
             return $data['translations'][0]['text'] ?? $text;
         } catch (\Exception $e) {
+            // Log error for debugging
+            error_log('DeepL translation error: ' . $e->getMessage());
             return $text;
         }
     }
@@ -170,7 +174,7 @@ class GameApiService
                            cover.url, screenshots.url,
                            genres.name, platforms.name, platforms.abbreviation,
                            involved_companies.company.name, involved_companies.developer, involved_companies.publisher,
-                           age_ratings.category, age_ratings.rating,
+                           age_ratings.*,
                            websites.url, websites.category,
                            aggregated_rating;",
             ]);
@@ -197,7 +201,13 @@ class GameApiService
             // Classification PEGI (category 2 = PEGI)
             $classification = null;
             foreach ($game['age_ratings'] ?? [] as $ar) {
-              
+                // category 1 = ESRB, category 2 = PEGI
+                if (($ar['category'] ?? 0) == 2) {
+                    // PEGI ratings: 1=3, 2=7, 3=12, 4=16, 5=18
+                    $pegiMap = [1 => 'PEGI 3', 2 => 'PEGI 7', 3 => 'PEGI 12', 4 => 'PEGI 16', 5 => 'PEGI 18'];
+                    $classification = $pegiMap[$ar['rating'] ?? 0] ?? null;
+                    break;
+                }
             }
 
             // Cover
@@ -238,12 +248,15 @@ class GameApiService
                 }
             }
 
-            // Plateformes avec slug
+            // Plateformes avec slug - utiliser le nom complet en minuscules pour un meilleur mapping
             $platforms = [];
             foreach ($game['platforms'] ?? [] as $p) {
+                $name = $p['name'];
+                // Créer un slug basé sur le nom complet
+                $slug = strtolower(str_replace(' ', '', $name));
                 $platforms[] = [
-                    'name' => $p['name'],
-                    'slug' => strtolower($p['abbreviation'] ?? $p['name']),
+                    'name' => $name,
+                    'slug' => $slug,
                 ];
             }
 

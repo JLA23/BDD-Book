@@ -156,6 +156,18 @@ class BrickController extends AbstractController
         ]);
     }
 
+    #[Route('/ajouter', name: 'brick_ajouter')]
+    public function ajouter(): Response
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+        $this->permissionService->denyAccessUnlessCanRegister('brick');
+
+        return $this->render('brick/ajouter_choix.html.twig', [
+            'rebrickableConfigured' => $this->brickApi->isRebrickableConfigured(),
+            'bricksetConfigured' => $this->brickApi->isBricksetConfigured(),
+        ]);
+    }
+
     #[Route('/nouveau', name: 'brick_new')]
     public function new(Request $request, BrickCollectionRepository $collectionRepo, BrickMarqueRepository $marqueRepo, BrickSetRepository $setRepo, LienUserBrickSetRepository $lienRepo, SluggerInterface $slugger): Response
     {

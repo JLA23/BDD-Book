@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>{% block title %}BDD-Books{% endblock %}</title>
+        <title>{% block title %}BDD-Hub{% endblock %}</title>
         <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
         <link rel="alternate icon" href="{{ asset('favicon.ico') }}">
         {% block stylesheets %}
@@ -15,13 +15,17 @@
     <body>
         <nav class="navbar navbar-light bg-light">
             <div class="d-flex align-items-center">
-                <!-- Liste déroulante BDD-Books / BDD-Magazines -->
+                <!-- Liste déroulante BDD-Hub -->
                 <div class="dropdown mr-3">
                     <a class="navbar-brand dropdown-toggle" href="#" id="navbarBddDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        <i class="fas fa-database mr-1"></i>BDD
+                        <i class="fas fa-database mr-1"></i>BDD-Hub
                     </a>
                     <div class="dropdown-menu" aria-labelledby="navbarBddDropdown">
                         <a class="dropdown-item" href="{{ path('index') }}">
+                            <i class="fas fa-home mr-2 text-dark"></i>Accueil
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="{{ path('books_index') }}">
                             <i class="fas fa-book mr-2 text-primary"></i>BDD-Books
                         </a>
                         <a class="dropdown-item" href="{{ path('magazines_list') }}">
@@ -46,12 +50,12 @@
                         </a>
                         {% endif %}
                         {% if app.user.canRegisterInSection('brick') %}
-                        <a class="dropdown-item" href="{{ path('brick_new') }}">
+                        <a class="dropdown-item" href="{{ path('brick_ajouter') }}">
                             <i class="fas fa-plus-circle mr-2 text-warning"></i>Ajouter un set
                         </a>
                         {% endif %}
                         {% if app.user.canRegisterInSection('games') %}
-                        <a class="dropdown-item" href="{{ path('game_new') }}">
+                        <a class="dropdown-item" href="{{ path('game_ajouter') }}">
                             <i class="fas fa-plus-circle mr-2" style="color: #6f42c1;"></i>Ajouter un jeu
                         </a>
                         {% endif %}

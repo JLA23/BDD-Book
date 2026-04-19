@@ -1,0 +1,85 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}BDD-Hub - Accueil{% endblock %}
+
+{% block body %}
+<div id="acceuilSite">
+    <div class="text-center mb-5">
+        <h1 class="display-4 font-weight-bold text-dark">
+            <i class="fas fa-database"></i> BDD-Hub
+        </h1>
+        <p class="lead text-muted">Base de données de la famille Lefebvre</p>
+    </div>
+
+    <div class="row justify-content-center">
+        <!-- BDD-Books -->
+        <div class="col-md-3 mb-4">
+            <a href="{{ path('books_index') }}" class="card h-100 text-decoration-none shadow-sm" style="cursor: pointer; border-left: 4px solid #007bff;">
+                <div class="card-body text-center py-5">
+                    <div class="mb-3">
+                        <i class="fas fa-book fa-4x text-primary"></i>
+                    </div>
+                    <h4 class="card-title text-dark">BDD-Books</h4>
+                    <p class="card-text text-muted">Livres, BD, Mangas</p>
+                </div>
+            </a>
+        </div>
+
+        <!-- BDD-Magazines -->
+        <div class="col-md-3 mb-4">
+            <a href="{{ path('magazines_list') }}" class="card h-100 text-decoration-none shadow-sm" style="cursor: pointer; border-left: 4px solid #28a745;">
+                <div class="card-body text-center py-5">
+                    <div class="mb-3">
+                        <i class="fas fa-newspaper fa-4x text-success"></i>
+                    </div>
+                    <h4 class="card-title text-dark">BDD-Magazines</h4>
+                    <p class="card-text text-muted">Magazines, Revues</p>
+                </div>
+            </a>
+        </div>
+
+        <!-- BDD-Brick -->
+        <div class="col-md-3 mb-4">
+            <a href="{{ path('brick_index') }}" class="card h-100 text-decoration-none shadow-sm" style="cursor: pointer; border-left: 4px solid #ff6b35;">
+                <div class="card-body text-center py-5">
+                    <div class="mb-3">
+                        <i class="fas fa-cubes fa-4x" style="color: #ff6b35;"></i>
+                    </div>
+                    <h4 class="card-title text-dark">BDD-Brick</h4>
+                    <p class="card-text text-muted">Sets de construction</p>
+                </div>
+            </a>
+        </div>
+
+        <!-- BDD-Games -->
+        <div class="col-md-3 mb-4">
+            <a href="{{ path('game_index') }}" class="card h-100 text-decoration-none shadow-sm" style="cursor: pointer; border-left: 4px solid #6f42c1;">
+                <div class="card-body text-center py-5">
+                    <div class="mb-3">
+                        <i class="fas fa-gamepad fa-4x" style="color: #6f42c1;"></i>
+                    </div>
+                    <h4 class="card-title text-dark">BDD-Games</h4>
+                    <p class="card-text text-muted">Jeux vidéo</p>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Section utilisateurs -->
+    <div class="mt-5">
+        <h3 class="text-center mb-4"><i class="fas fa-users"></i> Membres de la famille</h3>
+        <div class="row justify-content-center">
+            {% for user in users %}
+            <div class="col-auto mb-3">
+                <div class="card text-center" style="min-width: 150px;">
+                    <div class="card-body py-3">
+                        <i class="fas fa-user-circle fa-2x text-secondary mb-2"></i>
+                        <h6 class="card-title mb-0">{{ user.fullName }}</h6>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
