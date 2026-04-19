@@ -1,0 +1,115 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}BDD-Games - Base de données de jeux vidéo{% endblock %}
+
+{% block body %}
+    <div id="acceuilSite">
+        <div class="text-center mb-4">
+            <h1 class="display-5 font-weight-bold" style="color: #6f42c1;">
+                <i class="fas fa-gamepad"></i> BDD-Games
+            </h1>
+            <p class="lead text-muted">Base de données de jeux vidéo de la famille Lefebvre</p>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header" style="background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);">
+                <h5 class="mb-0 text-white"><i class="fas fa-search"></i> Rechercher un jeu</h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ path('game_list') }}" method="get">
+                    <div class="row">
+                        <div class="col-md-5">
+                            <div class="form-group mb-3">
+                                <label for="search" class="font-weight-bold text-dark">Que recherchez-vous ?</label>
+                                <div class="input-group input-group-lg">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text bg-white border-right-0"><i class="fas fa-gamepad" style="color: #6f42c1;"></i></span>
+                                    </div>
+                                    <input type="text" name="search" class="form-control border-left-0" placeholder="Titre du jeu..." style="border-top-right-radius: 0.3rem !important; border-bottom-right-radius: 0.3rem !important;">
+                                </div>
+                                <small class="form-text text-muted">Recherche par titre, éditeur ou développeur</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-dark">Console</label>
+                                <select name="console" class="form-control form-control-lg">
+                                    <option value="">Toutes</option>
+                                    {% for console in consoles %}
+                                        <option value="{{ console }}">{{ console }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-dark">Genre</label>
+                                <select name="genre" class="form-control form-control-lg">
+                                    <option value="">Tous</option>
+                                    {% for genre in genres %}
+                                        <option value="{{ genre }}">{{ genre }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-lg text-white px-5" style="background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);">
+                            <i class="fas fa-search"></i> Rechercher
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-{{ is_granted('IS_AUTHENTICATED_REMEMBERED') ? '3' : '4' }} mb-3">
+                <a href="{{ path('game_list') }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                    <div class="card-body text-center py-4">
+                        <div class="mb-3">
+                            <i class="fas fa-gamepad fa-3x" style="color: #6f42c1;"></i>
+                        </div>
+                        <h5 class="card-title text-dark">Tous les jeux</h5>
+                        <p class="card-text text-muted small">Parcourir le catalogue</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-{{ is_granted('IS_AUTHENTICATED_REMEMBERED') ? '3' : '4' }} mb-3">
+                <a href="{{ path('game_users') }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                    <div class="card-body text-center py-4">
+                        <div class="mb-3">
+                            <i class="fas fa-users fa-3x text-success"></i>
+                        </div>
+                        <h5 class="card-title text-dark">Collections</h5>
+                        <p class="card-text text-muted small">Par utilisateur</p>
+                    </div>
+                </a>
+            </div>
+            {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+            <div class="col-md-3 mb-3">
+                <a href="{{ path('game_search_api') }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                    <div class="card-body text-center py-4">
+                        <div class="mb-3">
+                            <i class="fas fa-search fa-3x text-info"></i>
+                        </div>
+                        <h5 class="card-title text-dark">Recherche API</h5>
+                        <p class="card-text text-muted small">Rechercher via JVN</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-3 mb-3">
+                <a href="{{ path('game_new') }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                    <div class="card-body text-center py-4">
+                        <div class="mb-3">
+                            <i class="fas fa-plus-circle fa-3x" style="color: #6f42c1;"></i>
+                        </div>
+                        <h5 class="card-title text-dark">Ajouter un jeu</h5>
+                        <p class="card-text text-muted small">Ajouter manuellement</p>
+                    </div>
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

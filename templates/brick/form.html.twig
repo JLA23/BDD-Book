@@ -1,0 +1,412 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{% if isEdit %}Modifier{% else %}Nouveau{% endif %} set - BDD-Brick{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            {% if duplicateWarning %}
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle"></i> <strong>{{ duplicateWarning.message }}</strong>
+                <p class="mb-0 mt-2">
+                    <a href="{{ path('brick_detail', {id: duplicateWarning.set.id}) }}" class="alert-link">
+                        Voir le set existant: {{ duplicateWarning.set.nom }} ({{ duplicateWarning.set.reference }})
+                    </a>
+                </p>
+            </div>
+            {% endif %}
+
+            <div class="card shadow-sm">
+                <div class="card-header" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
+                    <h5 class="mb-0 text-white">
+                        <i class="fas fa-{% if isEdit %}edit{% else %}plus{% endif %}"></i>
+                        {% if isEdit %}Modifier le set{% else %}Nouveau set{% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if prefillImages is defined and prefillImages|length > 0 %}
+                    <div class="alert alert-info mb-4">
+                        <strong><i class="fas fa-info-circle"></i> Import depuis API</strong>
+                        <p class="mb-2 small">{{ prefillImages|length }} image(s) seront automatiquement ajoutées.</p>
+                        <div class="d-flex flex-wrap">
+                            {% for img in prefillImages %}
+                            <img src="{{ img.url }}" alt="Aperçu {{ loop.index }}" class="mr-2 mb-2 rounded border" style="height: 60px; object-fit: contain;">
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {{ form_start(form, {'attr': {'class': 'needs-validation', 'novalidate': 'novalidate'}}) }}
+                    
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="form-group">
+                                {{ form_label(form.nom) }}
+                                {{ form_widget(form.nom) }}
+                                {{ form_errors(form.nom) }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form_label(form.reference) }}
+                                {{ form_widget(form.reference) }}
+                                {{ form_errors(form.reference) }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form_label(form.marque) }}
+                                <div class="input-group">
+                                    {{ form_widget(form.marque) }}
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-outline-secondary" data-toggle="modal" data-target="#newMarqueModal">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                {{ form_errors(form.marque) }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form_label(form.collection) }}
+                                <div class="input-group">
+                                    {{ form_widget(form.collection) }}
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-outline-secondary" data-toggle="modal" data-target="#newCollectionModal">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                {{ form_errors(form.collection) }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form_label(form.prix) }}
+                                {{ form_widget(form.prix) }}
+                                {{ form_errors(form.prix) }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form_label(form.annee) }}
+                                {{ form_widget(form.annee) }}
+                                {{ form_errors(form.annee) }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form_label(form.nbPieces) }}
+                                {{ form_widget(form.nbPieces) }}
+                                {{ form_errors(form.nbPieces) }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        {{ form_label(form.description) }}
+                        {{ form_widget(form.description) }}
+                        {{ form_errors(form.description) }}
+                    </div>
+                    
+                    <hr>
+                    <h5><i class="fas fa-images"></i> Images</h5>
+                    
+                    {% if isEdit %}
+                    <div class="mb-3">
+                        {% if set.images|length > 0 %}
+                        <div class="d-flex flex-wrap mb-2">
+                            {% for image in set.images %}
+                            <div class="position-relative m-1">
+                                <img src="{{ image.displayUrl }}" class="rounded border {% if loop.first %}border-warning{% endif %}" style="height: 80px; width: 80px; object-fit: cover;">
+                                {% if loop.first %}
+                                <span class="badge badge-warning position-absolute" style="top: -5px; left: -5px; font-size: 8px;"><i class="fas fa-star"></i></span>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <a href="{{ path('brick_images', {id: set.id}) }}" class="btn btn-sm btn-outline-info">
+                            <i class="fas fa-images"></i> Gérer les images ({{ set.images|length }})
+                        </a>
+                        {% else %}
+                        <p class="text-muted">Aucune image</p>
+                        <a href="{{ path('brick_images', {id: set.id}) }}" class="btn btn-sm btn-outline-info">
+                            <i class="fas fa-plus"></i> Ajouter des images
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div id="pendingImagesSection" class="mb-3">
+                        <label class="d-block mb-2">Images en attente d'ajout <span id="pendingCount" class="badge badge-info">{{ prefillImages|length }}</span></label>
+                        <div id="pendingImagesGrid" class="d-flex flex-wrap mb-2">
+                            {% for img in prefillImages %}
+                            <div class="pending-image-item position-relative m-1" data-index="{{ loop.index0 }}" data-url="{{ img.url }}">
+                                <img src="{{ img.url }}" class="rounded border" style="height: 80px; width: 80px; object-fit: cover;">
+                                <button type="button" class="btn btn-sm btn-danger position-absolute remove-pending-image" style="top: -5px; right: -5px; padding: 0 5px; font-size: 12px;">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                                <small class="d-block text-center text-muted" style="font-size: 10px;">{{ img.source|default('API') }}</small>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="input-group input-group-sm">
+                                    <input type="url" id="addImageUrl" class="form-control" placeholder="Ajouter une image par URL...">
+                                    <div class="input-group-append">
+                                        <button type="button" id="addImageUrlBtn" class="btn btn-outline-secondary">
+                                            <i class="fas fa-plus"></i> Ajouter
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="imageUrlsContainer">
+                            {% for img in prefillImages %}
+                            <input type="hidden" name="image_urls[]" value="{{ img.url }}">
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-upload"></i> Uploader des images</label>
+                        <input type="file" name="uploaded_images[]" class="form-control-file" multiple accept="image/*">
+                        <small class="text-muted">Vous pouvez sélectionner plusieurs fichiers</small>
+                    </div>
+                    
+                    <hr>
+                    <h5><i class="fas fa-user"></i> Ma collection</h5>
+                    
+                    <div class="form-group">
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input" id="addToCollection" name="add_to_collection" value="1" checked>
+                            <label class="custom-control-label" for="addToCollection">Ajouter ce set à ma collection</label>
+                        </div>
+                    </div>
+                    
+                    <div id="collectionDetails">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label><i class="fas fa-calendar"></i> Date d'acquisition</label>
+                                    <input type="date" name="date_achat" class="form-control" value="{{ "now"|date("Y-m-d") }}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label><i class="fas fa-euro-sign"></i> Prix d'achat</label>
+                                    <input type="number" name="prix_achat" class="form-control" step="0.01" placeholder="0.00">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-comment"></i> Commentaire personnel</label>
+                            <textarea name="commentaire_lien" class="form-control" rows="2" placeholder="Notes personnelles..."></textarea>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <hr>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{% if isEdit %}{{ path('brick_detail', {id: set.id}) }}{% else %}{{ path('brick_list') }}{% endif %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Annuler
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> {% if isEdit %}Enregistrer{% else %}Créer le set{% endif %}
+                        </button>
+                    </div>
+                    
+                    {{ form_end(form) }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal nouvelle marque -->
+<div class="modal fade" id="newMarqueModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
+                <h5 class="modal-title text-white"><i class="fas fa-trademark"></i> Nouvelle marque</h5>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="newMarqueName">Nom de la marque</label>
+                    <input type="text" id="newMarqueName" class="form-control" placeholder="Ex: LEGO, Mega Bloks...">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-success" id="createMarqueBtn"><i class="fas fa-plus"></i> Créer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal nouvelle collection -->
+<div class="modal fade" id="newCollectionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
+                <h5 class="modal-title text-white"><i class="fas fa-layer-group"></i> Nouvelle collection</h5>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="newCollectionName">Nom de la collection</label>
+                    <input type="text" id="newCollectionName" class="form-control" placeholder="Ex: Star Wars, Technic...">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-success" id="createCollectionBtn"><i class="fas fa-plus"></i> Créer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+$(document).ready(function() {
+    // Toggle collection details
+    $('#addToCollection').change(function() {
+        $('#collectionDetails').toggle(this.checked);
+    });
+    
+    // Remove pending image
+    $(document).on('click', '.remove-pending-image', function() {
+        var item = $(this).closest('.pending-image-item');
+        var index = item.data('index');
+        var url = item.data('url');
+        
+        // Remove hidden input
+        $('#imageUrlsContainer input[value="' + url + '"]').remove();
+        
+        $.ajax({
+            url: '{{ path("brick_api_remove_pending_image") }}',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ index: index }),
+            success: function(response) {
+                if (response.success) {
+                    item.fadeOut(200, function() { 
+                        $(this).remove();
+                        // Reindex remaining items
+                        $('#pendingImagesGrid .pending-image-item').each(function(i) {
+                            $(this).data('index', i);
+                        });
+                        $('#pendingCount').text(response.count);
+                    });
+                }
+            }
+        });
+    });
+    
+    // Add image by URL
+    $('#addImageUrlBtn').click(function() {
+        var url = $('#addImageUrl').val().trim();
+        if (!url) { alert('Veuillez saisir une URL'); return; }
+        
+        // Add hidden input for form submission
+        $('#imageUrlsContainer').append('<input type="hidden" name="image_urls[]" value="' + url + '">');
+        
+        // Add visual element
+        var count = $('#pendingImagesGrid .pending-image-item').length;
+        var html = '<div class="pending-image-item position-relative m-1" data-index="' + count + '" data-url="' + url + '">' +
+            '<img src="' + url + '" class="rounded border" style="height: 80px; width: 80px; object-fit: cover;">' +
+            '<button type="button" class="btn btn-sm btn-danger position-absolute remove-pending-image" style="top: -5px; right: -5px; padding: 0 5px; font-size: 12px;">' +
+            '<i class="fas fa-times"></i></button>' +
+            '<small class="d-block text-center text-muted" style="font-size: 10px;">Manuel</small></div>';
+        $('#pendingImagesGrid').append(html);
+        $('#pendingCount').text(count + 1);
+        $('#addImageUrl').val('');
+        
+        // Also update session
+        $.ajax({
+            url: '{{ path("brick_api_add_pending_image") }}',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ url: url })
+        });
+    });
+    
+    $('#addImageUrl').keypress(function(e) {
+        if (e.which == 13) { e.preventDefault(); $('#addImageUrlBtn').click(); }
+    });
+    
+    // Create marque
+    $('#createMarqueBtn').click(function() {
+        var nom = $('#newMarqueName').val().trim();
+        if (!nom) { alert('Veuillez saisir un nom'); return; }
+        var btn = $(this);
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+        $.ajax({
+            url: '{{ path("brick_api_marque_create") }}',
+            method: 'POST',
+            data: { nom: nom },
+            success: function(response) {
+                if (response.success) {
+                    var select = $('#{{ form.marque.vars.id }}');
+                    if (response.exists) {
+                        // Sélectionner l'existant
+                        select.val(response.id);
+                        alert('Cette marque existe déjà, elle a été sélectionnée.');
+                    } else {
+                        // Ajouter et sélectionner la nouvelle
+                        select.append($('<option>', { value: response.id, text: response.nom, selected: true }));
+                    }
+                    $('#newMarqueModal').modal('hide');
+                    $('#newMarqueName').val('');
+                }
+                btn.prop('disabled', false).html('<i class="fas fa-plus"></i> Créer');
+            },
+            error: function() { alert('Erreur'); btn.prop('disabled', false).html('<i class="fas fa-plus"></i> Créer'); }
+        });
+    });
+    
+    // Create collection
+    $('#createCollectionBtn').click(function() {
+        var nom = $('#newCollectionName').val().trim();
+        if (!nom) { alert('Veuillez saisir un nom'); return; }
+        var btn = $(this);
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+        $.ajax({
+            url: '{{ path("brick_api_collection_create") }}',
+            method: 'POST',
+            data: { nom: nom },
+            success: function(response) {
+                if (response.success) {
+                    var select = $('#{{ form.collection.vars.id }}');
+                    if (response.exists) {
+                        // Sélectionner l'existant
+                        select.val(response.id);
+                        alert('Cette collection existe déjà, elle a été sélectionnée.');
+                    } else {
+                        // Ajouter et sélectionner la nouvelle
+                        select.append($('<option>', { value: response.id, text: response.nom, selected: true }));
+                    }
+                    $('#newCollectionModal').modal('hide');
+                    $('#newCollectionName').val('');
+                }
+                btn.prop('disabled', false).html('<i class="fas fa-plus"></i> Créer');
+            },
+            error: function() { alert('Erreur'); btn.prop('disabled', false).html('<i class="fas fa-plus"></i> Créer'); }
+        });
+    });
+});
+</script>
+{% endblock %}

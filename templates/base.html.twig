@@ -27,14 +27,34 @@
                         <a class="dropdown-item" href="{{ path('magazines_list') }}">
                             <i class="fas fa-newspaper mr-2 text-success"></i>BDD-Magazines
                         </a>
+                        <a class="dropdown-item" href="{{ path('brick_index') }}">
+                            <i class="fas fa-cubes mr-2 text-warning"></i>BDD-Brick
+                        </a>
+                        <a class="dropdown-item" href="{{ path('game_index') }}">
+                            <i class="fas fa-gamepad mr-2" style="color: #6f42c1;"></i>BDD-Games
+                        </a>
                         {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
                         <div class="dropdown-divider"></div>
+                        {% if app.user.canRegisterInSection('books') %}
                         <a class="dropdown-item" href="{{ path('livre_ajouter') }}">
                             <i class="fas fa-plus-circle mr-2 text-primary"></i>Ajouter un livre
                         </a>
+                        {% endif %}
+                        {% if app.user.canRegisterInSection('magazines') %}
                         <a class="dropdown-item" href="{{ path('magazine_new') }}">
                             <i class="fas fa-plus-circle mr-2 text-success"></i>Ajouter un magazine
                         </a>
+                        {% endif %}
+                        {% if app.user.canRegisterInSection('brick') %}
+                        <a class="dropdown-item" href="{{ path('brick_new') }}">
+                            <i class="fas fa-plus-circle mr-2 text-warning"></i>Ajouter un set
+                        </a>
+                        {% endif %}
+                        {% if app.user.canRegisterInSection('games') %}
+                        <a class="dropdown-item" href="{{ path('game_new') }}">
+                            <i class="fas fa-plus-circle mr-2" style="color: #6f42c1;"></i>Ajouter un jeu
+                        </a>
+                        {% endif %}
                         {% endif %}
                     </div>
                 </div>
@@ -67,6 +87,12 @@
                             <a class="dropdown-item" href="{{ path('statistiques') }}">
                                 <i class="fas fa-chart-bar mr-2"></i>Statistiques
                             </a>
+                            {% if is_granted('ROLE_ADMIN') %}
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item text-danger" href="{{ path('admin_users') }}">
+                                <i class="fas fa-users-cog mr-2"></i>Administration
+                            </a>
+                            {% endif %}
                             <div class="dropdown-divider"></div>
                             <a class="dropdown-item text-danger" href="{{ path('app_logout') }}">
                                 <i class="fas fa-sign-out-alt mr-2"></i>Déconnexion

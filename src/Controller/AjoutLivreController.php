@@ -12,6 +12,7 @@ use App\Entity\Livre;
 use App\Form\LivreType;
 use App\Service\BookCoverService;
 use App\Service\BookInfoScraperService;
+use App\Service\SectionPermissionService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -24,15 +25,18 @@ class AjoutLivreController extends AbstractController
     private EntityManagerInterface $em;
     private BookInfoScraperService $scraperService;
     private BookCoverService $coverService;
+    private SectionPermissionService $permissionService;
 
     public function __construct(
         EntityManagerInterface $em,
         BookInfoScraperService $scraperService,
-        BookCoverService $coverService
+        BookCoverService $coverService,
+        SectionPermissionService $permissionService
     ) {
         $this->em = $em;
         $this->scraperService = $scraperService;
         $this->coverService = $coverService;
+        $this->permissionService = $permissionService;
     }
 
     /**
@@ -42,6 +46,7 @@ class AjoutLivreController extends AbstractController
     public function index(): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+        $this->permissionService->denyAccessUnlessCanRegister('books');
 
         return $this->render('livres/ajouter_choix.html.twig', [
             'supportedSites' => $this->scraperService->getSupportedSites(),
@@ -55,6 +60,7 @@ class AjoutLivreController extends AbstractController
     public function recherche(Request $request): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+        $this->permissionService->denyAccessUnlessCanRegister('books');
 
         $query = $request->get('query', '');
         $noResults = false;
@@ -108,6 +114,7 @@ class AjoutLivreController extends AbstractController
     public function fromUrl(Request $request): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+        $this->permissionService->denyAccessUnlessCanRegister('books');
 
         $data = null;
         $error = null;
@@ -142,6 +149,7 @@ class AjoutLivreController extends AbstractController
     public function formulaire(Request $request): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+        $this->permissionService->denyAccessUnlessCanRegister('books');
 
         $livre = new Livre();
         $forceNew = $request->get('force_new', false);
@@ -223,6 +231,7 @@ class AjoutLivreController extends AbstractController
     public function confirmerNouveau(Request $request): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+        $this->permissionService->denyAccessUnlessCanRegister('books');
 
         $formData = $request->getSession()->get('livre_ajout_data');
         if (!$formData) {
@@ -250,6 +259,7 @@ class AjoutLivreController extends AbstractController
     public function associer(int $id, Request $request): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+        $this->permissionService->denyAccessUnlessCanRegister('books');
 
         $livre = $this->em->getRepository(Livre::class)->find($id);
         if (!$livre) {
@@ -285,6 +295,7 @@ class AjoutLivreController extends AbstractController
     public function prefill(Request $request): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+        $this->permissionService->denyAccessUnlessCanRegister('books');
 
         $data = $request->request->all();
 

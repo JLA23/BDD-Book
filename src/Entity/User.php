@@ -60,6 +60,20 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      */
     private $idAccess;
 
+    /**
+     * Sections où l'utilisateur peut enregistrer du contenu
+     * null = toutes les sections (rétrocompatibilité), [] = aucune, ['books', 'magazines'] = seulement celles-ci
+     * @ORM\Column(type="json", nullable=true)
+     */
+    private ?array $sectionsEnregistrement = null;
+
+    public const SECTIONS = [
+        'books' => 'BDD-Books',
+        'magazines' => 'BDD-Magazines', 
+        'brick' => 'BDD-Brick',
+        'games' => 'BDD-Games',
+    ];
+
     public function getId(): ?int
     {
         return $this->id;
@@ -230,5 +244,44 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function getFullName(): string
     {
         return trim($this->name . ' ' . $this->lastname);
+    }
+
+    public function getSectionsEnregistrement(): ?array
+    {
+        return $this->sectionsEnregistrement;
+    }
+
+    public function setSectionsEnregistrement(?array $sectionsEnregistrement): self
+    {
+        $this->sectionsEnregistrement = $sectionsEnregistrement;
+        return $this;
+    }
+
+    /**
+     * Vérifie si l'utilisateur peut enregistrer dans une section
+     * Les admins peuvent tout enregistrer
+     * null = toutes les sections autorisées (rétrocompatibilité)
+     */
+    public function canRegisterInSection(string $section): bool
+    {
+        // Les admins peuvent tout enregistrer
+        if (in_array('ROLE_ADMIN', $this->getRoles())) {
+            return true;
+        }
+
+        // Si pas de restrictions définies (null), accès à tout
+        if ($this->sectionsEnregistrement === null) {
+            return true;
+        }
+
+        return in_array($section, $this->sectionsEnregistrement);
+    }
+
+    /**
+     * Retourne les sections disponibles
+     */
+    public static function getAvailableSections(): array
+    {
+        return self::SECTIONS;
     }
 }

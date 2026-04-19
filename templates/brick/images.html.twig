@@ -1,0 +1,144 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Gérer les images - {{ set.nom }} - BDD-Brick{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-4">
+    <div class="card shadow-sm">
+        <div class="card-header" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
+            <h5 class="mb-0 text-white">
+                <i class="fas fa-images"></i> Gérer les images - {{ set.nom }}
+            </h5>
+        </div>
+        <div class="card-body">
+            <form action="{{ path('brick_images', {id: set.id}) }}" method="post" enctype="multipart/form-data" class="mb-4">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label><i class="fas fa-upload"></i> Uploader des images</label>
+                            <input type="file" name="images[]" class="form-control-file" multiple accept="image/*">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label><i class="fas fa-link"></i> Ajouter par URL</label>
+                            <input type="url" name="image_urls[]" class="form-control" placeholder="https://...">
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-success"><i class="fas fa-plus"></i> Ajouter</button>
+            </form>
+            
+            <hr>
+            
+            <h6><i class="fas fa-sort"></i> Images actuelles <small class="text-muted">(glisser pour réordonner, la première = image principale)</small></h6>
+            
+            {% if set.images|length > 0 %}
+            <div id="imagesList" class="row">
+                {% for image in set.images %}
+                <div class="col-md-3 col-6 mb-3 image-item" data-id="{{ image.id }}">
+                    <div class="card h-100 {% if loop.first %}border-warning{% endif %}">
+                        <div class="position-relative">
+                            <img src="{{ image.displayUrl }}" class="card-img-top" style="height: 150px; object-fit: contain; background: #f8f9fa; cursor: move;">
+                            {% if loop.first %}
+                            <span class="badge badge-warning position-absolute" style="top: 5px; left: 5px;"><i class="fas fa-star"></i> Principale</span>
+                            {% else %}
+                            <span class="badge badge-dark position-absolute image-position" style="top: 5px; left: 5px;">{{ loop.index }}</span>
+                            {% endif %}
+                            <button type="button" class="btn btn-sm btn-danger position-absolute delete-image" style="top: 5px; right: 5px;" data-id="{{ image.id }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        <div class="card-body p-2 text-center">
+                            <small class="text-muted d-block">{{ image.source ?? 'Inconnu' }}</small>
+                            {% if not loop.first %}
+                            <button type="button" class="btn btn-xs btn-outline-warning set-main-image mt-1" data-id="{{ image.id }}" style="font-size: 10px; padding: 2px 6px;">
+                                <i class="fas fa-star"></i> Définir principale
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> Aucune image pour ce set.
+            </div>
+            {% endif %}
+        </div>
+        <div class="card-footer">
+            <a href="{{ path('brick_detail', {id: set.id}) }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Retour au set
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+$(document).ready(function() {
+    var el = document.getElementById('imagesList');
+    if (el) {
+        new Sortable(el, {
+            animation: 150,
+            onEnd: function() {
+                var order = [];
+                $('#imagesList .image-item').each(function() {
+                    order.push($(this).data('id'));
+                });
+                $.post('{{ path("brick_images_reorder", {id: set.id}) }}', { order: order });
+            }
+        });
+    }
+    
+    $('.delete-image').click(function() {
+        if (!confirm('Supprimer cette image ?')) return;
+        var btn = $(this);
+        var id = btn.data('id');
+        $.post('/brick/image/' + id + '/supprimer', function(response) {
+            if (response.success) {
+                btn.closest('.image-item').fadeOut(function() { $(this).remove(); updatePositions(); });
+            }
+        });
+    });
+    
+    // Définir comme image principale (mettre en position 0)
+    $('.set-main-image').click(function() {
+        var imageId = $(this).data('id');
+        var item = $(this).closest('.image-item');
+        var firstItem = $('#imagesList .image-item').first();
+        
+        // Déplacer l'élément en premier
+        item.insertBefore(firstItem);
+        
+        // Sauvegarder le nouvel ordre
+        var order = [];
+        $('#imagesList .image-item').each(function() {
+            order.push($(this).data('id'));
+        });
+        $.post('{{ path("brick_images_reorder", {id: set.id}) }}', { order: order }, function() {
+            location.reload();
+        });
+    });
+    
+    function updatePositions() {
+        $('#imagesList .image-item').each(function(index) {
+            var card = $(this).find('.card');
+            var badge = $(this).find('.image-position');
+            if (index === 0) {
+                card.addClass('border-warning');
+                badge.removeClass('badge-dark').addClass('badge-warning').html('<i class="fas fa-star"></i> Principale');
+                $(this).find('.set-main-image').hide();
+            } else {
+                card.removeClass('border-warning');
+                badge.removeClass('badge-warning').addClass('badge-dark').text(index + 1);
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

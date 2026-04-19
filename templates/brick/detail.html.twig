@@ -1,0 +1,312 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ set.nom }} - BDD-Brick{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-4">
+    <div class="mb-3 d-flex justify-content-between align-items-center">
+        <a href="{{ path('brick_list') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> Retour
+        </a>
+        {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+        <div>
+            <a href="{{ path('brick_images', {id: set.id}) }}" class="btn btn-info btn-sm mr-1">
+                <i class="fas fa-images"></i> Gérer les images
+            </a>
+            <a href="{{ path('brick_edit', {id: set.id}) }}" class="btn btn-primary btn-sm">
+                <i class="fas fa-edit"></i> Modifier
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
+            <h4 class="mb-0 text-white">
+                <i class="fas fa-cubes"></i> {{ set.nom }}
+                <span class="badge badge-light ml-2">{{ set.reference }}</span>
+                {% if set.marque %}
+                <span class="badge badge-dark ml-1">{{ set.marque.nom }}</span>
+                {% endif %}
+            </h4>
+        </div>
+        
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-5 mb-4">
+                    <div class="brick-main-image text-center mb-3 position-relative">
+                        <img id="mainImage" class="img-fluid rounded shadow" alt="{{ set.nom }}" 
+                             src="{{ set.mainImageUrl }}" style="max-height: 400px; object-fit: contain; cursor: pointer;"
+                             onclick="openLightbox(currentImageIndex)" data-toggle="tooltip" title="Cliquez pour agrandir"
+                             onerror="this.src='/images/brick-default.svg';" />
+                        {% if set.images|length > 1 %}
+                        <button type="button" class="btn btn-dark btn-sm position-absolute" style="left: 10px; top: 50%; transform: translateY(-50%); opacity: 0.7;" onclick="prevImage()">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <button type="button" class="btn btn-dark btn-sm position-absolute" style="right: 10px; top: 50%; transform: translateY(-50%); opacity: 0.7;" onclick="nextImage()">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                        <div class="position-absolute" style="bottom: 10px; left: 50%; transform: translateX(-50%);">
+                            <span class="badge badge-dark" id="imageCounter">1 / {{ set.images|length }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% if set.images|length > 1 %}
+                    <div class="brick-thumbnails d-flex flex-wrap justify-content-center">
+                        {% for image in set.images %}
+                        <div class="thumbnail-wrapper m-1" style="cursor: pointer;" onclick="goToImage({{ loop.index0 }})">
+                            <img src="{{ image.displayUrl }}" alt="Image {{ loop.index }}" 
+                                 class="img-thumbnail thumb-img {% if loop.first %}active{% endif %}" data-index="{{ loop.index0 }}"
+                                 style="width: 60px; height: 60px; object-fit: cover;" onerror="this.parentElement.style.display='none';" />
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-7">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <div class="info-item mb-3">
+                                <small class="text-muted d-block"><i class="fas fa-barcode"></i> Référence</small>
+                                <strong>{{ set.reference }}</strong>
+                            </div>
+                        </div>
+                        {% if set.marque %}
+                        <div class="col-sm-6">
+                            <div class="info-item mb-3">
+                                <small class="text-muted d-block"><i class="fas fa-trademark"></i> Marque</small>
+                                <strong>{{ set.marque.nom }}</strong>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if set.collection %}
+                        <div class="col-sm-6">
+                            <div class="info-item mb-3">
+                                <small class="text-muted d-block"><i class="fas fa-layer-group"></i> Collection</small>
+                                <strong>{{ set.collection.nom }}</strong>
+                            </div>
+                        </div>
+                        {% endif %}
+                        <div class="col-sm-6">
+                            <div class="info-item mb-3">
+                                <small class="text-muted d-block"><i class="fas fa-calendar"></i> Année</small>
+                                <strong>{% if set.annee %}{{ set.annee }}{% else %}-{% endif %}</strong>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="info-item mb-3">
+                                <small class="text-muted d-block"><i class="fas fa-puzzle-piece"></i> Nombre de pièces</small>
+                                <strong>{% if set.nbPieces %}{{ set.nbPieces }}{% else %}-{% endif %}</strong>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="info-item mb-3">
+                                <small class="text-muted d-block"><i class="fas fa-euro-sign"></i> Prix</small>
+                                <strong>{% if set.prix %}{{ set.prix|number_format(2) }} €{% else %}-{% endif %}</strong>
+                            </div>
+                        </div>
+                    </div>
+                    {% if set.description %}
+                    <div class="mt-3">
+                        <h6 class="text-muted mb-2"><i class="fas fa-align-left"></i> Description</h6>
+                        <div class="bg-light p-3 rounded" style="max-height: 200px; overflow-y: auto;">
+                            {{ set.description|nl2br }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mt-4 mb-5 shadow-sm">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center" style="cursor: pointer;" data-toggle="collapse" data-target="#proprietairesCollapse">
+            <h5 class="mb-0">
+                <i class="fas fa-users"></i> Propriétaires ({{ set.listeUser|length }})
+            </h5>
+            {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+                <a href="{{ path('brick_add_owner', {id: set.id}) }}" class="btn btn-sm btn-success" onclick="event.stopPropagation();">
+                    <i class="fas fa-user-plus mr-1"></i> Ajouter à ma collection
+                </a>
+            {% endif %}
+        </div>
+        <div id="proprietairesCollapse" class="collapse show">
+            <div class="card-body p-0">
+                {% if set.listeUser|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="thead-light">
+                            <tr>
+                                <th><i class="fas fa-user"></i> Utilisateur</th>
+                                <th><i class="fas fa-calendar-alt"></i> Date d'acquisition</th>
+                                <th><i class="fas fa-euro-sign"></i> Prix</th>
+                                <th><i class="fas fa-comment"></i> Commentaire</th>
+                                {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+                                    <th class="text-right"><i class="fas fa-cogs"></i></th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for lien in set.listeUser %}
+                            <tr>
+                                <td><strong>{{ lien.user.name }} {{ lien.user.lastName }}</strong></td>
+                                <td>{% if lien.dateAchat %}{{ lien.dateAchat|date('d/m/Y') }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                                <td>{% if lien.prixAchat %}<span class="text-success">{{ lien.prixAchat|number_format(2) }} €</span>{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                                <td>{% if lien.commentaire %}{{ lien.commentaire|length > 50 ? lien.commentaire|slice(0, 50) ~ '...' : lien.commentaire }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                                {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+                                    <td class="text-right text-nowrap">
+                                        <a href="{{ path('brick_edit_owner', {id: set.id, lienId: lien.id}) }}" class="btn btn-sm btn-outline-primary mr-1">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <form method="post" action="{{ path('brick_remove_owner', {id: set.id, lienId: lien.id}) }}" class="d-inline" onsubmit="return confirm('Retirer {{ lien.user.name }} ?')">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-user-minus"></i></button>
+                                        </form>
+                                    </td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="p-4 text-center text-muted">
+                    <i class="fas fa-users fa-2x mb-2"></i>
+                    <p class="mb-0">Aucun propriétaire pour ce set</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lightbox Modal -->
+<div class="modal fade" id="lightboxModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
+        <div class="modal-content bg-dark">
+            <div class="modal-header border-0 py-2">
+                <span class="text-white" id="lightboxCounter">1 / {{ set.images|length }}</span>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body text-center p-0 position-relative">
+                <img id="lightboxImage" src="" alt="{{ set.nom }}" class="img-fluid" style="max-height: 80vh; object-fit: contain;">
+                {% if set.images|length > 1 %}
+                <button type="button" class="btn btn-outline-light position-absolute" style="left: 20px; top: 50%; transform: translateY(-50%);" onclick="prevLightbox()">
+                    <i class="fas fa-chevron-left fa-2x"></i>
+                </button>
+                <button type="button" class="btn btn-outline-light position-absolute" style="right: 20px; top: 50%; transform: translateY(-50%);" onclick="nextLightbox()">
+                    <i class="fas fa-chevron-right fa-2x"></i>
+                </button>
+                {% endif %}
+            </div>
+            <div class="modal-footer border-0 py-2 justify-content-center">
+                {% if set.images|length > 1 %}
+                <div class="d-flex flex-wrap justify-content-center">
+                    {% for image in set.images %}
+                    <img src="{{ image.displayUrl }}" class="lightbox-thumb m-1 rounded" data-index="{{ loop.index0 }}"
+                         style="width: 50px; height: 50px; object-fit: cover; cursor: pointer; opacity: 0.5; transition: opacity 0.2s;"
+                         onclick="goToLightbox({{ loop.index0 }})" onerror="this.style.display='none';">
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .info-item { padding: 10px; background: #f8f9fa; border-radius: 8px; border-left: 3px solid #ff6b35; }
+    .brick-main-image { background: linear-gradient(135deg, #fff8e1 0%, #ffe0b2 100%); padding: 20px; border-radius: 10px; }
+    .thumbnail-wrapper img { transition: all 0.2s; border: 2px solid transparent; }
+    .thumbnail-wrapper:hover img { border-color: #ff6b35; transform: scale(1.1); }
+    .thumb-img.active { border-color: #ff6b35 !important; }
+    .lightbox-thumb.active { opacity: 1 !important; border: 2px solid #ff6b35; }
+</style>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+var images = [
+    {% for image in set.images %}
+    '{{ image.displayUrl }}'{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+var currentImageIndex = 0;
+var lightboxIndex = 0;
+
+function updateMainImage() {
+    if (images.length === 0) return;
+    document.getElementById('mainImage').src = images[currentImageIndex];
+    document.getElementById('imageCounter').textContent = (currentImageIndex + 1) + ' / ' + images.length;
+    
+    // Update active thumbnail
+    document.querySelectorAll('.thumb-img').forEach(function(img, i) {
+        img.classList.toggle('active', i === currentImageIndex);
+    });
+}
+
+function goToImage(index) {
+    currentImageIndex = index;
+    updateMainImage();
+}
+
+function prevImage() {
+    currentImageIndex = (currentImageIndex - 1 + images.length) % images.length;
+    updateMainImage();
+}
+
+function nextImage() {
+    currentImageIndex = (currentImageIndex + 1) % images.length;
+    updateMainImage();
+}
+
+function openLightbox(index) {
+    lightboxIndex = index;
+    updateLightbox();
+    $('#lightboxModal').modal('show');
+}
+
+function updateLightbox() {
+    if (images.length === 0) return;
+    document.getElementById('lightboxImage').src = images[lightboxIndex];
+    document.getElementById('lightboxCounter').textContent = (lightboxIndex + 1) + ' / ' + images.length;
+    
+    // Update active thumbnail in lightbox
+    document.querySelectorAll('.lightbox-thumb').forEach(function(img, i) {
+        img.classList.toggle('active', i === lightboxIndex);
+    });
+}
+
+function goToLightbox(index) {
+    lightboxIndex = index;
+    updateLightbox();
+}
+
+function prevLightbox() {
+    lightboxIndex = (lightboxIndex - 1 + images.length) % images.length;
+    updateLightbox();
+}
+
+function nextLightbox() {
+    lightboxIndex = (lightboxIndex + 1) % images.length;
+    updateLightbox();
+}
+
+// Keyboard navigation
+$(document).keydown(function(e) {
+    if ($('#lightboxModal').hasClass('show')) {
+        if (e.key === 'ArrowLeft') prevLightbox();
+        if (e.key === 'ArrowRight') nextLightbox();
+        if (e.key === 'Escape') $('#lightboxModal').modal('hide');
+    }
+});
+
+// Initialize tooltips
+$(function () {
+    $('[data-toggle="tooltip"]').tooltip();
+});
+</script>
+{% endblock %}
