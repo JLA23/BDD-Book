@@ -17,6 +17,7 @@ use App\Repository\BrickSetRepository;
 use App\Repository\LienUserBrickSetRepository;
 use App\Repository\UserRepository;
 use App\Service\BrickApiService;
+use App\Service\SectionPermissionService;
 use Doctrine\ORM\EntityManagerInterface;
 use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -32,22 +33,54 @@ class BrickController extends AbstractController
 {
     private EntityManagerInterface $em;
     private BrickApiService $brickApi;
+    private SectionPermissionService $permissionService;
 
-    public function __construct(EntityManagerInterface $em, BrickApiService $brickApi)
+    public function __construct(EntityManagerInterface $em, BrickApiService $brickApi, SectionPermissionService $permissionService)
     {
         $this->em = $em;
         $this->brickApi = $brickApi;
+        $this->permissionService = $permissionService;
+    }
+
+    /**
+     * Nettoie les collections et marques orphelines (sans sets associés)
+     */
+    private function cleanOrphanEntities(BrickCollectionRepository $collectionRepo, BrickMarqueRepository $marqueRepo): void
+    {
+        $hasChanges = false;
+
+        // Supprimer les collections sans sets
+        $allCollections = $collectionRepo->findAll();
+        foreach ($allCollections as $collection) {
+            if ($collection->getSets()->count() === 0) {
+                $this->em->remove($collection);
+                $hasChanges = true;
+            }
+        }
+
+        // Supprimer les marques sans sets
+        $allMarques = $marqueRepo->findAll();
+        foreach ($allMarques as $marque) {
+            if ($marque->getSets()->count() === 0) {
+                $this->em->remove($marque);
+                $hasChanges = true;
+            }
+        }
+
+        if ($hasChanges) {
+            $this->em->flush();
+        }
     }
 
     #[Route('/', name: 'brick_index')]
     public function index(BrickSetRepository $setRepo, BrickCollectionRepository $collectionRepo, BrickMarqueRepository $marqueRepo, UserRepository $userRepo, LienUserBrickSetRepository $lienRepo): Response
     {
-        // Récupérer les utilisateurs avec leur nombre de sets
+        // Récupérer les utilisateurs avec leur nombre de sets (ceux avec contenu ou permission)
         $users = $userRepo->findAll();
         $usersWithCount = [];
         foreach ($users as $user) {
             $count = $lienRepo->count(['user' => $user]);
-            if ($count > 0) {
+            if ($count > 0 || $user->canRegisterInSection('brick')) {
                 $user->setsCount = $count;
                 $usersWithCount[] = $user;
             }
@@ -70,7 +103,8 @@ class BrickController extends AbstractController
         $usersWithCount = [];
         foreach ($users as $user) {
             $count = $lienRepo->count(['user' => $user]);
-            if ($count > 0) {
+            // Afficher si l'utilisateur a du contenu OU s'il a la permission d'enregistrer
+            if ($count > 0 || $user->canRegisterInSection('brick')) {
                 $user->setsCount = $count;
                 $usersWithCount[] = $user;
             }
@@ -125,7 +159,8 @@ class BrickController extends AbstractController
     #[Route('/nouveau', name: 'brick_new')]
     public function new(Request $request, BrickCollectionRepository $collectionRepo, BrickMarqueRepository $marqueRepo, BrickSetRepository $setRepo, LienUserBrickSetRepository $lienRepo, SluggerInterface $slugger): Response
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+        $this->permissionService->denyAccessUnlessCanRegister('brick');
 
         $session = $request->getSession();
         $set = new BrickSet();
@@ -316,7 +351,8 @@ class BrickController extends AbstractController
     #[Route('/set/{id}/modifier', name: 'brick_edit', requirements: ['id' => '\d+'])]
     public function edit(int $id, Request $request, BrickSetRepository $setRepo): Response
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+        $this->permissionService->denyAccessUnlessCanRegister('brick');
 
         $set = $setRepo->find($id);
         if (!$set) {
@@ -344,9 +380,10 @@ class BrickController extends AbstractController
     }
 
     #[Route('/set/{id}/supprimer', name: 'brick_delete', requirements: ['id' => '\d+'], methods: ['POST'])]
-    public function delete(int $id, Request $request, BrickSetRepository $setRepo): Response
+    public function delete(int $id, Request $request, BrickSetRepository $setRepo, BrickCollectionRepository $collectionRepo, BrickMarqueRepository $marqueRepo): Response
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+        $this->permissionService->denyAccessUnlessCanRegister('brick');
 
         $set = $setRepo->find($id);
         if (!$set) {
@@ -354,8 +391,22 @@ class BrickController extends AbstractController
         }
 
         if ($this->isCsrfTokenValid('delete' . $set->getId(), $request->request->get('_token'))) {
+            // Supprimer les images uploadées
+            foreach ($set->getImages() as $image) {
+                if ($image->getFilename()) {
+                    $filePath = $this->getParameter('kernel.project_dir') . '/public/uploads/brick/' . $image->getFilename();
+                    if (file_exists($filePath)) {
+                        unlink($filePath);
+                    }
+                }
+            }
+            
             $this->em->remove($set);
             $this->em->flush();
+            
+            // Nettoyer les collections et marques orphelines
+            $this->cleanOrphanEntities($collectionRepo, $marqueRepo);
+            
             $this->addFlash('success', 'Set supprimé');
         }
 
@@ -365,7 +416,8 @@ class BrickController extends AbstractController
     #[Route('/recherche-reference', name: 'brick_search_reference')]
     public function searchByReference(): Response
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+        $this->permissionService->denyAccessUnlessCanRegister('brick');
 
         return $this->render('brick/search_reference.html.twig', [
             'rebrickableConfigured' => $this->brickApi->isRebrickableConfigured(),
@@ -376,7 +428,7 @@ class BrickController extends AbstractController
     #[Route('/api/search', name: 'brick_api_search', methods: ['GET'])]
     public function apiSearch(Request $request, BrickSetRepository $setRepo): JsonResponse
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
 
         $reference = $request->query->get('reference', '');
 
@@ -432,7 +484,7 @@ class BrickController extends AbstractController
     #[Route('/api/store-images', name: 'brick_api_store_images', methods: ['POST'])]
     public function apiStoreImages(Request $request): JsonResponse
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
 
         $data = json_decode($request->getContent(), true);
         $images = $data['images'] ?? [];
@@ -446,7 +498,7 @@ class BrickController extends AbstractController
     #[Route('/api/remove-pending-image', name: 'brick_api_remove_pending_image', methods: ['POST'])]
     public function apiRemovePendingImage(Request $request): JsonResponse
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
 
         $data = json_decode($request->getContent(), true);
         $indexToRemove = $data['index'] ?? null;
@@ -465,7 +517,7 @@ class BrickController extends AbstractController
     #[Route('/api/add-pending-image', name: 'brick_api_add_pending_image', methods: ['POST'])]
     public function apiAddPendingImage(Request $request): JsonResponse
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
 
         $data = json_decode($request->getContent(), true);
         $url = $data['url'] ?? null;
@@ -485,7 +537,7 @@ class BrickController extends AbstractController
     #[Route('/set/{id}/images', name: 'brick_images', requirements: ['id' => '\d+'])]
     public function manageImages(int $id, Request $request, BrickSetRepository $setRepo, BrickImageRepository $imageRepo, SluggerInterface $slugger): Response
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
 
         $set = $setRepo->find($id);
         if (!$set) {
@@ -546,7 +598,7 @@ class BrickController extends AbstractController
     #[Route('/set/{id}/images/reorder', name: 'brick_images_reorder', requirements: ['id' => '\d+'], methods: ['POST'])]
     public function reorderImages(int $id, Request $request, BrickSetRepository $setRepo, BrickImageRepository $imageRepo): JsonResponse
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
 
         $set = $setRepo->find($id);
         if (!$set) {
@@ -570,7 +622,7 @@ class BrickController extends AbstractController
     #[Route('/image/{id}/supprimer', name: 'brick_image_delete', requirements: ['id' => '\d+'], methods: ['POST'])]
     public function deleteImage(int $id, BrickImageRepository $imageRepo): JsonResponse
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
 
         $image = $imageRepo->find($id);
         if (!$image) {
@@ -595,7 +647,8 @@ class BrickController extends AbstractController
     #[Route('/set/{id}/ajouter-proprietaire', name: 'brick_add_owner', requirements: ['id' => '\d+'])]
     public function addOwner(int $id, Request $request, BrickSetRepository $setRepo, LienUserBrickSetRepository $lienRepo): Response
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+        $this->permissionService->denyAccessUnlessCanRegister('brick');
 
         $set = $setRepo->find($id);
         if (!$set) {
@@ -641,7 +694,7 @@ class BrickController extends AbstractController
     #[Route('/set/{id}/modifier-proprietaire/{lienId}', name: 'brick_edit_owner', requirements: ['id' => '\d+', 'lienId' => '\d+'])]
     public function editOwner(int $id, int $lienId, Request $request, BrickSetRepository $setRepo, LienUserBrickSetRepository $lienRepo): Response
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
 
         $set = $setRepo->find($id);
         if (!$set) {
@@ -683,9 +736,9 @@ class BrickController extends AbstractController
     }
 
     #[Route('/set/{id}/retirer-proprietaire/{lienId}', name: 'brick_remove_owner', requirements: ['id' => '\d+', 'lienId' => '\d+'], methods: ['POST'])]
-    public function removeOwner(int $id, int $lienId, Request $request, BrickSetRepository $setRepo, LienUserBrickSetRepository $lienRepo): Response
+    public function removeOwner(int $id, int $lienId, Request $request, BrickSetRepository $setRepo, LienUserBrickSetRepository $lienRepo, BrickCollectionRepository $collectionRepo, BrickMarqueRepository $marqueRepo): Response
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
 
         $lien = $lienRepo->find($lienId);
         if (!$lien || $lien->getBrickSet()->getId() !== $id) {
@@ -714,6 +767,9 @@ class BrickController extends AbstractController
             $this->em->remove($set);
             $this->em->flush();
             
+            // Nettoyer les collections et marques orphelines
+            $this->cleanOrphanEntities($collectionRepo, $marqueRepo);
+            
             $this->addFlash('info', 'Set supprimé car plus aucun propriétaire');
             return $this->redirectToRoute('brick_list');
         }
@@ -731,15 +787,22 @@ class BrickController extends AbstractController
     }
 
     #[Route('/collection/nouvelle', name: 'brick_collection_new')]
-    public function newCollection(Request $request): Response
+    public function newCollection(Request $request, BrickCollectionRepository $collectionRepo): Response
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
 
         $collection = new BrickCollection();
         $form = $this->createForm(BrickCollectionType::class, $collection);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            // Vérifier si une collection avec ce nom existe déjà
+            $existing = $collectionRepo->findOneBy(['nom' => $collection->getNom()]);
+            if ($existing) {
+                $this->addFlash('warning', 'Cette collection existe déjà');
+                return $this->redirectToRoute('brick_collections');
+            }
+            
             $this->em->persist($collection);
             $this->em->flush();
 
@@ -755,13 +818,24 @@ class BrickController extends AbstractController
     }
 
     #[Route('/api/collection/create', name: 'brick_api_collection_create', methods: ['POST'])]
-    public function apiCreateCollection(Request $request): JsonResponse
+    public function apiCreateCollection(Request $request, BrickCollectionRepository $collectionRepo): JsonResponse
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
 
         $nom = $request->request->get('nom');
         if (empty($nom)) {
             return $this->json(['error' => 'Nom requis'], 400);
+        }
+
+        // Vérifier si existe déjà
+        $existing = $collectionRepo->findOneBy(['nom' => $nom]);
+        if ($existing) {
+            return $this->json([
+                'success' => true,
+                'exists' => true,
+                'id' => $existing->getId(),
+                'nom' => $existing->getNom(),
+            ]);
         }
 
         $collection = new BrickCollection();
@@ -786,15 +860,22 @@ class BrickController extends AbstractController
     }
 
     #[Route('/marque/nouvelle', name: 'brick_marque_new')]
-    public function newMarque(Request $request): Response
+    public function newMarque(Request $request, BrickMarqueRepository $marqueRepo): Response
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
 
         $marque = new BrickMarque();
         $form = $this->createForm(BrickMarqueType::class, $marque);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            // Vérifier si une marque avec ce nom existe déjà
+            $existing = $marqueRepo->findOneBy(['nom' => $marque->getNom()]);
+            if ($existing) {
+                $this->addFlash('warning', 'Cette marque existe déjà');
+                return $this->redirectToRoute('brick_marques');
+            }
+            
             $this->em->persist($marque);
             $this->em->flush();
 
@@ -810,13 +891,24 @@ class BrickController extends AbstractController
     }
 
     #[Route('/api/marque/create', name: 'brick_api_marque_create', methods: ['POST'])]
-    public function apiCreateMarque(Request $request): JsonResponse
+    public function apiCreateMarque(Request $request, BrickMarqueRepository $marqueRepo): JsonResponse
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
 
         $nom = $request->request->get('nom');
         if (empty($nom)) {
             return $this->json(['error' => 'Nom requis'], 400);
+        }
+
+        // Vérifier si existe déjà
+        $existing = $marqueRepo->findOneBy(['nom' => $nom]);
+        if ($existing) {
+            return $this->json([
+                'success' => true,
+                'exists' => true,
+                'id' => $existing->getId(),
+                'nom' => $existing->getNom(),
+            ]);
         }
 
         $marque = new BrickMarque();

@@ -360,7 +360,15 @@ $(document).ready(function() {
             data: { nom: nom },
             success: function(response) {
                 if (response.success) {
-                    $('#{{ form.marque.vars.id }}').append($('<option>', { value: response.id, text: response.nom, selected: true }));
+                    var select = $('#{{ form.marque.vars.id }}');
+                    if (response.exists) {
+                        // Sélectionner l'existant
+                        select.val(response.id);
+                        alert('Cette marque existe déjà, elle a été sélectionnée.');
+                    } else {
+                        // Ajouter et sélectionner la nouvelle
+                        select.append($('<option>', { value: response.id, text: response.nom, selected: true }));
+                    }
                     $('#newMarqueModal').modal('hide');
                     $('#newMarqueName').val('');
                 }
@@ -382,7 +390,15 @@ $(document).ready(function() {
             data: { nom: nom },
             success: function(response) {
                 if (response.success) {
-                    $('#{{ form.collection.vars.id }}').append($('<option>', { value: response.id, text: response.nom, selected: true }));
+                    var select = $('#{{ form.collection.vars.id }}');
+                    if (response.exists) {
+                        // Sélectionner l'existant
+                        select.val(response.id);
+                        alert('Cette collection existe déjà, elle a été sélectionnée.');
+                    } else {
+                        // Ajouter et sélectionner la nouvelle
+                        select.append($('<option>', { value: response.id, text: response.nom, selected: true }));
+                    }
                     $('#newCollectionModal').modal('hide');
                     $('#newCollectionName').val('');
                 }

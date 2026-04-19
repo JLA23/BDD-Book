@@ -13,6 +13,7 @@ use App\Repository\KioskCollecRepository;
 use App\Repository\KioskNumRepository;
 use App\Repository\LienKioskNumUserRepository;
 use App\Repository\UserRepository;
+use App\Service\SectionPermissionService;
 use Doctrine\ORM\EntityManagerInterface;
 use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -24,10 +25,12 @@ use Symfony\Component\Routing\Attribute\Route;
 class KiosqueController extends AbstractController
 {
     private EntityManagerInterface $em;
+    private SectionPermissionService $permissionService;
 
-    public function __construct(EntityManagerInterface $em)
+    public function __construct(EntityManagerInterface $em, SectionPermissionService $permissionService)
     {
         $this->em = $em;
+        $this->permissionService = $permissionService;
     }
 
     #[Route('/', name: 'magazines_list')]
@@ -73,7 +76,8 @@ class KiosqueController extends AbstractController
     #[Route('/nouveau', name: 'magazine_new')]
     public function newMagazine(Request $request): Response
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+        $this->permissionService->denyAccessUnlessCanRegister('magazines');
         
         $user = $this->getUser();
         $magazine = new KioskCollec();
@@ -152,7 +156,8 @@ class KiosqueController extends AbstractController
     #[Route('/{id}/modifier', name: 'magazine_edit', requirements: ['id' => '\d+'])]
     public function editMagazine(int $id, Request $request, KioskCollecRepository $repository): Response
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+        $this->permissionService->denyAccessUnlessCanRegister('magazines');
         
         $magazine = $repository->find($id);
         if (!$magazine) {
@@ -194,7 +199,8 @@ class KiosqueController extends AbstractController
     #[Route('/{id}/numero/nouveau', name: 'numero_new', requirements: ['id' => '\d+'])]
     public function newNumero(int $id, Request $request, KioskCollecRepository $magazineRepo): Response
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+        $this->permissionService->denyAccessUnlessCanRegister('magazines');
         
         $magazine = $magazineRepo->find($id);
         if (!$magazine) {
@@ -248,7 +254,8 @@ class KiosqueController extends AbstractController
     #[Route('/{id}/numeros/nouveau', name: 'numeros_new_multiple', requirements: ['id' => '\d+'])]
     public function newNumerosMultiple(int $id, Request $request, KioskCollecRepository $magazineRepo, UserRepository $userRepo): Response
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+        $this->permissionService->denyAccessUnlessCanRegister('magazines');
         
         $magazine = $magazineRepo->find($id);
         if (!$magazine) {
@@ -381,7 +388,8 @@ class KiosqueController extends AbstractController
     #[Route('/numero/{id}/modifier', name: 'numero_edit', requirements: ['id' => '\d+'])]
     public function editNumero(int $id, Request $request, KioskNumRepository $repository): Response
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+        $this->permissionService->denyAccessUnlessCanRegister('magazines');
         
         $numero = $repository->find($id);
         if (!$numero) {
@@ -424,7 +432,8 @@ class KiosqueController extends AbstractController
     #[Route('/numero/{id}/proprietaire/ajouter', name: 'numero_add_owner', requirements: ['id' => '\d+'])]
     public function addOwner(int $id, Request $request, KioskNumRepository $numeroRepo, UserRepository $userRepo, LienKioskNumUserRepository $lienRepo): Response
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+        $this->permissionService->denyAccessUnlessCanRegister('magazines');
         
         $numero = $numeroRepo->find($id);
         if (!$numero) {
@@ -519,7 +528,8 @@ class KiosqueController extends AbstractController
     #[Route('/proprietaire/{id}/commentaire', name: 'numero_edit_owner_comment', requirements: ['id' => '\d+'])]
     public function editOwnerComment(int $id, Request $request, LienKioskNumUserRepository $lienRepo): Response
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+        $this->permissionService->denyAccessUnlessCanRegister('magazines');
         
         $lien = $lienRepo->find($id);
         if (!$lien) {

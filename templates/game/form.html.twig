@@ -1,0 +1,231 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{% if isEdit %}Modifier{% else %}Nouveau{% endif %} jeu - BDD-Games{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            {% if duplicateWarning %}
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle"></i> <strong>{{ duplicateWarning.message }}</strong>
+                <p class="mb-0 mt-2">
+                    <a href="{{ path('game_detail', {id: duplicateWarning.game.id}) }}" class="alert-link">
+                        Voir le jeu existant: {{ duplicateWarning.game.titre }} ({{ duplicateWarning.game.console }})
+                    </a>
+                </p>
+            </div>
+            {% endif %}
+
+            <div class="card shadow-sm">
+                <div class="card-header" style="background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);">
+                    <h5 class="mb-0 text-white">
+                        <i class="fas fa-{% if isEdit %}edit{% else %}plus{% endif %}"></i>
+                        {% if isEdit %}Modifier le jeu{% else %}Nouveau jeu{% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if prefillImages is defined and prefillImages|length > 0 %}
+                    <div class="alert alert-info mb-4">
+                        <strong><i class="fas fa-info-circle"></i> Import depuis API</strong>
+                        <p class="mb-2 small">{{ prefillImages|length }} image(s) seront automatiquement ajoutées.</p>
+                        <div class="d-flex flex-wrap">
+                            {% for img in prefillImages %}
+                            <img src="{{ img.url }}" alt="Aperçu {{ loop.index }}" class="mr-2 mb-2 rounded border" style="height: 60px; object-fit: contain;">
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {{ form_start(form, {'attr': {'class': 'needs-validation', 'novalidate': 'novalidate', 'enctype': 'multipart/form-data'}}) }}
+                    
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="form-group">
+                                {{ form_label(form.titre) }}
+                                {{ form_widget(form.titre) }}
+                                {{ form_errors(form.titre) }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form_label(form.console) }}
+                                {{ form_widget(form.console) }}
+                                {{ form_errors(form.console) }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                {{ form_label(form.annee) }}
+                                {{ form_widget(form.annee) }}
+                                {{ form_errors(form.annee) }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                {{ form_label(form.genre) }}
+                                {{ form_widget(form.genre) }}
+                                {{ form_errors(form.genre) }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                {{ form_label(form.classification) }}
+                                {{ form_widget(form.classification) }}
+                                {{ form_errors(form.classification) }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                {{ form_label(form.editeur) }}
+                                {{ form_widget(form.editeur) }}
+                                {{ form_errors(form.editeur) }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                {{ form_label(form.developpeur) }}
+                                {{ form_widget(form.developpeur) }}
+                                {{ form_errors(form.developpeur) }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                {{ form_label(form.coverUrl) }}
+                                {{ form_widget(form.coverUrl) }}
+                                {{ form_errors(form.coverUrl) }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        {{ form_label(form.description) }}
+                        {{ form_widget(form.description) }}
+                        {{ form_errors(form.description) }}
+                    </div>
+
+                    {% if not isEdit %}
+                    <hr>
+                    <h5><i class="fas fa-images"></i> Images supplémentaires</h5>
+                    
+                    <div class="form-group">
+                        <label>Uploader des images</label>
+                        <input type="file" name="uploaded_images[]" class="form-control-file" multiple accept="image/*">
+                        <small class="text-muted">Formats acceptés: JPG, PNG, GIF</small>
+                    </div>
+
+                    <hr>
+                    <div class="form-group">
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input" id="addToCollection" name="add_to_collection" value="1" checked>
+                            <label class="custom-control-label" for="addToCollection">
+                                <strong>Ajouter à ma collection</strong>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="collectionDetails">
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h6><i class="fas fa-user"></i> Informations de ma collection</h6>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label>Type d'édition</label>
+                                            <select name="type_edition" id="typeEdition" class="form-control form-control-sm">
+                                                <option value="physique">Physique</option>
+                                                <option value="numerique">Numérique</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label>Nom de l'édition</label>
+                                            <input type="text" name="nom_edition" class="form-control form-control-sm" placeholder="Standard, Collector, GOTY...">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label>Date d'achat</label>
+                                            <input type="date" name="date_achat" class="form-control form-control-sm" value="{{ 'now'|date('Y-m-d') }}">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label>Prix d'achat (€)</label>
+                                            <input type="number" step="0.01" name="prix_achat" class="form-control form-control-sm" placeholder="0.00">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4" id="storeField" style="display: none;">
+                                        <div class="form-group">
+                                            <label>Store</label>
+                                            <select name="store" class="form-control form-control-sm">
+                                                <option value="">-- Sélectionner --</option>
+                                                <option value="Steam">Steam</option>
+                                                <option value="Epic Games">Epic Games</option>
+                                                <option value="GOG">GOG</option>
+                                                <option value="PlayStation Store">PlayStation Store</option>
+                                                <option value="Xbox Store">Xbox Store</option>
+                                                <option value="Nintendo eShop">Nintendo eShop</option>
+                                                <option value="Ubisoft Connect">Ubisoft Connect</option>
+                                                <option value="EA App">EA App</option>
+                                                <option value="Battle.net">Battle.net</option>
+                                                <option value="Autre">Autre</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label>Commentaire</label>
+                                            <input type="text" name="commentaire_lien" class="form-control form-control-sm" placeholder="Notes personnelles...">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ isEdit ? path('game_detail', {id: game.id}) : path('game_index') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Annuler
+                        </a>
+                        <button type="submit" class="btn" style="background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%); color: white;">
+                            <i class="fas fa-save"></i> {% if isEdit %}Enregistrer{% else %}Créer le jeu{% endif %}
+                        </button>
+                    </div>
+                    
+                    {{ form_end(form) }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+$(document).ready(function() {
+    $('#addToCollection').change(function() {
+        $('#collectionDetails').toggle(this.checked);
+    });
+    
+    $('#typeEdition').change(function() {
+        if ($(this).val() === 'numerique') {
+            $('#storeField').show();
+        } else {
+            $('#storeField').hide();
+        }
+    });
+});
+</script>
+{% endblock %}

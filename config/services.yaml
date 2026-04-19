@@ -42,3 +42,9 @@ services:
         arguments:
             $rebrickableApiKey: '%env(default::REBRICKABLE_API_KEY)%'
             $bricksetApiKey: '%env(default::BRICKSET_API_KEY)%'
+
+    App\Service\GameApiService:
+        arguments:
+            $twitchClientId: '%env(default::TWITCH_CLIENT_ID)%'
+            $twitchClientSecret: '%env(default::TWITCH_CLIENT_SECRET)%'
+            $deeplApiKey: '%env(default::DEEPL_API_KEY)%'

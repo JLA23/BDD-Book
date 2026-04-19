@@ -3,137 +3,135 @@
 {% block title %}BDD-Brick - Base de données de sets{% endblock %}
 
 {% block body %}
-<div class="container py-3">
-    <div class="text-center mb-3">
-        <h2 style="color: #ff6b35;">
-            <i class="fas fa-cubes"></i> BDD-Brick
-        </h2>
-        <p class="text-muted mb-0">Base de données de sets de construction de la famille Lefebvre</p>
-    </div>
-
-    <div class="card shadow-sm mb-3">
-        <div class="card-header py-2" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
-            <h6 class="mb-0 text-white"><i class="fas fa-search"></i> Rechercher un set</h6>
+    <div id="acceuilSite">
+        <div class="text-center mb-4">
+            <h1 class="display-5 font-weight-bold" style="color: #ff6b35;">
+                <i class="fas fa-cubes"></i> BDD-Brick
+            </h1>
+            <p class="lead text-muted">Base de données de sets de construction de la famille Lefebvre</p>
         </div>
-        <div class="card-body py-3">
-            <form action="{{ path('brick_list') }}" method="get">
-                <div class="row align-items-end">
-                    <div class="col-md-5 mb-2">
-                        <label class="form-label small mb-1"><strong>Que recherchez-vous ?</strong></label>
-                        <div class="input-group input-group-sm">
-                            <div class="input-group-prepend">
-                                <span class="input-group-text bg-white"><i class="fas fa-cubes text-warning"></i></span>
+
+        <div class="card mb-4">
+            <div class="card-header" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
+                <h5 class="mb-0 text-white"><i class="fas fa-search"></i> Rechercher un set</h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ path('brick_list') }}" method="get">
+                    <div class="row">
+                        <div class="col-md-5">
+                            <div class="form-group mb-3">
+                                <label for="search" class="font-weight-bold text-dark">Que recherchez-vous ?</label>
+                                <div class="input-group input-group-lg">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text bg-white border-right-0"><i class="fas fa-cubes" style="color: #ff6b35;"></i></span>
+                                    </div>
+                                    <input type="text" name="search" class="form-control border-left-0" placeholder="Nom du set ou référence..." style="border-top-right-radius: 0.3rem !important; border-bottom-right-radius: 0.3rem !important;">
+                                </div>
+                                <small class="form-text text-muted">Recherche par nom ou numéro de référence</small>
                             </div>
-                            <input type="text" name="search" class="form-control" placeholder="Nom du set ou référence...">
                         </div>
-                        <small class="text-muted" style="font-size: 11px;">Recherche par nom ou numéro de référence</small>
+                        <div class="col-md-3">
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-dark">Marque</label>
+                                <select name="marque" class="form-control form-control-lg">
+                                    <option value="">Toutes</option>
+                                    {% for marque in marques %}
+                                        <option value="{{ marque.id }}">{{ marque.nom }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-dark">Collection / Thème</label>
+                                <select name="collection" class="form-control form-control-lg">
+                                    <option value="">Toutes</option>
+                                    {% for collection in collections %}
+                                        <option value="{{ collection.id }}">{{ collection.nom }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-md-2 mb-2">
-                        <label class="form-label small mb-1"><strong>Marque</strong></label>
-                        <select name="marque" class="form-control form-control-sm">
-                            <option value="">Toutes</option>
-                            {% for marque in marques %}
-                                <option value="{{ marque.id }}">{{ marque.nom }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-3 mb-2">
-                        <label class="form-label small mb-1"><strong>Collection</strong></label>
-                        <select name="collection" class="form-control form-control-sm">
-                            <option value="">Toutes</option>
-                            {% for collection in collections %}
-                                <option value="{{ collection.id }}">{{ collection.nom }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-2 mb-2">
-                        <button type="submit" class="btn btn-warning btn-sm btn-block">
+                    
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-lg text-white px-5" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
                             <i class="fas fa-search"></i> Rechercher
                         </button>
                     </div>
-                </div>
-            </form>
+                </form>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-{{ is_granted('IS_AUTHENTICATED_REMEMBERED') ? '2' : '3' }} mb-3">
+                <a href="{{ path('brick_list') }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                    <div class="card-body text-center py-4">
+                        <div class="mb-3">
+                            <i class="fas fa-cubes fa-3x" style="color: #ff6b35;"></i>
+                        </div>
+                        <h5 class="card-title text-dark">Tous les sets</h5>
+                        <p class="card-text text-muted small">Parcourir le catalogue complet</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-{{ is_granted('IS_AUTHENTICATED_REMEMBERED') ? '2' : '3' }} mb-3">
+                <a href="{{ path('brick_users') }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                    <div class="card-body text-center py-4">
+                        <div class="mb-3">
+                            <i class="fas fa-users fa-3x text-success"></i>
+                        </div>
+                        <h5 class="card-title text-dark">Collections</h5>
+                        <p class="card-text text-muted small">Par utilisateur</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-{{ is_granted('IS_AUTHENTICATED_REMEMBERED') ? '2' : '3' }} mb-3">
+                <a href="{{ path('brick_collections') }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                    <div class="card-body text-center py-4">
+                        <div class="mb-3">
+                            <i class="fas fa-layer-group fa-3x text-info"></i>
+                        </div>
+                        <h5 class="card-title text-dark">Thèmes</h5>
+                        <p class="card-text text-muted small">Star Wars, Technic, City...</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-{{ is_granted('IS_AUTHENTICATED_REMEMBERED') ? '2' : '3' }} mb-3">
+                <a href="{{ path('brick_marques') }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                    <div class="card-body text-center py-4">
+                        <div class="mb-3">
+                            <i class="fas fa-trademark fa-3x text-secondary"></i>
+                        </div>
+                        <h5 class="card-title text-dark">Marques</h5>
+                        <p class="card-text text-muted small">LEGO, Mega Bloks, Cobi...</p>
+                    </div>
+                </a>
+            </div>
+            {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+            <div class="col-md-2 mb-3">
+                <a href="{{ path('brick_search_reference') }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                    <div class="card-body text-center py-4">
+                        <div class="mb-3">
+                            <i class="fas fa-barcode fa-3x text-info"></i>
+                        </div>
+                        <h5 class="card-title text-dark">Recherche API</h5>
+                        <p class="card-text text-muted small">Par référence Brickset</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-2 mb-3">
+                <a href="{{ path('brick_new') }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                    <div class="card-body text-center py-4">
+                        <div class="mb-3">
+                            <i class="fas fa-plus-circle fa-3x" style="color: #ff6b35;"></i>
+                        </div>
+                        <h5 class="card-title text-dark">Ajouter un set</h5>
+                        <p class="card-text text-muted small">Ajouter un set à la base</p>
+                    </div>
+                </a>
+            </div>
+            {% endif %}
         </div>
     </div>
-
-    <div class="row">
-        <div class="col-md-3 col-6 mb-2">
-            <a href="{{ path('brick_list') }}" class="text-decoration-none">
-                <div class="card h-100 text-center py-3 shadow-sm hover-card">
-                    <div class="card-body p-2">
-                        <i class="fas fa-cubes fa-2x mb-2" style="color: #ff6b35;"></i>
-                        <h6 class="card-title mb-1">Tous les sets</h6>
-                        <p class="card-text text-muted small mb-2">Parcourir le catalogue complet</p>
-                        <span class="badge badge-warning badge-pill px-2 py-1">{{ totalSets }} set(s)</span>
-                    </div>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-3 col-6 mb-2">
-            <a href="{{ path('brick_users') }}" class="text-decoration-none">
-                <div class="card h-100 text-center py-3 shadow-sm hover-card">
-                    <div class="card-body p-2">
-                        <i class="fas fa-users fa-2x mb-2 text-success"></i>
-                        <h6 class="card-title mb-1">Collections</h6>
-                        <p class="card-text text-muted small mb-2">Par utilisateur</p>
-                        <span class="badge badge-success badge-pill px-2 py-1">{{ users|length }} utilisateur(s)</span>
-                    </div>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-3 col-6 mb-2">
-            <a href="{{ path('brick_collections') }}" class="text-decoration-none">
-                <div class="card h-100 text-center py-3 shadow-sm hover-card">
-                    <div class="card-body p-2">
-                        <i class="fas fa-layer-group fa-2x mb-2 text-info"></i>
-                        <h6 class="card-title mb-1">Thèmes</h6>
-                        <p class="card-text text-muted small mb-2">Star Wars, Technic, City...</p>
-                        <span class="badge badge-info badge-pill px-2 py-1">{{ totalCollections }} thème(s)</span>
-                    </div>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-3 col-6 mb-2">
-            <a href="{{ path('brick_marques') }}" class="text-decoration-none">
-                <div class="card h-100 text-center py-3 shadow-sm hover-card">
-                    <div class="card-body p-2">
-                        <i class="fas fa-trademark fa-2x mb-2 text-secondary"></i>
-                        <h6 class="card-title mb-1">Marques</h6>
-                        <p class="card-text text-muted small mb-2">LEGO, Mega Bloks, Cobi...</p>
-                        <span class="badge badge-secondary badge-pill px-2 py-1">{{ totalMarques }} marque(s)</span>
-                    </div>
-                </div>
-            </a>
-        </div>
-        {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
-        <div class="col-md-3 col-6 mb-2">
-            <a href="{{ path('brick_search_reference') }}" class="text-decoration-none">
-                <div class="card h-100 text-center py-3 shadow-sm hover-card">
-                    <div class="card-body p-2">
-                        <i class="fas fa-barcode fa-2x mb-2 text-info"></i>
-                        <h6 class="card-title mb-1">Recherche API</h6>
-                        <p class="card-text text-muted small mb-2">Par référence Brickset</p>
-                    </div>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-3 col-6 mb-2">
-            <a href="{{ path('brick_new') }}" class="text-decoration-none">
-                <div class="card h-100 text-center py-3 shadow-sm hover-card">
-                    <div class="card-body p-2">
-                        <i class="fas fa-plus-circle fa-2x mb-2 text-success"></i>
-                        <h6 class="card-title mb-1">Ajouter un set</h6>
-                        <p class="card-text text-muted small mb-2">Ajouter un set à la base</p>
-                    </div>
-                </div>
-            </a>
-        </div>
-        {% endif %}
-    </div>
-</div>
-
-<style>
-    .hover-card { transition: transform 0.2s, box-shadow 0.2s; border: 1px solid #dee2e6; }
-    .hover-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important; }
-</style>
 {% endblock %}

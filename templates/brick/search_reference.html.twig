@@ -45,21 +45,9 @@
                             <p class="mt-2 text-muted">Recherche en cours...</p>
                         </div>
                         
-                        <div id="duplicateWarning" class="alert alert-warning" style="display: none;">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div>
-                                    <i class="fas fa-exclamation-triangle"></i> <strong>Ce set existe déjà dans votre base !</strong>
-                                    <span id="duplicateSetName" class="ml-2"></span>
-                                </div>
-                                <div>
-                                    <a href="#" id="duplicateLink" class="btn btn-sm btn-primary mr-2">
-                                        <i class="fas fa-eye"></i> Voir le set
-                                    </a>
-                                    <a href="#" id="duplicateAddToCollection" class="btn btn-sm btn-success">
-                                        <i class="fas fa-user-plus"></i> Ajouter à ma collection
-                                    </a>
-                                </div>
-                            </div>
+                        <div id="duplicateWarning" class="alert alert-danger" style="display: none;">
+                            <i class="fas fa-exclamation-triangle"></i> <strong>Ce set existe déjà dans votre base !</strong>
+                            <a href="#" id="duplicateLink" class="alert-link ml-2">Voir le set</a>
                         </div>
                         
                         <div id="setResult" style="display: none;">
@@ -163,13 +151,9 @@ $(document).ready(function() {
             success: function(response) {
                 $('#loadingSpinner').hide();
                 
-                // Si le set existe déjà, afficher l'alerte avec les options
-                if (response.exists && response.duplicate) {
+                if (response.duplicate) {
                     $('#duplicateWarning').show();
-                    $('#duplicateSetName').text(response.duplicate.nom);
                     $('#duplicateLink').attr('href', '/brick/set/' + response.duplicate.id);
-                    $('#duplicateAddToCollection').attr('href', '/brick/set/' + response.duplicate.id + '/ajouter-proprietaire');
-                    return;
                 }
                 
                 if (response.set) {
@@ -221,24 +205,17 @@ $(document).ready(function() {
             images.forEach(function(img, index) {
                 var isMain = img.type === 'main';
                 grid.append(
-                    '<div class="col-md-3 col-6 mb-3 image-card-wrapper">' +
-                    '<div class="card ' + (isMain ? 'border-warning' : '') + '" data-index="' + index + '">' +
+                    '<div class="col-md-3 col-6 mb-3">' +
+                    '<div class="card ' + (isMain ? 'border-warning' : '') + '">' +
                     '<div class="position-relative">' +
-                    '<img src="' + img.url + '" class="card-img-top" style="height: 150px; object-fit: contain; background: #f8f9fa; cursor: pointer;" onclick="setMainImage(' + index + ')" onerror="this.closest(\'.image-card-wrapper\').remove(); updateSelectedCount();">' +
+                    '<img src="' + img.url + '" class="card-img-top" style="height: 150px; object-fit: contain; background: #f8f9fa;" onerror="this.closest(\'.col-md-3\').remove(); updateSelectedCount();">' +
                     '<div class="custom-control custom-checkbox position-absolute" style="top: 5px; left: 10px;">' +
-                    '<input type="checkbox" class="custom-control-input image-checkbox" id="imgCheck' + index + '" data-url="' + img.url + '" data-source="' + img.source + '" data-index="' + index + '" ' + (isMain ? 'checked' : '') + '>' +
+                    '<input type="checkbox" class="custom-control-input image-checkbox" id="imgCheck' + index + '" data-url="' + img.url + '" data-source="' + img.source + '" ' + (isMain ? 'checked' : '') + '>' +
                     '<label class="custom-control-label" for="imgCheck' + index + '"></label>' +
                     '</div>' +
-                    '<div class="main-image-badge position-absolute" style="top: 5px; right: 5px; display: ' + (isMain ? 'block' : 'none') + ';">' +
-                    '<span class="badge badge-warning"><i class="fas fa-star"></i> Principale</span>' +
+                    (isMain ? '<span class="badge badge-warning position-absolute" style="top: 5px; right: 5px;"><i class="fas fa-star"></i></span>' : '') +
                     '</div>' +
-                    '</div>' +
-                    '<div class="card-body p-2 text-center">' +
-                    '<small class="text-muted d-block">' + img.source + '</small>' +
-                    '<button type="button" class="btn btn-xs btn-outline-warning mt-1 set-main-btn" onclick="setMainImage(' + index + ')" style="font-size: 10px; padding: 2px 6px;">' +
-                    '<i class="fas fa-star"></i> Principale' +
-                    '</button>' +
-                    '</div>' +
+                    '<div class="card-body p-2 text-center"><small class="text-muted">' + img.source + '</small></div>' +
                     '</div></div>'
                 );
             });
@@ -262,31 +239,8 @@ $(document).ready(function() {
     
     $('#importSetBtn').click(function() {
         var selectedImages = [];
-        var mainImageIndex = null;
-        
-        // Trouver l'image principale
-        $('.main-image-badge:visible').each(function() {
-            mainImageIndex = $(this).closest('.card').data('index');
-        });
-        
-        // Ajouter d'abord l'image principale si elle est sélectionnée
-        if (mainImageIndex !== null) {
-            var mainCheckbox = $('#imgCheck' + mainImageIndex);
-            if (mainCheckbox.is(':checked')) {
-                selectedImages.push({ 
-                    url: mainCheckbox.data('url'), 
-                    source: mainCheckbox.data('source'),
-                    isMain: true 
-                });
-            }
-        }
-        
-        // Ajouter les autres images sélectionnées
         $('.image-checkbox:checked').each(function() {
-            var idx = $(this).data('index');
-            if (idx !== mainImageIndex) {
-                selectedImages.push({ url: $(this).data('url'), source: $(this).data('source') });
-            }
+            selectedImages.push({ url: $(this).data('url'), source: $(this).data('source') });
         });
         
         $.ajax({
@@ -330,21 +284,6 @@ $(document).ready(function() {
 function selectSet(reference) {
     $('#referenceInput').val(reference);
     $('#searchBtn').click();
-}
-
-function setMainImage(index) {
-    // Retirer le badge de toutes les images
-    $('.main-image-badge').hide();
-    $('#imagesGrid .card').removeClass('border-warning');
-    
-    // Ajouter le badge à l'image sélectionnée
-    var card = $('#imagesGrid .card[data-index="' + index + '"]');
-    card.addClass('border-warning');
-    card.find('.main-image-badge').show();
-    
-    // S'assurer que l'image est cochée
-    $('#imgCheck' + index).prop('checked', true);
-    updateSelectedCount();
 }
 </script>
 {% endblock %}
