@@ -530,7 +530,7 @@
             formData.append('cover', selectedFile);
             
             $.ajax({
-                url: '/livre/' + livreId + '/upload-cover',
+                url: '/books/' + livreId + '/upload-cover',
                 method: 'POST',
                 data: formData,
                 processData: false,
@@ -569,7 +569,7 @@
             btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Suppression...');
             
             $.ajax({
-                url: '/livre/' + livreId + '/supprimer-url-couverture',
+                url: '/books/' + livreId + '/supprimer-url-couverture',
                 method: 'POST',
                 success: function(response) {
                     if (response.success) {
@@ -608,7 +608,7 @@
             btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Enregistrement...');
             
             $.ajax({
-                url: '/livre/' + livreId + '/update-cover-url',
+                url: '/books/' + livreId + '/update-cover-url',
                 method: 'POST',
                 data: { imageUrl: foundImageUrl },
                 success: function(response) {
@@ -642,7 +642,7 @@
             
             // Appeler le contrôleur qui va appeler Puppeteer
             $.ajax({
-                url: '/livre/' + livreId + '/scrape-covers',
+                url: '/books/' + livreId + '/scrape-covers',
                 method: 'GET',
                 dataType: 'json',
                 timeout: 120000, // 2 minutes
@@ -685,7 +685,7 @@
                             
                             // Enregistrer l'URL
                             $.ajax({
-                                url: '/livre/' + livreId + '/update-cover-url',
+                                url: '/books/' + livreId + '/update-cover-url',
                                 method: 'POST',
                                 data: { imageUrl: imageUrl },
                                 dataType: 'json',
