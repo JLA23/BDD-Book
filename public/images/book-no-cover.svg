@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 300" fill="none">
+  <!-- Fond gris neutre -->
+  <rect width="200" height="300" fill="#6c757d"/>
+  
+  <!-- Texte "Couverture indisponible" -->
+  <text x="100" y="55" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="22" font-weight="bold">Couverture</text>
+  <text x="100" y="85" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="22" font-weight="bold">indisponible</text>
+  
+  <!-- Icône livre ouvert -->
+  <g transform="translate(100, 200)">
+    <!-- Page gauche -->
+    <path d="M-50 -40 L-50 40 Q-25 30 0 40 L0 -40 Q-25 -50 -50 -40 Z" fill="#5f5f5f"/>
+    <!-- Page droite -->
+    <path d="M50 -40 L50 40 Q25 30 0 40 L0 -40 Q25 -50 50 -40 Z" fill="#6b6b6b"/>
+    <!-- Reliure centrale -->
+    <path d="M-3 -45 L-3 45 L3 45 L3 -45 Z" fill="#4a4a4a"/>
+    <!-- Lignes de texte gauche -->
+    <line x1="-40" y1="-20" x2="-10" y2="-20" stroke="#7a7a7a" stroke-width="3"/>
+    <line x1="-40" y1="-5" x2="-10" y2="-5" stroke="#7a7a7a" stroke-width="3"/>
+    <line x1="-40" y1="10" x2="-10" y2="10" stroke="#7a7a7a" stroke-width="3"/>
+    <!-- Lignes de texte droite -->
+    <line x1="10" y1="-20" x2="40" y2="-20" stroke="#858585" stroke-width="3"/>
+    <line x1="10" y1="-5" x2="40" y2="-5" stroke="#858585" stroke-width="3"/>
+    <line x1="10" y1="10" x2="40" y2="10" stroke="#858585" stroke-width="3"/>
+  </g>
+</svg>

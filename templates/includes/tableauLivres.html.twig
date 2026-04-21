@@ -35,19 +35,25 @@
                                  class="img-cover img-fluid" 
                                  alt="{{ livre.titre }}" 
                                  src="{{ livre.getBestImage }}"
-                                 style="max-height: 180px; object-fit: contain; cursor: pointer;" />
-                        {% else %}
+                                 style="max-height: 180px; object-fit: contain; cursor: pointer;"
+                                 onerror="this.onerror=null; this.src='{{ asset('images/book-no-cover.svg') }}';" />
+                        {% elseif imageData %}
                             {# Image base64 (BLOB) #}
                             <img id='img-{{ livre.id }}' 
                                  class="img-cover img-fluid" 
                                  alt="{{ livre.titre }}" 
                                  src="data:image/png;base64,{{ imageData }}"
-                                 style="max-height: 180px; object-fit: contain; cursor: pointer;" />
+                                 style="max-height: 180px; object-fit: contain; cursor: pointer;"
+                                 onerror="this.onerror=null; this.src='{{ asset('images/book-no-cover.svg') }}';" />
+                        {% else %}
+                            <img src="{{ asset('images/book-no-cover.svg') }}" 
+                                 alt="Couverture indisponible" 
+                                 style="max-height: 180px; object-fit: contain;" />
                         {% endif %}
                     {% else %}
-                        <div class="d-flex align-items-center justify-content-center" style="height: 180px;">
-                            <i class="fas fa-book fa-4x text-muted"></i>
-                        </div>
+                        <img src="{{ asset('images/book-no-cover.svg') }}" 
+                             alt="Couverture indisponible" 
+                             style="max-height: 180px; object-fit: contain;" />
                     {% endif %}
                 </div>
                 

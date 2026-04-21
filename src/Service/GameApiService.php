@@ -198,15 +198,52 @@ class GameApiService
                 }
             }
 
-            // Classification PEGI (category 2 = PEGI)
+            // Classification PEGI/ESRB depuis age_ratings
+            // IGDB utilise: organization (1=ESRB, 2=PEGI, etc.) et rating_category
+            // PEGI rating_category: 9=PEGI 3, 10=PEGI 7, 11=PEGI 12, 12=PEGI 16, 13=PEGI 18 (anciens)
+            // Nouveaux: 8=PEGI 3, 9=PEGI 7, 10=PEGI 12, 11=PEGI 16, 12=PEGI 18
             $classification = null;
-            foreach ($game['age_ratings'] ?? [] as $ar) {
-                // category 1 = ESRB, category 2 = PEGI
-                if (($ar['category'] ?? 0) == 2) {
-                    // PEGI ratings: 1=3, 2=7, 3=12, 4=16, 5=18
-                    $pegiMap = [1 => 'PEGI 3', 2 => 'PEGI 7', 3 => 'PEGI 12', 4 => 'PEGI 16', 5 => 'PEGI 18'];
-                    $classification = $pegiMap[$ar['rating'] ?? 0] ?? null;
-                    break;
+            $ageRatings = $game['age_ratings'] ?? [];
+            
+            if (!empty($ageRatings)) {
+                // Mapping rating_category vers PEGI
+                $pegiMap = [
+                    8 => 'PEGI 3', 9 => 'PEGI 7', 10 => 'PEGI 12', 11 => 'PEGI 16', 12 => 'PEGI 18',
+                    // Anciens IDs possibles
+                    1 => 'PEGI 3', 2 => 'PEGI 7', 3 => 'PEGI 12', 4 => 'PEGI 16', 5 => 'PEGI 18',
+                ];
+                // ESRB rating_category: 6=M (Mature 17+), 5=T (Teen), etc.
+                $esrbToPegi = [
+                    1 => 'PEGI 3',   // RP
+                    2 => 'PEGI 3',   // EC
+                    3 => 'PEGI 3',   // E
+                    4 => 'PEGI 7',   // E10+
+                    5 => 'PEGI 12',  // T
+                    6 => 'PEGI 18',  // M
+                    7 => 'PEGI 18',  // AO
+                ];
+                
+                $esrbFallback = null;
+                foreach ($ageRatings as $ar) {
+                    // organization: 1=ESRB, 2=PEGI
+                    $org = $ar['organization'] ?? ($ar['category'] ?? 0);
+                    $ratingCat = $ar['rating_category'] ?? ($ar['rating'] ?? 0);
+                    
+                    // PEGI (organization 2) - prioritaire
+                    if ($org == 2) {
+                        if (isset($pegiMap[$ratingCat])) {
+                            $classification = $pegiMap[$ratingCat];
+                            break;
+                        }
+                    }
+                    // ESRB (organization 1) - fallback
+                    if ($org == 1 && $esrbFallback === null && isset($esrbToPegi[$ratingCat])) {
+                        $esrbFallback = $esrbToPegi[$ratingCat];
+                    }
+                }
+                
+                if ($classification === null && $esrbFallback !== null) {
+                    $classification = $esrbFallback;
                 }
             }
 

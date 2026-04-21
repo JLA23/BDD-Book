@@ -1,5 +1,7 @@
 {% extends 'base.html.twig' %}
 
+{% block title %}BDD-Book - {{ livre.titre }}{% endblock %}
+
 {% block body %}
 <div class="container-fluid px-4">
     <!-- Bouton retour + modifier -->
@@ -41,8 +43,9 @@
                         <img id='img-{{ livre.id }}' 
                              class="img-fluid rounded shadow clickable-image" 
                              alt="{{ livre.titre }}" 
-                             src="{{ livre.getBestImage }}"
-                             style="max-height: 400px; object-fit: contain; cursor: pointer;" />
+                             src="{{ livre.getBestImage ?: asset('images/book-no-cover.svg') }}"
+                             style="max-height: 400px; object-fit: contain; cursor: pointer;"
+                             onerror="this.onerror=null; this.src='{{ asset('images/book-no-cover.svg') }}';" />
                         {% if is_granted('IS_AUTHENTICATED_FULLY') %}
                         <button type="button" class="btn btn-light btn-sm edit-cover-btn" data-toggle="modal" data-target="#editCoverModal" title="Modifier la couverture">
                             <i class="fas fa-edit"></i>
@@ -239,7 +242,11 @@
             <div class="modal-body">
                 <!-- Image actuelle -->
                 <div class="text-center mb-4">
-                    <img src="{{ livre.getBestImage }}" class="img-thumbnail" style="max-height: 200px;" alt="Couverture actuelle">
+                    <img src="{{ livre.getBestImage ?: asset('images/book-no-cover.svg') }}" 
+                         class="img-thumbnail" 
+                         style="max-height: 200px;" 
+                         alt="Couverture actuelle"
+                         onerror="this.onerror=null; this.src='{{ asset('images/book-no-cover.svg') }}';">
                     {% if livre.getImage2 %}
                     <div class="mt-2">
                         <span class="badge badge-info"><i class="fas fa-link"></i> Image externe</span>

@@ -198,6 +198,34 @@
                                         </div>
                                     </div>
                                 </div>
+                                <div class="row">
+                                    <div class="col-12">
+                                        <div class="form-group">
+                                            <label><i class="fas fa-camera"></i> Photo de votre édition <small class="text-muted">(optionnel)</small></label>
+                                            <div class="btn-group btn-group-sm mb-2" role="group">
+                                                <button type="button" class="btn btn-outline-secondary active" id="btnUploadFile">
+                                                    <i class="fas fa-upload"></i> Fichier
+                                                </button>
+                                                <button type="button" class="btn btn-outline-secondary" id="btnUploadUrl">
+                                                    <i class="fas fa-link"></i> URL
+                                                </button>
+                                            </div>
+                                            <div id="fileUploadSection">
+                                                <div class="custom-file">
+                                                    <input type="file" name="image_perso" class="custom-file-input" id="imagePersoInput" accept="image/*">
+                                                    <label class="custom-file-label" for="imagePersoInput" data-browse="Parcourir">Choisir une image...</label>
+                                                </div>
+                                            </div>
+                                            <div id="urlUploadSection" style="display: none;">
+                                                <input type="url" name="image_perso_url" class="form-control form-control-sm" id="imagePersoUrl" placeholder="https://exemple.com/image.jpg">
+                                            </div>
+                                            <small class="text-muted">Photo de votre boîte, steelbook, collector...</small>
+                                            <div id="imagePersoPreview" class="mt-2 text-center" style="display: none;">
+                                                <img id="previewPersoImg" src="" class="img-thumbnail" style="max-height: 100px;">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -233,6 +261,59 @@ $(document).ready(function() {
             $('#storeField').show();
         } else {
             $('#storeField').hide();
+        }
+    });
+    
+    // Toggle fichier / URL pour photo édition
+    $('#btnUploadFile').click(function() {
+        $(this).addClass('active');
+        $('#btnUploadUrl').removeClass('active');
+        $('#fileUploadSection').show();
+        $('#urlUploadSection').hide();
+        $('#imagePersoUrl').val('');
+        $('#imagePersoPreview').hide();
+    });
+    
+    $('#btnUploadUrl').click(function() {
+        $(this).addClass('active');
+        $('#btnUploadFile').removeClass('active');
+        $('#urlUploadSection').show();
+        $('#fileUploadSection').hide();
+        $('#imagePersoInput').val('');
+        $('.custom-file-label').text('Choisir une image...');
+        $('#imagePersoPreview').hide();
+    });
+    
+    // Prévisualisation de l'image personnelle (fichier)
+    $('#imagePersoInput').change(function(e) {
+        var file = e.target.files[0];
+        if (file) {
+            $(this).next('.custom-file-label').text(file.name);
+            if (file.type.match('image.*')) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    $('#previewPersoImg').attr('src', e.target.result);
+                    $('#imagePersoPreview').show();
+                };
+                reader.readAsDataURL(file);
+            }
+        } else {
+            $(this).next('.custom-file-label').text('Choisir une image...');
+            $('#imagePersoPreview').hide();
+        }
+    });
+    
+    // Prévisualisation de l'image personnelle (URL)
+    $('#imagePersoUrl').on('input', function() {
+        var url = $(this).val().trim();
+        if (url) {
+            $('#previewPersoImg').attr('src', url).on('load', function() {
+                $('#imagePersoPreview').show();
+            }).on('error', function() {
+                $('#imagePersoPreview').hide();
+            });
+        } else {
+            $('#imagePersoPreview').hide();
         }
     });
 });

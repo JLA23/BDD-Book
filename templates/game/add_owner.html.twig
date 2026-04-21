@@ -73,9 +73,29 @@
                         </div>
 
                         <div class="form-group" id="imageField">
-                            <label><strong>Photo de votre édition</strong> <small class="text-muted">(optionnel)</small></label>
-                            <input type="file" name="image_perso" class="form-control-file" accept="image/*">
-                            <small class="text-muted">Ajoutez une photo de votre boîte, steelbook, etc.</small>
+                            <label><strong><i class="fas fa-camera"></i> Photo de votre édition</strong> <small class="text-muted">(optionnel)</small></label>
+                            <div class="btn-group btn-group-sm mb-2 d-block" role="group">
+                                <button type="button" class="btn btn-outline-secondary active" id="btnUploadFile">
+                                    <i class="fas fa-upload"></i> Fichier
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" id="btnUploadUrl">
+                                    <i class="fas fa-link"></i> URL
+                                </button>
+                            </div>
+                            <div id="fileUploadSection">
+                                <div class="custom-file mb-2">
+                                    <input type="file" name="image_perso" class="custom-file-input" id="imagePersoInput" accept="image/*">
+                                    <label class="custom-file-label" for="imagePersoInput" data-browse="Parcourir">Choisir une image...</label>
+                                </div>
+                            </div>
+                            <div id="urlUploadSection" style="display: none;">
+                                <input type="url" name="image_perso_url" class="form-control mb-2" id="imagePersoUrl" placeholder="https://exemple.com/image.jpg">
+                            </div>
+                            <small class="text-muted">Ajoutez une photo de votre boîte, steelbook, collector, etc.</small>
+                            <div id="imagePreview" class="mt-2 text-center" style="display: none;">
+                                <img id="previewImg" src="" class="img-thumbnail" style="max-height: 150px;">
+                                <br><small class="text-success"><i class="fas fa-check"></i> Image sélectionnée</small>
+                            </div>
                         </div>
 
                         <div class="form-group">
@@ -108,6 +128,59 @@ $(document).ready(function() {
             $('#storeField').show();
         } else {
             $('#storeField').hide();
+        }
+    });
+    
+    // Toggle fichier / URL
+    $('#btnUploadFile').click(function() {
+        $(this).addClass('active');
+        $('#btnUploadUrl').removeClass('active');
+        $('#fileUploadSection').show();
+        $('#urlUploadSection').hide();
+        $('#imagePersoUrl').val('');
+        $('#imagePreview').hide();
+    });
+    
+    $('#btnUploadUrl').click(function() {
+        $(this).addClass('active');
+        $('#btnUploadFile').removeClass('active');
+        $('#urlUploadSection').show();
+        $('#fileUploadSection').hide();
+        $('#imagePersoInput').val('');
+        $('.custom-file-label').text('Choisir une image...');
+        $('#imagePreview').hide();
+    });
+    
+    // Prévisualisation fichier
+    $('#imagePersoInput').change(function(e) {
+        var file = e.target.files[0];
+        if (file) {
+            $(this).next('.custom-file-label').text(file.name);
+            if (file.type.match('image.*')) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    $('#previewImg').attr('src', e.target.result);
+                    $('#imagePreview').show();
+                };
+                reader.readAsDataURL(file);
+            }
+        } else {
+            $(this).next('.custom-file-label').text('Choisir une image...');
+            $('#imagePreview').hide();
+        }
+    });
+    
+    // Prévisualisation URL
+    $('#imagePersoUrl').on('input', function() {
+        var url = $(this).val().trim();
+        if (url) {
+            $('#previewImg').attr('src', url).on('load', function() {
+                $('#imagePreview').show();
+            }).on('error', function() {
+                $('#imagePreview').hide();
+            });
+        } else {
+            $('#imagePreview').hide();
         }
     });
 });

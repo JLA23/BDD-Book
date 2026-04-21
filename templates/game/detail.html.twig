@@ -150,6 +150,15 @@
                             </td>
                             <td>
                                 {{ lien.nomEdition|default('Standard') }}
+                                {% if lien.displayImage %}
+                                    <button type="button" class="btn btn-sm btn-outline-info ml-2 show-edition-photo" 
+                                            data-image="{{ lien.displayImage }}" 
+                                            data-user="{{ lien.user.name }} {{ lien.user.lastName }}"
+                                            data-edition="{{ lien.nomEdition|default('Standard') }}"
+                                            title="Voir la photo">
+                                        <i class="fas fa-camera"></i>
+                                    </button>
+                                {% endif %}
                             </td>
                             <td>
                                 {% if lien.typeEdition == 'physique' %}
@@ -198,6 +207,25 @@
 <div id="imageModal" class="image-modal">
     <span class="image-modal-close">&times;</span>
     <img class="image-modal-content" id="modalImage">
+</div>
+
+<!-- Modal Photo Édition -->
+<div class="modal fade" id="editionPhotoModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-camera"></i> <span id="editionPhotoTitle">Photo de l'édition</span>
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body text-center p-0">
+                <img id="editionPhotoImg" src="" class="img-fluid" style="max-height: 70vh;">
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Modale d'édition de jaquette -->
@@ -378,6 +406,16 @@ $(document).ready(function() {
         if (e.keyCode === 27) {
             $('#imageModal').fadeOut();
         }
+    });
+    
+    // Modal photo édition utilisateur
+    $('.show-edition-photo').on('click', function() {
+        var image = $(this).data('image');
+        var user = $(this).data('user');
+        var edition = $(this).data('edition');
+        $('#editionPhotoTitle').text(edition + ' - ' + user);
+        $('#editionPhotoImg').attr('src', image);
+        $('#editionPhotoModal').modal('show');
     });
     
     // Ouvrir section URL

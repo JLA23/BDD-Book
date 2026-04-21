@@ -258,6 +258,25 @@ class GameController extends AbstractController
                 
                 $lien->setCommentaire($request->request->get('commentaire_lien'));
                 
+                // Image personnalisée de l'édition (fichier ou URL)
+                $imagePerso = $request->files->get('image_perso');
+                $imagePersoUrl = $request->request->get('image_perso_url');
+                
+                if ($imagePerso instanceof UploadedFile && $imagePerso->isValid()) {
+                    $userUploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/game/user';
+                    if (!is_dir($userUploadDir)) {
+                        mkdir($userUploadDir, 0777, true);
+                    }
+                    $originalFilename = pathinfo($imagePerso->getClientOriginalName(), PATHINFO_FILENAME);
+                    $safeFilename = $slugger->slug($originalFilename);
+                    $newFilename = $safeFilename . '-' . uniqid() . '.' . $imagePerso->guessExtension();
+                    $imagePerso->move($userUploadDir, $newFilename);
+                    $lien->setImagePerso($newFilename);
+                } elseif ($imagePersoUrl && filter_var($imagePersoUrl, FILTER_VALIDATE_URL)) {
+                    // Stocker directement l'URL
+                    $lien->setImagePerso($imagePersoUrl);
+                }
+                
                 $this->em->persist($lien);
             }
 
@@ -541,8 +560,10 @@ class GameController extends AbstractController
             
             $lien->setCommentaire($request->request->get('commentaire'));
 
-            // Image personnalisée
+            // Image personnalisée (fichier ou URL)
             $imageFile = $request->files->get('image_perso');
+            $imageUrl = $request->request->get('image_perso_url');
+            
             if ($imageFile instanceof UploadedFile && $imageFile->isValid()) {
                 $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/game/user';
                 if (!is_dir($uploadDir)) {
@@ -553,6 +574,8 @@ class GameController extends AbstractController
                 $newFilename = $safeFilename . '-' . uniqid() . '.' . $imageFile->guessExtension();
                 $imageFile->move($uploadDir, $newFilename);
                 $lien->setImagePerso($newFilename);
+            } elseif ($imageUrl && filter_var($imageUrl, FILTER_VALIDATE_URL)) {
+                $lien->setImagePerso($imageUrl);
             }
             
             $this->em->persist($lien);
@@ -606,10 +629,12 @@ class GameController extends AbstractController
             
             $lien->setCommentaire($request->request->get('commentaire'));
 
-            // Image personnalisée
+            // Image personnalisée (fichier ou URL)
             $imageFile = $request->files->get('image_perso');
+            $imageUrl = $request->request->get('image_perso_url');
+            
             if ($imageFile instanceof UploadedFile && $imageFile->isValid()) {
-                // Supprimer l'ancienne image si existe
+                // Supprimer l'ancienne image si existe (fichier local uniquement)
                 if ($lien->getImagePerso() && !filter_var($lien->getImagePerso(), FILTER_VALIDATE_URL)) {
                     $oldPath = $this->getParameter('kernel.project_dir') . '/public/uploads/game/user/' . $lien->getImagePerso();
                     if (file_exists($oldPath)) {
@@ -626,6 +651,15 @@ class GameController extends AbstractController
                 $newFilename = $safeFilename . '-' . uniqid() . '.' . $imageFile->guessExtension();
                 $imageFile->move($uploadDir, $newFilename);
                 $lien->setImagePerso($newFilename);
+            } elseif ($imageUrl && filter_var($imageUrl, FILTER_VALIDATE_URL)) {
+                // Supprimer l'ancienne image si existe (fichier local uniquement)
+                if ($lien->getImagePerso() && !filter_var($lien->getImagePerso(), FILTER_VALIDATE_URL)) {
+                    $oldPath = $this->getParameter('kernel.project_dir') . '/public/uploads/game/user/' . $lien->getImagePerso();
+                    if (file_exists($oldPath)) {
+                        unlink($oldPath);
+                    }
+                }
+                $lien->setImagePerso($imageUrl);
             }
             
             $this->em->flush();

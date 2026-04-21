@@ -604,7 +604,17 @@ class Livre
         }
 
         if (!empty($this->image)) {
-            return 'data:image/jpeg;base64,' . base64_encode(stream_get_contents($this->image));
+            // Reset stream pointer to beginning before reading
+            if (is_resource($this->image)) {
+                rewind($this->image);
+                $content = stream_get_contents($this->image);
+                if ($content !== false && !empty($content)) {
+                    return 'data:image/jpeg;base64,' . base64_encode($content);
+                }
+            } elseif (is_string($this->image)) {
+                // Already a string (not a stream)
+                return 'data:image/jpeg;base64,' . base64_encode($this->image);
+            }
         }
 
         return null;
