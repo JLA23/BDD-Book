@@ -58,14 +58,13 @@ class LivresController extends AbstractController
                 // Privilégier image2 (fichier téléchargé) si disponible, sinon image (BLOB)
                 if ($livre->getImage2()) {
                     $images[$livre->getId()] = '/uploads/covers/' . $livre->getImage2();
-                } elseif ($livre->getImage()) {
-                    // Reset stream pointer to beginning before reading
-                    $imageStream = $livre->getImage();
-                    if (is_resource($imageStream)) {
-                        rewind($imageStream);
-                        $content = stream_get_contents($imageStream);
-                        if ($content !== false && !empty($content)) {
-                            $images[$livre->getId()] = base64_encode($content);
+                } else {
+                    // Recharger l'entité pour obtenir un stream frais
+                    $freshLivre = $em->getRepository(Livre::class)->find($livre->getId());
+                    if ($freshLivre && $freshLivre->getImage()) {
+                        $base64Image = $freshLivre->getBase64ImageForList();
+                        if ($base64Image !== null) {
+                            $images[$livre->getId()] = $base64Image;
                         }
                     }
                 }

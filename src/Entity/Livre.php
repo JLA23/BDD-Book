@@ -621,6 +621,29 @@ class Livre
     }
 
     /**
+     * Get base64 image for list display (without data: prefix)
+     * Used specifically for the list view where images are pre-loaded
+     */
+    public function getBase64ImageForList(): ?string
+    {
+        if (!empty($this->image)) {
+            // Reset stream pointer to beginning before reading
+            if (is_resource($this->image)) {
+                rewind($this->image);
+                $content = stream_get_contents($this->image);
+                if ($content !== false && !empty($content)) {
+                    return base64_encode($content);
+                }
+            } elseif (is_string($this->image)) {
+                // Already a string (not a stream)
+                return base64_encode($this->image);
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Add Auteur
      *
      * @param \App\Entity\LienAuteurLivre $auteur
