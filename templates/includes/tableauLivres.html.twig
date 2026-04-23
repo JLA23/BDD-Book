@@ -27,18 +27,18 @@
             <div class="card h-100 livre-card shadow-sm">
                 <!-- Image -->
                 <div class="livre-cover-wrapper text-center p-2" style="background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);">
-                    {% if livre.id in images|keys %}
+                    {% if livre.image2 %}
+                        {# URL directe (image2) #}
+                        <img id='img-{{ livre.id }}' 
+                             class="img-cover img-fluid" 
+                             alt="{{ livre.titre }}" 
+                             src="{{ livre.getBestImage }}"
+                             style="max-height: 180px; object-fit: contain; cursor: pointer;"
+                             onerror="this.onerror=null; this.src='{{ asset('images/book-no-cover.svg') }}';" />
+                    {% elseif livre.id in images|keys %}
+                        {# Image base64 (BLOB) #}
                         {% set imageData = images[livre.id] %}
-                        {% if livre.image2 %}
-                            {# URL directe (image2) #}
-                            <img id='img-{{ livre.id }}' 
-                                 class="img-cover img-fluid" 
-                                 alt="{{ livre.titre }}" 
-                                 src="{{ livre.getBestImage }}"
-                                 style="max-height: 180px; object-fit: contain; cursor: pointer;"
-                                 onerror="this.onerror=null; this.src='{{ asset('images/book-no-cover.svg') }}';" />
-                        {% elseif imageData %}
-                            {# Image base64 (BLOB) #}
+                        {% if imageData %}
                             <img id='img-{{ livre.id }}' 
                                  class="img-cover img-fluid" 
                                  alt="{{ livre.titre }}" 
