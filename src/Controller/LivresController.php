@@ -59,7 +59,15 @@ class LivresController extends AbstractController
                 if ($livre->getImage2()) {
                     $images[$livre->getId()] = '/uploads/covers/' . $livre->getImage2();
                 } elseif ($livre->getImage()) {
-                    $images[$livre->getId()] = base64_encode(stream_get_contents($livre->getImage()));
+                    // Reset stream pointer to beginning before reading
+                    $imageStream = $livre->getImage();
+                    if (is_resource($imageStream)) {
+                        rewind($imageStream);
+                        $content = stream_get_contents($imageStream);
+                        if ($content !== false && !empty($content)) {
+                            $images[$livre->getId()] = base64_encode($content);
+                        }
+                    }
                 }
             }
         }
