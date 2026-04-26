@@ -64,8 +64,9 @@ class GameController extends AbstractController
         $search = $request->query->get('search');
         $console = $request->query->get('console');
         $genre = $request->query->get('genre');
+        $year = $request->query->get('year');
 
-        $games = $gameRepo->findBySearch($search, $console, $genre);
+        $games = $gameRepo->findBySearch($search, $console, $genre, $year);
 
         $pagination = $paginator->paginate(
             $games,
@@ -78,8 +79,10 @@ class GameController extends AbstractController
             'search' => $search,
             'console' => $console,
             'genre' => $genre,
+            'year' => $year,
             'consoles' => $gameRepo->getDistinctConsoles(),
             'genres' => $gameRepo->getDistinctGenres(),
+            'years' => $gameRepo->getDistinctYears(),
         ]);
     }
 
@@ -476,6 +479,8 @@ class GameController extends AbstractController
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
 
         $query = $request->query->get('q', '');
+        $platform = $request->query->get('platform');
+        $year = $request->query->get('year');
 
         if (empty($query)) {
             return $this->json(['error' => 'Recherche requise'], 400);
@@ -485,7 +490,7 @@ class GameController extends AbstractController
             return $this->json(['error' => 'API non configurée'], 500);
         }
 
-        $results = $this->gameApi->searchGames($query, 10);
+        $results = $this->gameApi->searchGames($query, 50, $platform, $year);
 
         return $this->json([
             'success' => true,

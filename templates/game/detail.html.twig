@@ -22,7 +22,29 @@
             <h4 class="mb-0 text-white">
                 <i class="fas fa-gamepad"></i> {{ game.titre }}
                 {% if game.console %}
-                    <span class="badge badge-light ml-2">{{ game.console }}</span>
+                    {% set consoleIcons = {
+                        'PS5': 'fab fa-playstation', 'PS4': 'fab fa-playstation', 'PS3': 'fab fa-playstation',
+                        'PS2': 'fab fa-playstation', 'PS1': 'fab fa-playstation', 'PSVita': 'fab fa-playstation', 'PSP': 'fab fa-playstation',
+                        'XSX': 'fab fa-xbox', 'XOne': 'fab fa-xbox', 'X360': 'fab fa-xbox', 'Xbox': 'fab fa-xbox',
+                        'Switch': 'fas fa-gamepad', 'WiiU': 'fas fa-gamepad', 'Wii': 'fas fa-gamepad',
+                        'GameCube': 'fas fa-gamepad', 'N64': 'fas fa-gamepad', '3DS': 'fas fa-gamepad',
+                        'DS': 'fas fa-gamepad', 'GBA': 'fas fa-gamepad', 'GB': 'fas fa-gamepad',
+                        'PC': 'fas fa-desktop', 'Mac': 'fab fa-apple', 'Linux': 'fab fa-linux',
+                        'Android': 'fab fa-android', 'iOS': 'fab fa-apple'
+                    } %}
+                    {% set consoleColors = {
+                        'PS5': '#003791', 'PS4': '#003791', 'PS3': '#003791', 'PS2': '#003791', 'PS1': '#003791',
+                        'PSVita': '#003791', 'PSP': '#003791',
+                        'XSX': '#107C10', 'XOne': '#107C10', 'X360': '#107C10', 'Xbox': '#107C10',
+                        'Switch': '#E60012', 'WiiU': '#0096C8', 'Wii': '#0096C8',
+                        'GameCube': '#6A5FBB', 'N64': '#6A5FBB', '3DS': '#CE181E',
+                        'DS': '#CE181E', 'GBA': '#6A5FBB', 'GB': '#6A5FBB',
+                        'PC': '#5a4a78', 'Mac': '#555555', 'Linux': '#FCC624',
+                        'Android': '#3DDC84', 'iOS': '#555555'
+                    } %}
+                    <span class="badge ml-2" style="background-color: {{ consoleColors[game.console] ?? '#6c757d' }}; color: white;">
+                        <i class="{{ consoleIcons[game.console] ?? 'fas fa-gamepad' }}"></i> {{ game.console }}
+                    </span>
                 {% endif %}
             </h4>
         </div>
@@ -58,7 +80,13 @@
                         <div class="col-sm-6">
                             <div class="info-item mb-3">
                                 <small class="text-muted d-block"><i class="fas fa-tv"></i> Console</small>
-                                <strong>{{ game.console|default('-') }}</strong>
+                                {% if game.console %}
+                                    <span class="badge" style="background-color: {{ consoleColors[game.console] ?? '#6c757d' }}; color: white;">
+                                        <i class="{{ consoleIcons[game.console] ?? 'fas fa-gamepad' }}"></i> {{ game.console }}
+                                    </span>
+                                {% else %}
+                                    <strong>-</strong>
+                                {% endif %}
                             </div>
                         </div>
                         <div class="col-sm-6">

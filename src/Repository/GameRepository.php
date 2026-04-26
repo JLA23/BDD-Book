@@ -24,7 +24,7 @@ class GameRepository extends ServiceEntityRepository
             ->getResult();
     }
 
-    public function findBySearch(?string $search = null, ?string $console = null, ?string $genre = null): array
+    public function findBySearch(?string $search = null, ?string $console = null, ?string $genre = null, ?string $year = null): array
     {
         $qb = $this->createQueryBuilder('g');
 
@@ -41,6 +41,11 @@ class GameRepository extends ServiceEntityRepository
         if ($genre) {
             $qb->andWhere('g.genre LIKE :genre')
                ->setParameter('genre', '%' . $genre . '%');
+        }
+
+        if ($year) {
+            $qb->andWhere('g.annee = :year')
+               ->setParameter('year', $year);
         }
 
         return $qb->orderBy('g.titre', 'ASC')
@@ -81,11 +86,25 @@ class GameRepository extends ServiceEntityRepository
         $result = $this->createQueryBuilder('g')
             ->select('DISTINCT g.genre')
             ->where('g.genre IS NOT NULL')
+            ->andWhere('g.genre != :empty')
+            ->setParameter('empty', '')
             ->orderBy('g.genre', 'ASC')
             ->getQuery()
             ->getResult();
 
         return array_column($result, 'genre');
+    }
+
+    public function getDistinctYears(): array
+    {
+        $result = $this->createQueryBuilder('g')
+            ->select('DISTINCT g.annee')
+            ->where('g.annee IS NOT NULL')
+            ->orderBy('g.annee', 'DESC')
+            ->getQuery()
+            ->getResult();
+
+        return array_column($result, 'annee');
     }
 
     public function countAll(): int

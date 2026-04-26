@@ -14,11 +14,11 @@
     <div class="card shadow-sm mb-4">
         <div class="card-body">
             <form action="{{ path('game_list') }}" method="get" class="row align-items-end">
-                <div class="col-md-4 mb-2">
+                <div class="col-md-3 mb-2">
                     <label class="small"><strong>Recherche</strong></label>
                     <input type="text" name="search" class="form-control form-control-sm" value="{{ search }}" placeholder="Titre, éditeur...">
                 </div>
-                <div class="col-md-3 mb-2">
+                <div class="col-md-2 mb-2">
                     <label class="small"><strong>Console</strong></label>
                     <select name="console" class="form-control form-control-sm">
                         <option value="">Toutes</option>
@@ -27,7 +27,7 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-3 mb-2">
+                <div class="col-md-2 mb-2">
                     <label class="small"><strong>Genre</strong></label>
                     <select name="genre" class="form-control form-control-sm">
                         <option value="">Tous</option>
@@ -37,9 +37,21 @@
                     </select>
                 </div>
                 <div class="col-md-2 mb-2">
+                    <label class="small"><strong>Année</strong></label>
+                    <select name="year" class="form-control form-control-sm">
+                        <option value="">Toutes</option>
+                        {% for y in years %}
+                            <option value="{{ y }}" {% if year == y %}selected{% endif %}>{{ y }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 mb-2">
                     <button type="submit" class="btn btn-sm btn-block" style="background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%); color: white;">
                         <i class="fas fa-search"></i> Filtrer
                     </button>
+                    <a href="{{ path('game_list') }}" class="btn btn-sm btn-block btn-outline-secondary mt-1">
+                        <i class="fas fa-times"></i> Réinitialiser
+                    </a>
                 </div>
             </form>
         </div>
@@ -58,15 +70,71 @@
             <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-4">
                 <a href="{{ path('game_detail', {id: game.id}) }}" class="text-decoration-none">
                     <div class="card h-100 shadow-sm hover-card">
-                        <div class="position-relative" style="height: 200px; overflow: hidden;">
+                        <div class="position-relative text-center p-2" style="background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);">
                             {% if game.mainImage %}
-                                <img src="{{ game.mainImage }}" class="card-img-top" alt="{{ game.titre }}" style="height: 100%; width: 100%; object-fit: cover;">
+                                <img src="{{ game.mainImage }}" class="card-img-top img-fluid" alt="{{ game.titre }}" style="max-height: 200px; object-fit: contain;">
                             {% else %}
-                                <div class="d-flex align-items-center justify-content-center h-100 bg-light">
+                                <div class="d-flex align-items-center justify-content-center" style="height: 200px;">
                                     <i class="fas fa-gamepad fa-4x text-muted"></i>
                                 </div>
                             {% endif %}
-                            <span class="badge position-absolute" style="top: 5px; right: 5px; background-color: #6f42c1;">{{ game.console }}</span>
+                            {% set consoleIcons = {
+                                'PS5': 'fab fa-playstation',
+                                'PS4': 'fab fa-playstation',
+                                'PS3': 'fab fa-playstation',
+                                'PS2': 'fab fa-playstation',
+                                'PS1': 'fab fa-playstation',
+                                'PSVita': 'fab fa-playstation',
+                                'PSP': 'fab fa-playstation',
+                                'XSX': 'fab fa-xbox',
+                                'XOne': 'fab fa-xbox',
+                                'X360': 'fab fa-xbox',
+                                'Xbox': 'fab fa-xbox',
+                                'Switch': 'fas fa-gamepad',
+                                'WiiU': 'fas fa-gamepad',
+                                'Wii': 'fas fa-gamepad',
+                                'GameCube': 'fas fa-gamepad',
+                                'N64': 'fas fa-gamepad',
+                                '3DS': 'fas fa-gamepad',
+                                'DS': 'fas fa-gamepad',
+                                'GBA': 'fas fa-gamepad',
+                                'GB': 'fas fa-gamepad',
+                                'PC': 'fas fa-desktop',
+                                'Mac': 'fab fa-apple',
+                                'Linux': 'fab fa-linux',
+                                'Android': 'fab fa-android',
+                                'iOS': 'fab fa-apple'
+                            } %}
+                            {% set consoleColors = {
+                                'PS5': '#003791',
+                                'PS4': '#003791',
+                                'PS3': '#003791',
+                                'PS2': '#003791',
+                                'PS1': '#003791',
+                                'PSVita': '#003791',
+                                'PSP': '#003791',
+                                'XSX': '#107C10',
+                                'XOne': '#107C10',
+                                'X360': '#107C10',
+                                'Xbox': '#107C10',
+                                'Switch': '#E60012',
+                                'WiiU': '#0096C8',
+                                'Wii': '#0096C8',
+                                'GameCube': '#6A5FBB',
+                                'N64': '#6A5FBB',
+                                '3DS': '#CE181E',
+                                'DS': '#CE181E',
+                                'GBA': '#6A5FBB',
+                                'GB': '#6A5FBB',
+                                'PC': '#5a4a78',
+                                'Mac': '#555555',
+                                'Linux': '#FCC624',
+                                'Android': '#3DDC84',
+                                'iOS': '#555555'
+                            } %}
+                            <span class="badge position-absolute" style="top: 5px; right: 5px; background-color: {{ consoleColors[game.console] ?? '#6c757d' }}; color: white;">
+                                <i class="{{ consoleIcons[game.console] ?? 'fas fa-gamepad' }}"></i> {{ game.console }}
+                            </span>
                         </div>
                         <div class="card-body p-2">
                             <h6 class="card-title mb-1 text-dark text-truncate" title="{{ game.titre }}">{{ game.titre }}</h6>

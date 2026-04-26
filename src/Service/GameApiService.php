@@ -96,7 +96,7 @@ class GameApiService
     /**
      * Recherche des jeux par titre via IGDB API
      */
-    public function searchGames(string $query, int $limit = 10): array
+    public function searchGames(string $query, int $limit = 10, ?string $platform = null, ?string $year = null): array
     {
         if (!$this->isConfigured()) {
             return [];
@@ -108,17 +108,50 @@ class GameApiService
         }
 
         try {
+            // Utiliser search pour une recherche plus efficace, puis filtrer en PHP
+            $queryBody = "search \"{$query}\";";
+            $queryBody .= " fields name, first_release_date, cover.url, genres.name, platforms.name, platforms.id, rating, aggregated_rating;";
+            $queryBody .= " limit 50;";
+
             $response = $this->httpClient->request('POST', 'https://api.igdb.com/v4/games', [
                 'headers' => [
                     'Client-ID' => $this->twitchClientId,
                     'Authorization' => 'Bearer ' . $token,
                 ],
-                'body' => "search \"{$query}\"; 
-                    fields name, first_release_date, cover.url, genres.name, platforms.name, rating, aggregated_rating;
-                    limit {$limit};",
+                'body' => $queryBody,
             ]);
 
             $games = $response->toArray();
+
+            // Filtrer par plateforme et année côté PHP
+            if ($platform || $year) {
+                $games = array_filter($games, function($game) use ($platform, $year) {
+                    // Filtre par plateforme
+                    if ($platform && isset($game['platforms'])) {
+                        $hasPlatform = false;
+                        foreach ($game['platforms'] as $p) {
+                            if ((is_array($p) && isset($p['id']) && $p['id'] == $platform) ||
+                                (is_int($p) && $p == $platform)) {
+                                $hasPlatform = true;
+                                break;
+                            }
+                        }
+                        if (!$hasPlatform) return false;
+                    }
+
+                    // Filtre par année
+                    if ($year && isset($game['first_release_date'])) {
+                        $gameYear = date('Y', $game['first_release_date']);
+                        if ($gameYear != $year) return false;
+                    }
+
+                    return true;
+                });
+
+                // Limiter après filtrage
+                $games = array_slice($games, 0, $limit);
+            }
+
             $results = [];
 
             foreach ($games as $game) {

@@ -27,7 +27,7 @@
                     <h5 class="mb-0 text-white"><i class="fas fa-gamepad"></i> Rechercher un jeu</h5>
                 </div>
                 <div class="card-body">
-                    <div class="input-group">
+                    <div class="input-group mb-3">
                         <input type="text" id="searchQuery" class="form-control form-control-lg" placeholder="Titre du jeu (ex: Zelda, God of War, Elden Ring...)">
                         <div class="input-group-append">
                             <button class="btn btn-lg" id="searchBtn" style="background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%); color: white;">
@@ -35,7 +35,43 @@
                             </button>
                         </div>
                     </div>
-                    <small class="text-muted">Recherche via l'API IGDB (Twitch)</small>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="small"><strong>Console / Plateforme (optionnel)</strong></label>
+                            <select id="platformFilter" class="form-control form-control-sm mb-2">
+                                <option value="">Toutes les plateformes</option>
+                                <option value="167">PlayStation 5</option>
+                                <option value="48">PlayStation 4</option>
+                                <option value="16">PlayStation 3</option>
+                                <option value="9">PlayStation 2</option>
+                                <option value="7">PlayStation</option>
+                                <option value="46">PlayStation Vita</option>
+                                <option value="38">PlayStation Portable</option>
+                                <option value="169">Xbox Series X</option>
+                                <option value="12">Xbox One</option>
+                                <option value="11">Xbox 360</option>
+                                <option value="1">Xbox</option>
+                                <option value="130">Nintendo Switch</option>
+                                <option value="41">Wii U</option>
+                                <option value="5">Wii</option>
+                                <option value="21">GameCube</option>
+                                <option value="4">Nintendo 64</option>
+                                <option value="18">Nintendo 3DS</option>
+                                <option value="20">Nintendo DS</option>
+                                <option value="24">Game Boy Advance</option>
+                                <option value="6">PC (Windows)</option>
+                                <option value="14">Mac</option>
+                                <option value="3">Linux</option>
+                                <option value="34">Android</option>
+                                <option value="39">iOS</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="small"><strong>Année (optionnel)</strong></label>
+                            <input type="number" id="yearFilter" class="form-control form-control-sm mb-2" placeholder="Ex: 2023" min="1970" max="{{ 'now'|date('Y') }}">
+                        </div>
+                    </div>
+                    <small class="text-muted">Recherche via l'API IGDB (Twitch) - Jusqu'à 50 résultats</small>
                 </div>
             </div>
 
@@ -105,26 +141,33 @@ $('#searchQuery').keypress(function(e) {
 $('#searchBtn').click(function() {
     var query = $('#searchQuery').val().trim();
     if (!query) { alert('Veuillez saisir un titre'); return; }
-    
+
+    var platform = $('#platformFilter').val();
+    var year = $('#yearFilter').val();
+
     $('#loadingSpinner').show();
     $('#searchResults').hide();
     $('#gameDetails').hide();
-    
+
+    var data = { q: query };
+    if (platform) data.platform = platform;
+    if (year) data.year = year;
+
     $.ajax({
         url: '{{ path("game_api_search") }}',
-        data: { q: query },
+        data: data,
         success: function(response) {
             $('#loadingSpinner').hide();
-            
+
             if (response.results && response.results.length > 0) {
                 var html = '<div class="row">';
                 response.results.forEach(function(game) {
                     html += '<div class="col-md-4 col-lg-3 mb-4">';
                     html += '<div class="card h-100 shadow-sm hover-card" style="cursor: pointer;" onclick="loadGameDetails(' + game.id + ')">';
                     if (game.cover) {
-                        html += '<img src="' + game.cover + '" class="card-img-top" style="height: 180px; object-fit: cover;">';
+                        html += '<div class="text-center p-2" style="background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);"><img src="' + game.cover + '" class="img-fluid" style="max-height: 180px; object-fit: contain;"></div>';
                     } else {
-                        html += '<div class="d-flex align-items-center justify-content-center bg-light" style="height: 180px;"><i class="fas fa-gamepad fa-3x text-muted"></i></div>';
+                        html += '<div class="d-flex align-items-center justify-content-center" style="height: 180px; background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);"><i class="fas fa-gamepad fa-3x text-muted"></i></div>';
                     }
                     html += '<div class="card-body p-2">';
                     html += '<h6 class="card-title mb-1 text-truncate">' + game.titre + '</h6>';
