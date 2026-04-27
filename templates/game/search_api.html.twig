@@ -110,11 +110,13 @@
                             </div>
                         </div>
                         
+                        <div id="existingGameAlert" class="mt-3" style="display: none;"></div>
+                        
                         <hr>
                         <h5>Sélectionner la plateforme</h5>
                         <div id="platformSelect" class="mb-3"></div>
                         
-                        <div class="text-center">
+                        <div class="text-center" id="actionButtons">
                             <button class="btn btn-lg btn-success" id="addGameBtn">
                                 <i class="fas fa-plus"></i> Ajouter ce jeu
                             </button>
@@ -235,6 +237,9 @@ function loadGameDetails(gameId) {
                 }
                 $('#platformSelect').html(platformsHtml);
                 
+                // Vérifier si le jeu existe déjà
+                checkExistingGame();
+                
                 $('#gameDetails').show();
             }
         },
@@ -253,13 +258,60 @@ function loadGameDetails(gameId) {
     });
 }
 
-$('#addGameBtn').click(function() {
+function checkExistingGame() {
     if (!currentGame) return;
     
     var platformSlug = $('input[name="platform"]:checked').val();
-    var platformName = $('input[name="platform"]:checked').next('label').text();
+    var consoleCode = platformToConsole(platformSlug);
     
-    // Convertir le slug en code console
+    $.ajax({
+        url: '{{ path("game_api_check_existing") }}',
+        data: {
+            titre: currentGame.titre,
+            annee: currentGame.annee || '',
+            console: consoleCode
+        },
+        success: function(response) {
+            var alertHtml = '';
+            var btnHtml = '';
+            
+            if (response.exists && response.games.length > 0) {
+                var game = response.games[0];
+                alertHtml = '<div class="alert alert-warning">' +
+                    '<i class="fas fa-exclamation-triangle"></i> <strong>Ce jeu existe déjà dans la base !</strong><br>' +
+                    '<a href="' + game.detailUrl + '" class="alert-link" target="_blank">' + game.titre + (game.annee ? ' (' + game.annee + ')' : '') + '</a>';
+                if (game.hasConsole) {
+                    alertHtml += ' <span class="badge badge-danger">Déjà enregistrée sur cette console</span>';
+                }
+                alertHtml += '</div>';
+                
+                btnHtml += '<a href="' + game.addEditionUrl + '" class="btn btn-lg btn-primary mr-2">' +
+                    '<i class="fas fa-plus"></i> Ajouter une édition sur la fiche' +
+                    '</a>';
+                btnHtml += '<button class="btn btn-lg btn-success" id="addGameBtnNew">' +
+                    '<i class="fas fa-file"></i> Créer une nouvelle fiche' +
+                    '</button>';
+            } else {
+                btnHtml = '<button class="btn btn-lg btn-success" id="addGameBtnNew">' +
+                    '<i class="fas fa-plus"></i> Ajouter ce jeu' +
+                    '</button>';
+            }
+            
+            $('#existingGameAlert').html(alertHtml).toggle(alertHtml !== '');
+            $('#actionButtons').html(btnHtml);
+            
+            // Bind le nouveau bouton
+            $('#addGameBtnNew').off('click').on('click', function() {
+                addNewGame();
+            });
+        }
+    });
+}
+
+function addNewGame() {
+    if (!currentGame) return;
+    
+    var platformSlug = $('input[name="platform"]:checked').val();
     var consoleCode = platformToConsole(platformSlug);
     
     var params = new URLSearchParams({
@@ -277,6 +329,17 @@ $('#addGameBtn').click(function() {
     });
     
     window.location.href = '{{ path("game_new") }}?' + params.toString();
+}
+
+// Quand on change de plateforme, re-vérifier l'existence
+$(document).on('change', 'input[name="platform"]', function() {
+    if (currentGame) {
+        checkExistingGame();
+    }
+});
+
+$('#addGameBtn').click(function() {
+    addNewGame();
 });
 
 function platformToConsole(slug) {

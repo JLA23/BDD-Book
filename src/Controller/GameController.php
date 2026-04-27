@@ -160,8 +160,26 @@ class GameController extends AbstractController
                 $game->setExternalId($request->query->get('externalId'));
             }
 
-            // Vérifier si le jeu existe déjà (par titre uniquement)
-            $existing = $gameRepo->findOneBy(['titre' => $game->getTitre()]);
+            // Vérifier si le jeu existe déjà (par externalId ou titre + année exact)
+            $existing = null;
+            $titre = trim($game->getTitre() ?? '');
+            $annee = $request->query->get('annee') ? (int) $request->query->get('annee') : null;
+            $externalId = $request->query->get('externalId');
+
+            if ($externalId) {
+                $existing = $gameRepo->findOneBy(['externalId' => $externalId]);
+            }
+
+            if (!$existing && !empty($titre) && $annee) {
+                $existing = $gameRepo->createQueryBuilder('g')
+                    ->where('LOWER(g.titre) = LOWER(:titre)')
+                    ->andWhere('g.annee = :annee')
+                    ->setParameter('titre', $titre)
+                    ->setParameter('annee', $annee)
+                    ->getQuery()
+                    ->getOneOrNullResult();
+            }
+
             if ($existing) {
                 $duplicateWarning = [
                     'message' => 'Ce jeu existe déjà dans la base !',
@@ -176,8 +194,17 @@ class GameController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            // Vérifier doublon par titre uniquement
-            $existing = $gameRepo->findOneBy(['titre' => $game->getTitre()]);
+            // Vérifier doublon par titre + année exact (insensible à la casse)
+            $qb = $gameRepo->createQueryBuilder('g')
+                ->where('LOWER(g.titre) = LOWER(:titre)')
+                ->setParameter('titre', trim($game->getTitre()));
+
+            if ($game->getAnnee()) {
+                $qb->andWhere('g.annee = :annee')
+                   ->setParameter('annee', $game->getAnnee());
+            }
+
+            $existing = $qb->getQuery()->getOneOrNullResult();
             if ($existing && $existing->getId() !== $game->getId()) {
                 $this->addFlash('danger', 'Ce jeu existe déjà dans la base !');
                 return $this->render('game/form.html.twig', [
@@ -496,6 +523,57 @@ class GameController extends AbstractController
         return $this->json([
             'success' => true,
             'results' => $results,
+        ]);
+    }
+
+    #[Route('/api/check-existing', name: 'game_api_check_existing', methods: ['GET'])]
+    public function apiCheckExisting(Request $request, GameRepository $gameRepo): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+
+        $titre = $request->query->get('titre');
+        $annee = $request->query->get('annee');
+        $console = $request->query->get('console');
+
+        if (empty($titre)) {
+            return $this->json(['error' => 'Titre requis'], 400);
+        }
+
+        $qb = $gameRepo->createQueryBuilder('g')
+            ->where('LOWER(g.titre) = LOWER(:titre)')
+            ->setParameter('titre', $titre);
+
+        if ($annee) {
+            $qb->andWhere('g.annee = :annee')
+               ->setParameter('annee', (int) $annee);
+        }
+
+        $games = $qb->getQuery()->getResult();
+
+        $existing = [];
+        foreach ($games as $game) {
+            $hasConsole = false;
+            if ($console) {
+                foreach ($game->getUserLinks() as $link) {
+                    if ($link->getConsole() === $console) {
+                        $hasConsole = true;
+                        break;
+                    }
+                }
+            }
+            $existing[] = [
+                'id' => $game->getId(),
+                'titre' => $game->getTitre(),
+                'annee' => $game->getAnnee(),
+                'hasConsole' => $hasConsole,
+                'detailUrl' => $this->generateUrl('game_detail', ['id' => $game->getId()]),
+                'addEditionUrl' => $this->generateUrl('game_add_owner', ['id' => $game->getId()]),
+            ];
+        }
+
+        return $this->json([
+            'exists' => count($existing) > 0,
+            'games' => $existing,
         ]);
     }
 
