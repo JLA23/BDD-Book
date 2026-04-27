@@ -105,6 +105,31 @@ class GameController extends AbstractController
         ]);
     }
 
+    #[Route('/utilisateur/{id}', name: 'game_user', requirements: ['id' => '\d+'])]
+    public function userCollection(int $id, UserRepository $userRepo, LienUserGameRepository $lienRepo): Response
+    {
+        $user = $userRepo->find($id);
+        if (!$user) {
+            throw $this->createNotFoundException('Utilisateur non trouvé');
+        }
+
+        $liens = $lienRepo->findByUser($user);
+
+        $grouped = [];
+        foreach ($liens as $lien) {
+            $gid = $lien->getGame()->getId();
+            if (!isset($grouped[$gid])) {
+                $grouped[$gid] = ['game' => $lien->getGame(), 'editions' => []];
+            }
+            $grouped[$gid]['editions'][] = $lien;
+        }
+
+        return $this->render('game/user_collection.html.twig', [
+            'user' => $user,
+            'grouped' => $grouped,
+        ]);
+    }
+
     #[Route('/ajouter', name: 'game_ajouter')]
     public function ajouter(): Response
     {

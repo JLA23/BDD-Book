@@ -1,0 +1,100 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Collection de {{ user.name }} {{ user.lastname }} - BDD-Games{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 style="color: #6f42c1;">
+            <i class="fas fa-gamepad"></i> Collection de {{ user.name }} {{ user.lastname }}
+        </h2>
+        <a href="{{ path('game_users') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Retour
+        </a>
+    </div>
+
+    {% if grouped|length == 0 %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> Cet utilisateur n'a pas encore de jeux dans sa collection.
+        </div>
+    {% else %}
+        {% set consoleIcons = {
+            'PS5':'fab fa-playstation','PS4':'fab fa-playstation','PS3':'fab fa-playstation',
+            'PS2':'fab fa-playstation','PS1':'fab fa-playstation','PSVita':'fab fa-playstation','PSP':'fab fa-playstation',
+            'XSX':'fab fa-xbox','XOne':'fab fa-xbox','X360':'fab fa-xbox','Xbox':'fab fa-xbox',
+            'Switch':'fas fa-gamepad','WiiU':'fas fa-gamepad','Wii':'fas fa-gamepad',
+            'GameCube':'fas fa-gamepad','N64':'fas fa-gamepad','3DS':'fas fa-gamepad',
+            'DS':'fas fa-gamepad','GBA':'fas fa-gamepad','GB':'fas fa-gamepad',
+            'PC':'fas fa-desktop','Mac':'fab fa-apple','Linux':'fab fa-linux',
+            'Android':'fab fa-android','iOS':'fab fa-apple'
+        } %}
+        {% set consoleColors = {
+            'PS5':'#003791','PS4':'#003791','PS3':'#003791','PS2':'#003791','PS1':'#003791',
+            'PSVita':'#003791','PSP':'#003791',
+            'XSX':'#107C10','XOne':'#107C10','X360':'#107C10','Xbox':'#107C10',
+            'Switch':'#E60012','WiiU':'#0096C8','Wii':'#0096C8',
+            'GameCube':'#6A5FBB','N64':'#6A5FBB','3DS':'#CE181E',
+            'DS':'#CE181E','GBA':'#6A5FBB','GB':'#6A5FBB',
+            'PC':'#5a4a78','Mac':'#555555','Linux':'#FCC624',
+            'Android':'#3DDC84','iOS':'#555555'
+        } %}
+
+        <div class="row">
+            {% for item in grouped %}
+                {% set game = item.game %}
+                {% set editions = item.editions %}
+                {% set gid = game.id %}
+                {% set userConsoles = [] %}
+                {% for ed in editions %}
+                    {% if ed.console and ed.console not in userConsoles %}
+                        {% set userConsoles = userConsoles|merge([ed.console]) %}
+                    {% endif %}
+                {% endfor %}
+                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-4">
+                    <a href="{{ path('game_detail', {id: game.id}) }}" class="text-decoration-none">
+                        <div class="card h-100 shadow-sm hover-card">
+                            <div class="position-relative text-center p-2" style="background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);">
+                                {% if game.coverUrl %}
+                                    <img src="{{ game.coverUrl }}" alt="{{ game.titre }}" class="card-img-top img-fluid" style="max-height: 200px; object-fit: contain;">
+                                {% else %}
+                                    <div class="d-flex align-items-center justify-content-center" style="height: 200px;">
+                                        <i class="fas fa-gamepad fa-4x text-muted"></i>
+                                    </div>
+                                {% endif %}
+                                {% if userConsoles|length > 1 %}
+                                    <span class="badge position-absolute" style="top: 5px; right: 5px; background-color: #6c757d; color: white;">
+                                        <i class="fas fa-gamepad"></i> Multi
+                                    </span>
+                                {% elseif userConsoles|length == 1 %}
+                                    <span class="badge position-absolute" style="top: 5px; right: 5px; background-color: {{ consoleColors[userConsoles[0]] ?? '#6c757d' }}; color: white;">
+                                        <i class="{{ consoleIcons[userConsoles[0]] ?? 'fas fa-gamepad' }}"></i> {{ userConsoles[0] }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <div class="card-body p-2">
+                                <h6 class="card-title mb-1 text-dark text-truncate" title="{{ game.titre }}">{{ game.titre }}</h6>
+                                <p class="card-text small text-muted mb-0">
+                                    {% if game.annee %}{{ game.annee }}{% endif %}
+                                </p>
+                                <div class="mt-1">
+                                    {% for ed in editions %}
+                                        <span class="badge badge-{{ ed.typeEdition == 'physique' ? 'primary' : 'info' }} badge-sm mr-1">
+                                            <i class="fas fa-{{ ed.typeEdition == 'physique' ? 'box' : 'cloud' }}"></i>
+                                            {% if ed.nomEdition %}{{ ed.nomEdition }}{% else %}{{ ed.typeEdition|capitalize }}{% endif %}
+                                        </span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    .hover-card { transition: transform 0.2s, box-shadow 0.2s; }
+    .hover-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important; }
+</style>
+{% endblock %}

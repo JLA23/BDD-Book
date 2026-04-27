@@ -32,6 +32,13 @@ class LivresController extends AbstractController
         return $this->render('pages/index.html.twig', ['users' => $users]);
     }
 
+    #[Route('/listeUser', name: 'listeUser')]
+    public function listeUser(UserRepository $userRepository): Response
+    {
+        $users = $userRepository->findAll();
+        return $this->render('pages/listUser.html.twig', ['users' => $users]);
+    }
+
     #[Route('/liste', name: 'listesLivres')]
     public function listesLivres(Request $request, PaginatorInterface $paginator)
     {

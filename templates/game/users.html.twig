@@ -3,47 +3,28 @@
 {% block title %}Collections - BDD-Games{% endblock %}
 
 {% block body %}
-<div class="container-fluid px-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div id="list_user">
         <h2 style="color: #6f42c1;"><i class="fas fa-users"></i> Collections par utilisateur</h2>
-        <a href="{{ path('game_index') }}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left"></i> Retour
-        </a>
-    </div>
-
-    {% if users|length == 0 %}
-        <div class="alert alert-info">
-            <i class="fas fa-info-circle"></i> Aucun utilisateur n'a encore de jeux dans sa collection.
-        </div>
-    {% else %}
-        <div class="row">
+        <div class="row" id="users">
             {% for user in users %}
-            <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
-                <div class="card h-100 shadow-sm hover-card">
-                    <div class="card-body text-center">
-                        {% if user.avatar %}
-                            <img src="/uploads/avatars/{{ user.avatar }}" alt="Avatar" class="rounded-circle mb-3" style="width: 80px; height: 80px; object-fit: cover;">
-                        {% else %}
-                            <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 80px; height: 80px;">
-                                <i class="fas fa-user fa-2x"></i>
-                            </div>
-                        {% endif %}
-                        <h5 class="card-title">{{ user.name }} {{ user.lastName }}</h5>
-                        <p class="card-text">
-                            <span class="badge badge-pill px-3 py-2" style="background-color: #6f42c1; color: white;">
+                <div id='div-btn-user' class="col-lg-3 col-md-6 col-sm-12">
+                    <a type="button" id='btn-user' class="btn btn-light center-btn" href="{{ path('game_user', {id : user.id}) }}">
+                        <div class="user-avatar-large mx-auto mb-3">
+                            {% if user.logo %}
+                                <img src="{{ asset('uploads/avatars/' ~ user.logo) }}" alt="{{ user.username }}" class="user-avatar-img">
+                            {% else %}
+                                <span class="user-avatar-initials">{{ user.name|first|upper }}{{ user.lastname|first|upper }}</span>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <strong>{{ user.name }} {{ user.lastname }}</strong><br>
+                            <span class="badge badge-pill px-3 py-2 mt-2" style="background-color: #6f42c1; color: white;">
                                 <i class="fas fa-gamepad"></i> {{ user.gamesCount }} jeu(x)
                             </span>
-                        </p>
-                    </div>
+                        </div>
+                    </a>
                 </div>
-            </div>
             {% endfor %}
         </div>
-    {% endif %}
-</div>
-
-<style>
-    .hover-card { transition: transform 0.2s, box-shadow 0.2s; }
-    .hover-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important; }
-</style>
+    </div>
 {% endblock %}
