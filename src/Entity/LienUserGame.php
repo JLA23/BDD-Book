@@ -76,6 +76,13 @@ class LienUserGame
     private $imagePerso;
 
     /**
+     * @var string|null Console/Plateforme de l'édition possédée
+     *
+     * @ORM\Column(name="console", type="string", length=100, nullable=true)
+     */
+    private $console;
+
+    /**
      * @var string|null Commentaire
      *
      * @ORM\Column(name="commentaire", type="text", nullable=true)
@@ -194,6 +201,17 @@ class LienUserGame
     public function setImagePerso(?string $imagePerso): self
     {
         $this->imagePerso = $imagePerso;
+        return $this;
+    }
+
+    public function getConsole(): ?string
+    {
+        return $this->console;
+    }
+
+    public function setConsole(?string $console): self
+    {
+        $this->console = $console;
         return $this;
     }
 

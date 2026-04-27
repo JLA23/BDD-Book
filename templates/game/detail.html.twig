@@ -21,31 +21,6 @@
         <div class="card-header" style="background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);">
             <h4 class="mb-0 text-white">
                 <i class="fas fa-gamepad"></i> {{ game.titre }}
-                {% if game.console %}
-                    {% set consoleIcons = {
-                        'PS5': 'fab fa-playstation', 'PS4': 'fab fa-playstation', 'PS3': 'fab fa-playstation',
-                        'PS2': 'fab fa-playstation', 'PS1': 'fab fa-playstation', 'PSVita': 'fab fa-playstation', 'PSP': 'fab fa-playstation',
-                        'XSX': 'fab fa-xbox', 'XOne': 'fab fa-xbox', 'X360': 'fab fa-xbox', 'Xbox': 'fab fa-xbox',
-                        'Switch': 'fas fa-gamepad', 'WiiU': 'fas fa-gamepad', 'Wii': 'fas fa-gamepad',
-                        'GameCube': 'fas fa-gamepad', 'N64': 'fas fa-gamepad', '3DS': 'fas fa-gamepad',
-                        'DS': 'fas fa-gamepad', 'GBA': 'fas fa-gamepad', 'GB': 'fas fa-gamepad',
-                        'PC': 'fas fa-desktop', 'Mac': 'fab fa-apple', 'Linux': 'fab fa-linux',
-                        'Android': 'fab fa-android', 'iOS': 'fab fa-apple'
-                    } %}
-                    {% set consoleColors = {
-                        'PS5': '#003791', 'PS4': '#003791', 'PS3': '#003791', 'PS2': '#003791', 'PS1': '#003791',
-                        'PSVita': '#003791', 'PSP': '#003791',
-                        'XSX': '#107C10', 'XOne': '#107C10', 'X360': '#107C10', 'Xbox': '#107C10',
-                        'Switch': '#E60012', 'WiiU': '#0096C8', 'Wii': '#0096C8',
-                        'GameCube': '#6A5FBB', 'N64': '#6A5FBB', '3DS': '#CE181E',
-                        'DS': '#CE181E', 'GBA': '#6A5FBB', 'GB': '#6A5FBB',
-                        'PC': '#5a4a78', 'Mac': '#555555', 'Linux': '#FCC624',
-                        'Android': '#3DDC84', 'iOS': '#555555'
-                    } %}
-                    <span class="badge ml-2" style="background-color: {{ consoleColors[game.console] ?? '#6c757d' }}; color: white;">
-                        <i class="{{ consoleIcons[game.console] ?? 'fas fa-gamepad' }}"></i> {{ game.console }}
-                    </span>
-                {% endif %}
             </h4>
         </div>
         
@@ -77,18 +52,6 @@
                 <div class="col-md-8">
                     <!-- Infos principales -->
                     <div class="row">
-                        <div class="col-sm-6">
-                            <div class="info-item mb-3">
-                                <small class="text-muted d-block"><i class="fas fa-tv"></i> Console</small>
-                                {% if game.console %}
-                                    <span class="badge" style="background-color: {{ consoleColors[game.console] ?? '#6c757d' }}; color: white;">
-                                        <i class="{{ consoleIcons[game.console] ?? 'fas fa-gamepad' }}"></i> {{ game.console }}
-                                    </span>
-                                {% else %}
-                                    <strong>-</strong>
-                                {% endif %}
-                            </div>
-                        </div>
                         <div class="col-sm-6">
                             <div class="info-item mb-3">
                                 <small class="text-muted d-block"><i class="fas fa-calendar"></i> Année</small>
@@ -144,9 +107,10 @@
                 <i class="fas fa-users"></i> Propriétaires ({{ owners|length }})
                 <i class="fas fa-chevron-down float-right ml-2"></i>
             </h5>
-            {% if is_granted('IS_AUTHENTICATED_REMEMBERED') and not userHasGame %}
+            {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
                 <a href="{{ path('game_add_owner', {id: game.id}) }}" class="btn btn-sm btn-success" onclick="event.stopPropagation();">
-                    <i class="fas fa-user-plus mr-1"></i> Ajouter à ma collection
+                    <i class="fas fa-user-plus mr-1"></i>
+                    {% if userGameCount > 0 %}Ajouter une autre édition{% else %}Ajouter à ma collection{% endif %}
                 </a>
             {% endif %}
         </div>
@@ -159,9 +123,30 @@
             {% else %}
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
+                    {% set ownerConsoleIcons = {
+                        'PS5': 'fab fa-playstation', 'PS4': 'fab fa-playstation', 'PS3': 'fab fa-playstation',
+                        'PS2': 'fab fa-playstation', 'PS1': 'fab fa-playstation', 'PSVita': 'fab fa-playstation', 'PSP': 'fab fa-playstation',
+                        'XSX': 'fab fa-xbox', 'XOne': 'fab fa-xbox', 'X360': 'fab fa-xbox', 'Xbox': 'fab fa-xbox',
+                        'Switch': 'fas fa-gamepad', 'WiiU': 'fas fa-gamepad', 'Wii': 'fas fa-gamepad',
+                        'GameCube': 'fas fa-gamepad', 'N64': 'fas fa-gamepad', '3DS': 'fas fa-gamepad',
+                        'DS': 'fas fa-gamepad', 'GBA': 'fas fa-gamepad', 'GB': 'fas fa-gamepad',
+                        'PC': 'fas fa-desktop', 'Mac': 'fab fa-apple', 'Linux': 'fab fa-linux',
+                        'Android': 'fab fa-android', 'iOS': 'fab fa-apple'
+                    } %}
+                    {% set ownerConsoleColors = {
+                        'PS5': '#003791', 'PS4': '#003791', 'PS3': '#003791', 'PS2': '#003791', 'PS1': '#003791',
+                        'PSVita': '#003791', 'PSP': '#003791',
+                        'XSX': '#107C10', 'XOne': '#107C10', 'X360': '#107C10', 'Xbox': '#107C10',
+                        'Switch': '#E60012', 'WiiU': '#0096C8', 'Wii': '#0096C8',
+                        'GameCube': '#6A5FBB', 'N64': '#6A5FBB', '3DS': '#CE181E',
+                        'DS': '#CE181E', 'GBA': '#6A5FBB', 'GB': '#6A5FBB',
+                        'PC': '#5a4a78', 'Mac': '#555555', 'Linux': '#FCC624',
+                        'Android': '#3DDC84', 'iOS': '#555555'
+                    } %}
                     <thead class="thead-light">
                         <tr>
                             <th><i class="fas fa-user"></i> Utilisateur</th>
+                            <th><i class="fas fa-tv"></i> Console</th>
                             <th><i class="fas fa-box"></i> Édition</th>
                             <th><i class="fas fa-tag"></i> Type</th>
                             <th><i class="fas fa-comment"></i> Commentaire</th>
@@ -175,6 +160,15 @@
                         <tr>
                             <td>
                                 <strong>{{ lien.user.name }} {{ lien.user.lastName }}</strong>
+                            </td>
+                            <td>
+                                {% if lien.console %}
+                                    <span class="badge" style="background-color: {{ ownerConsoleColors[lien.console] ?? '#6c757d' }}; color: white;">
+                                        <i class="{{ ownerConsoleIcons[lien.console] ?? 'fas fa-gamepad' }}"></i> {{ lien.console }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
                             </td>
                             <td>
                                 {{ lien.nomEdition|default('Standard') }}

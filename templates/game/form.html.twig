@@ -11,7 +11,7 @@
                 <i class="fas fa-exclamation-triangle"></i> <strong>{{ duplicateWarning.message }}</strong>
                 <p class="mb-0 mt-2">
                     <a href="{{ path('game_detail', {id: duplicateWarning.game.id}) }}" class="alert-link">
-                        Voir le jeu existant: {{ duplicateWarning.game.titre }} ({{ duplicateWarning.game.console }})
+                        Voir le jeu existant: {{ duplicateWarning.game.titre }}
                     </a>
                 </p>
             </div>
@@ -38,18 +38,11 @@
                     {{ form_start(form, {'attr': {'class': 'needs-validation', 'novalidate': 'novalidate', 'enctype': 'multipart/form-data'}}) }}
                     
                     <div class="row">
-                        <div class="col-md-8">
+                        <div class="col-md-12">
                             <div class="form-group">
                                 {{ form_label(form.titre) }}
                                 {{ form_widget(form.titre) }}
                                 {{ form_errors(form.titre) }}
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                {{ form_label(form.console) }}
-                                {{ form_widget(form.console) }}
-                                {{ form_errors(form.console) }}
                             </div>
                         </div>
                     </div>
@@ -144,7 +137,28 @@
                             <div class="card-body">
                                 <h6><i class="fas fa-user"></i> Informations de ma collection</h6>
                                 <div class="row">
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label>Console</label>
+                                            {% set formConsoles = {
+                                                'PS5': 'PlayStation 5', 'PS4': 'PlayStation 4', 'PS3': 'PlayStation 3',
+                                                'PS2': 'PlayStation 2', 'PS1': 'PlayStation', 'PSVita': 'PS Vita',
+                                                'PSP': 'PSP', 'XSX': 'Xbox Series X', 'XOne': 'Xbox One',
+                                                'X360': 'Xbox 360', 'Xbox': 'Xbox', 'Switch': 'Nintendo Switch',
+                                                'WiiU': 'Wii U', 'Wii': 'Wii', 'GameCube': 'GameCube',
+                                                'N64': 'Nintendo 64', '3DS': 'Nintendo 3DS', 'DS': 'Nintendo DS',
+                                                'GBA': 'Game Boy Advance', 'GB': 'Game Boy', 'PC': 'PC',
+                                                'Mac': 'Mac', 'Linux': 'Linux', 'Android': 'Android', 'iOS': 'iOS'
+                                            } %}
+                                            <select name="console" class="form-control form-control-sm" required>
+                                                <option value="">-- Sélectionner --</option>
+                                                {% for code, label in formConsoles %}
+                                                    <option value="{{ code }}" {% if prefillConsole is defined and prefillConsole == code %}selected{% endif %}>{{ label }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
                                         <div class="form-group">
                                             <label>Type d'édition</label>
                                             <select name="type_edition" id="typeEdition" class="form-control form-control-sm">
@@ -153,13 +167,13 @@
                                             </select>
                                         </div>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
                                         <div class="form-group">
                                             <label>Nom de l'édition</label>
                                             <input type="text" name="nom_edition" class="form-control form-control-sm" placeholder="Standard, Collector, GOTY...">
                                         </div>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
                                         <div class="form-group">
                                             <label>Date d'achat</label>
                                             <input type="date" name="date_achat" class="form-control form-control-sm" value="{{ 'now'|date('Y-m-d') }}">

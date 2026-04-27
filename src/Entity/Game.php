@@ -31,13 +31,6 @@ class Game
     private $titre;
 
     /**
-     * @var string
-     *
-     * @ORM\Column(name="console", type="string", length=100)
-     */
-    private $console;
-
-    /**
      * @var int|null
      *
      * @ORM\Column(name="annee", type="integer", nullable=true)
@@ -131,17 +124,6 @@ class Game
     public function setTitre(string $titre): self
     {
         $this->titre = $titre;
-        return $this;
-    }
-
-    public function getConsole(): ?string
-    {
-        return $this->console;
-    }
-
-    public function setConsole(string $console): self
-    {
-        $this->console = $console;
         return $this;
     }
 

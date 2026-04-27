@@ -34,7 +34,9 @@ class GameRepository extends ServiceEntityRepository
         }
 
         if ($console) {
-            $qb->andWhere('g.console = :console')
+            // Recherche par console via les liens utilisateur uniquement
+            $qb->leftJoin('g.userLinks', 'link')
+               ->andWhere('link.console = :console')
                ->setParameter('console', $console);
         }
 
@@ -48,9 +50,9 @@ class GameRepository extends ServiceEntityRepository
                ->setParameter('year', $year);
         }
 
-        return $qb->orderBy('g.titre', 'ASC')
-                  ->getQuery()
-                  ->getResult();
+        $qb->orderBy('g.titre', 'ASC');
+
+        return $qb->getQuery()->getResult();
     }
 
     public function findByExternalId(string $externalId): ?Game
@@ -60,9 +62,11 @@ class GameRepository extends ServiceEntityRepository
 
     public function findByTitreAndConsole(string $titre, string $console): ?Game
     {
+        // Chercher un jeu avec ce titre ayant déjà un lien sur cette console
         return $this->createQueryBuilder('g')
+            ->join('g.userLinks', 'link')
             ->where('g.titre = :titre')
-            ->andWhere('g.console = :console')
+            ->andWhere('link.console = :console')
             ->setParameter('titre', $titre)
             ->setParameter('console', $console)
             ->getQuery()
@@ -71,12 +75,10 @@ class GameRepository extends ServiceEntityRepository
 
     public function getDistinctConsoles(): array
     {
-        $result = $this->createQueryBuilder('g')
-            ->select('DISTINCT g.console')
-            ->where('g.console IS NOT NULL')
-            ->orderBy('g.console', 'ASC')
-            ->getQuery()
-            ->getResult();
+        // Consoles depuis les liens utilisateur uniquement
+        $conn = $this->getEntityManager()->getConnection();
+        $sql = "SELECT DISTINCT console FROM lien_user_game WHERE console IS NOT NULL AND console != '' ORDER BY console ASC";
+        $result = $conn->executeQuery($sql)->fetchAllAssociative();
 
         return array_column($result, 'console');
     }

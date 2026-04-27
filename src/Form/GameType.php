@@ -16,35 +16,6 @@ class GameType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        $consoles = [
-            'PlayStation 5' => 'PS5',
-            'PlayStation 4' => 'PS4',
-            'PlayStation 3' => 'PS3',
-            'PlayStation 2' => 'PS2',
-            'PlayStation' => 'PS1',
-            'PlayStation Vita' => 'PSVita',
-            'PSP' => 'PSP',
-            'Xbox Series X/S' => 'XSX',
-            'Xbox One' => 'XOne',
-            'Xbox 360' => 'X360',
-            'Xbox' => 'Xbox',
-            'Nintendo Switch' => 'Switch',
-            'Nintendo Wii U' => 'WiiU',
-            'Nintendo Wii' => 'Wii',
-            'Nintendo GameCube' => 'GameCube',
-            'Nintendo 64' => 'N64',
-            'Nintendo 3DS' => '3DS',
-            'Nintendo DS' => 'DS',
-            'Game Boy Advance' => 'GBA',
-            'Game Boy' => 'GB',
-            'PC' => 'PC',
-            'Mac' => 'Mac',
-            'Linux' => 'Linux',
-            'Android' => 'Android',
-            'iOS' => 'iOS',
-            'Autre' => 'Autre',
-        ];
-
         $classifications = [
             'PEGI 3' => 'PEGI 3',
             'PEGI 7' => 'PEGI 7',
@@ -59,13 +30,6 @@ class GameType extends AbstractType
                 'label' => 'Titre du jeu',
                 'required' => true,
                 'attr' => ['class' => 'form-control', 'placeholder' => 'Ex: The Legend of Zelda'],
-            ])
-            ->add('console', ChoiceType::class, [
-                'label' => 'Console / Plateforme',
-                'required' => true,
-                'choices' => $consoles,
-                'placeholder' => '-- Sélectionner --',
-                'attr' => ['class' => 'form-control'],
             ])
             ->add('annee', IntegerType::class, [
                 'label' => 'Année de sortie',

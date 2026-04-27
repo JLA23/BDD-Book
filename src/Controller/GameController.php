@@ -134,7 +134,6 @@ class GameController extends AbstractController
         // Pré-remplissage depuis l'API
         if ($request->query->get('prefill')) {
             $game->setTitre($request->query->get('titre', ''));
-            $game->setConsole($request->query->get('console', ''));
             
             if ($request->query->get('annee')) {
                 $game->setAnnee((int) $request->query->get('annee'));
@@ -161,11 +160,11 @@ class GameController extends AbstractController
                 $game->setExternalId($request->query->get('externalId'));
             }
 
-            // Vérifier si le jeu existe déjà
-            $existing = $gameRepo->findByTitreAndConsole($game->getTitre(), $game->getConsole());
+            // Vérifier si le jeu existe déjà (par titre uniquement)
+            $existing = $gameRepo->findOneBy(['titre' => $game->getTitre()]);
             if ($existing) {
                 $duplicateWarning = [
-                    'message' => 'Ce jeu existe déjà pour cette plateforme !',
+                    'message' => 'Ce jeu existe déjà dans la base !',
                     'game' => $existing,
                 ];
             }
@@ -177,10 +176,10 @@ class GameController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            // Vérifier doublon
-            $existing = $gameRepo->findByTitreAndConsole($game->getTitre(), $game->getConsole());
-            if ($existing) {
-                $this->addFlash('danger', 'Ce jeu existe déjà pour cette plateforme !');
+            // Vérifier doublon par titre uniquement
+            $existing = $gameRepo->findOneBy(['titre' => $game->getTitre()]);
+            if ($existing && $existing->getId() !== $game->getId()) {
+                $this->addFlash('danger', 'Ce jeu existe déjà dans la base !');
                 return $this->render('game/form.html.twig', [
                     'form' => $form->createView(),
                     'game' => null,
@@ -242,6 +241,7 @@ class GameController extends AbstractController
                 $lien = new LienUserGame();
                 $lien->setUser($this->getUser());
                 $lien->setGame($game);
+                $lien->setConsole($request->request->get('console'));
                 $lien->setTypeEdition($request->request->get('type_edition', 'physique'));
                 $lien->setNomEdition($request->request->get('nom_edition'));
                 
@@ -296,6 +296,7 @@ class GameController extends AbstractController
             'isEdit' => false,
             'prefillImages' => $prefillImages,
             'duplicateWarning' => $duplicateWarning,
+            'prefillConsole' => $request->query->get('console'),
         ]);
     }
 
@@ -308,19 +309,19 @@ class GameController extends AbstractController
         }
 
         $owners = $lienRepo->findByGame($game);
-        $userHasGame = false;
-        $userLink = null;
-        
+        $userGameCount = 0;
+        $userLinks = [];
+
         if ($this->getUser()) {
-            $userLink = $lienRepo->findUserGameLink($this->getUser(), $game);
-            $userHasGame = $userLink !== null;
+            $userLinks = $lienRepo->findBy(['user' => $this->getUser(), 'game' => $game]);
+            $userGameCount = count($userLinks);
         }
 
         return $this->render('game/detail.html.twig', [
             'game' => $game,
             'owners' => $owners,
-            'userHasGame' => $userHasGame,
-            'userLink' => $userLink,
+            'userGameCount' => $userGameCount,
+            'userLinks' => $userLinks,
         ]);
     }
 
@@ -546,6 +547,7 @@ class GameController extends AbstractController
             $lien = new LienUserGame();
             $lien->setUser($this->getUser());
             $lien->setGame($game);
+            $lien->setConsole($request->request->get('console'));
             $lien->setTypeEdition($request->request->get('type_edition', 'physique'));
             $lien->setNomEdition($request->request->get('nom_edition'));
             
@@ -613,6 +615,7 @@ class GameController extends AbstractController
         $game = $lien->getGame();
 
         if ($request->isMethod('POST')) {
+            $lien->setConsole($request->request->get('console'));
             $lien->setTypeEdition($request->request->get('type_edition', 'physique'));
             $lien->setNomEdition($request->request->get('nom_edition'));
             

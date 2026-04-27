@@ -132,9 +132,21 @@
                                 'Android': '#3DDC84',
                                 'iOS': '#555555'
                             } %}
-                            <span class="badge position-absolute" style="top: 5px; right: 5px; background-color: {{ consoleColors[game.console] ?? '#6c757d' }}; color: white;">
-                                <i class="{{ consoleIcons[game.console] ?? 'fas fa-gamepad' }}"></i> {{ game.console }}
-                            </span>
+                            {% set gameConsoles = [] %}
+                            {% for link in game.userLinks %}
+                                {% if link.console and link.console not in gameConsoles %}
+                                    {% set gameConsoles = gameConsoles|merge([link.console]) %}
+                                {% endif %}
+                            {% endfor %}
+                            {% if gameConsoles|length > 1 %}
+                                <span class="badge position-absolute" style="top: 5px; right: 5px; background-color: #6c757d; color: white;">
+                                    <i class="fas fa-gamepad"></i> Multi
+                                </span>
+                            {% elseif gameConsoles|length == 1 %}
+                                <span class="badge position-absolute" style="top: 5px; right: 5px; background-color: {{ consoleColors[gameConsoles[0]] ?? '#6c757d' }}; color: white;">
+                                    <i class="{{ consoleIcons[gameConsoles[0]] ?? 'fas fa-gamepad' }}"></i> {{ gameConsoles[0] }}
+                                </span>
+                            {% endif %}
                         </div>
                         <div class="card-body p-2">
                             <h6 class="card-title mb-1 text-dark text-truncate" title="{{ game.titre }}">{{ game.titre }}</h6>
