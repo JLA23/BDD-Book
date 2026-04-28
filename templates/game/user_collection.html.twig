@@ -76,14 +76,7 @@
                                 <p class="card-text small text-muted mb-0">
                                     {% if game.annee %}{{ game.annee }}{% endif %}
                                 </p>
-                                <div class="mt-1">
-                                    {% for ed in editions %}
-                                        <span class="badge badge-{{ ed.typeEdition == 'physique' ? 'primary' : 'info' }} badge-sm mr-1">
-                                            <i class="fas fa-{{ ed.typeEdition == 'physique' ? 'box' : 'cloud' }}"></i>
-                                            {% if ed.nomEdition %}{{ ed.nomEdition }}{% else %}{{ ed.typeEdition|capitalize }}{% endif %}
-                                        </span>
-                                    {% endfor %}
-                                </div>
+                                
                             </div>
                         </div>
                     </a>
