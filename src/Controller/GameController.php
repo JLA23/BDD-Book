@@ -339,7 +339,7 @@ class GameController extends AbstractController
             $this->em->flush();
 
             $this->addFlash('success', 'Jeu créé avec succès' . ($addToCollection === '1' ? ' et ajouté à votre collection' : ''));
-            return $this->redirectToRoute('game_detail', ['id' => $game->getId()]);
+            return $this->redirectToRoute('game_detail', ['id' => $game->getId(), 'from' => 'list']);
         }
 
         return $this->render('game/form.html.twig', [
@@ -422,7 +422,7 @@ class GameController extends AbstractController
             
             $this->em->flush();
             $this->addFlash('success', 'Jeu modifié avec succès');
-            return $this->redirectToRoute('game_detail', ['id' => $game->getId()]);
+            return $this->redirectToRoute('game_detail', ['id' => $game->getId(), 'from' => 'list']);
         }
 
         return $this->render('game/form.html.twig', [

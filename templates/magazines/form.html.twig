@@ -4,17 +4,6 @@
 
 {% block body %}
 <div class="container mt-4">
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ path('magazines_list') }}">Magazines</a></li>
-            {% if edit %}
-                <li class="breadcrumb-item"><a href="{{ path('magazine_detail', {id: magazine.id}) }}">{{ magazine.nom }}</a></li>
-                <li class="breadcrumb-item active">Modifier</li>
-            {% else %}
-                <li class="breadcrumb-item active">Nouveau magazine</li>
-            {% endif %}
-        </ol>
-    </nav>
 
     <h1>{% if edit %}Modifier le magazine{% else %}Nouveau magazine{% endif %}</h1>
 

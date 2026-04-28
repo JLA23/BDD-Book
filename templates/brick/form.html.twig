@@ -88,7 +88,12 @@
                         <div class="col-md-4">
                             <div class="form-group">
                                 {{ form_label(form.prix) }}
-                                {{ form_widget(form.prix) }}
+                                <div class="input-group">
+                                    {{ form_widget(form.prix) }}
+                                    <div class="input-group-append">
+                                        <span class="input-group-text">€</span>
+                                    </div>
+                                </div>
                                 {{ form_errors(form.prix) }}
                             </div>
                         </div>
@@ -203,8 +208,8 @@
                             </div>
                             <div class="col-md-4">
                                 <div class="form-group">
-                                    <label><i class="fas fa-euro-sign"></i> Prix d'achat</label>
-                                    <input type="number" name="prix_achat" class="form-control" step="0.01" placeholder="0.00">
+                                    <label>Prix d'achat <i class="fas fa-euro-sign"></i></label>
+                                    <input type="number" name="prix_achat" class="form-control" step="0.01" min="0" placeholder="0.00">
                                 </div>
                             </div>
                         </div>

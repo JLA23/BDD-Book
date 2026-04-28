@@ -42,7 +42,8 @@ class NumeroMagazineType extends AbstractType
                 'label' => 'Prix',
                 'required' => false,
                 'scale' => 2,
-                'attr' => ['class' => 'form-control']
+                'html5' => true,
+                'attr' => ['class' => 'form-control', 'min' => '0']
             ])
             ->add('monnaie', EntityType::class, [
                 'class' => Monnaie::class,

@@ -6,9 +6,15 @@
 <div class="container-fluid px-4">
     <!-- Bouton retour + modifier -->
     <div class="mb-3 d-flex justify-content-between align-items-center">
-        <a href="javascript:history.back()" class="btn btn-outline-secondary btn-sm">
-            <i class="fas fa-arrow-left"></i> Retour
-        </a>
+        {% if app.request.query.get('from') == 'list' %}
+            <a href="{{ path('game_list') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left"></i> Retour
+            </a>
+        {% else %}
+            <a href="javascript:history.back()" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left"></i> Retour
+            </a>
+        {% endif %}
         {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
             <a href="{{ path('game_edit', {id: game.id}) }}" class="btn btn-sm" style="background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%); color: white;">
                 <i class="fas fa-edit"></i> Modifier

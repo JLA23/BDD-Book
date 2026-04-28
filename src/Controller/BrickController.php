@@ -348,7 +348,7 @@ class BrickController extends AbstractController
             $this->em->flush();
 
             $this->addFlash('success', 'Set créé avec succès' . ($addToCollection === '1' ? ' et ajouté à votre collection' : ''));
-            return $this->redirectToRoute('brick_detail', ['id' => $set->getId()]);
+            return $this->redirectToRoute('brick_detail', ['id' => $set->getId(), 'from' => 'list']);
         }
 
         return $this->render('brick/form.html.twig', [
@@ -379,7 +379,7 @@ class BrickController extends AbstractController
             $this->em->flush();
 
             $this->addFlash('success', 'Set modifié avec succès');
-            return $this->redirectToRoute('brick_detail', ['id' => $set->getId()]);
+            return $this->redirectToRoute('brick_detail', ['id' => $set->getId(), 'from' => 'list']);
         }
 
         return $this->render('brick/form.html.twig', [

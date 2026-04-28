@@ -128,6 +128,14 @@
         {% block javascripts %}
             <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js"></script>
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+            <script>
+                // Bloquer la molette de la souris sur les inputs number pour éviter les modifications involontaires
+                document.addEventListener('wheel', function(e) {
+                    if (document.activeElement && document.activeElement.type === 'number') {
+                        document.activeElement.blur();
+                    }
+                }, { capture: true });
+            </script>
         {% endblock %}
     </body>
 </html>

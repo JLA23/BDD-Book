@@ -11,6 +11,7 @@ use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\MoneyType;
+use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -53,11 +54,12 @@ class BrickSetType extends AbstractType
                     return $repo->createQueryBuilder('c')->orderBy('c.nom', 'ASC');
                 },
             ])
-            ->add('prix', MoneyType::class, [
+            ->add('prix', NumberType::class, [
                 'label' => 'Prix',
                 'required' => false,
-                'currency' => 'EUR',
-                'attr' => ['class' => 'form-control', 'placeholder' => '0.00'],
+                'scale' => 2,
+                'html5' => true,
+                'attr' => ['class' => 'form-control', 'placeholder' => '0.00', 'step' => '0.01', 'min' => '0'],
             ])
             ->add('annee', IntegerType::class, [
                 'label' => 'Année de sortie',
