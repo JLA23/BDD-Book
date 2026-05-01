@@ -3,6 +3,9 @@
 {% block title %}Modifier ma collection - {{ game.titre }}{% endblock %}
 
 {% block body %}
+{% set gameConsoles = gameConsoles|default([]) %}
+{% set gameStores = gameStores|default([]) %}
+{% set currentConsoleCode = lien.resolvedConsoleCode %}
 <div class="container-fluid px-4">
     <div class="row justify-content-center">
         <div class="col-lg-6">
@@ -27,18 +30,8 @@
                                 <div class="form-group">
                                     <label><strong>Console / Plateforme</strong></label>
                                     <select name="console" class="form-control" required>
-                                        {% set consoles_list = {
-                                            'PS5': 'PlayStation 5', 'PS4': 'PlayStation 4', 'PS3': 'PlayStation 3',
-                                            'PS2': 'PlayStation 2', 'PS1': 'PlayStation', 'PSVita': 'PS Vita',
-                                            'PSP': 'PSP', 'XSX': 'Xbox Series X', 'XOne': 'Xbox One',
-                                            'X360': 'Xbox 360', 'Xbox': 'Xbox', 'Switch': 'Nintendo Switch',
-                                            'WiiU': 'Wii U', 'Wii': 'Wii', 'GameCube': 'GameCube',
-                                            'N64': 'Nintendo 64', '3DS': 'Nintendo 3DS', 'DS': 'Nintendo DS',
-                                            'GBA': 'Game Boy Advance', 'GB': 'Game Boy', 'PC': 'PC',
-                                            'Mac': 'Mac', 'Linux': 'Linux', 'Android': 'Android', 'iOS': 'iOS'
-                                        } %}
-                                        {% for code, label in consoles_list %}
-                                            <option value="{{ code }}" {% if lien.console == code %}selected{% endif %}>{{ label }}</option>
+                                        {% for c in gameConsoles %}
+                                            <option value="{{ c.code }}" {% if currentConsoleCode == c.code %}selected{% endif %}>{{ c.nom }}</option>
                                         {% endfor %}
                                     </select>
                                 </div>
@@ -81,9 +74,8 @@
                             <label><strong>Store</strong></label>
                             <select name="store" class="form-control">
                                 <option value="">-- Sélectionner --</option>
-                                {% set stores = ['Steam', 'Epic Games', 'GOG', 'PlayStation Store', 'Xbox Store', 'Nintendo eShop', 'Ubisoft Connect', 'EA App', 'Battle.net', 'Autre'] %}
-                                {% for store in stores %}
-                                    <option value="{{ store }}" {% if lien.store == store %}selected{% endif %}>{{ store }}</option>
+                                {% for s in gameStores %}
+                                    <option value="{{ s.nom }}" {% if lien.store == s.nom %}selected{% endif %}>{{ s.nom }}</option>
                                 {% endfor %}
                             </select>
                         </div>

@@ -1,0 +1,52 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Administration — Références jeux{% endblock %}
+
+{% block body %}
+<div id="acceuilSite">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="display-5 font-weight-bold text-danger">
+            <i class="fas fa-gamepad"></i> Références jeux vidéo
+        </h1>
+        <a href="{{ path('admin_users') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Admin utilisateurs
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 shadow-sm border-danger">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fab fa-playstation"></i> Consoles</h5>
+                    <p class="card-text text-muted small">Codes, noms, icônes FontAwesome et couleur de fond des badges.</p>
+                    <a href="{{ path('admin_game_consoles') }}" class="btn btn-danger">Gérer les consoles</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 shadow-sm border-secondary">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-exchange-alt"></i> Mapping consoles</h5>
+                    <p class="card-text text-muted small">Libellés bruts (imports, anciennes données) reliés à une console canonique.</p>
+                    <a href="{{ path('admin_game_console_aliases') }}" class="btn btn-outline-danger">Mappings alias</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 shadow-sm border-secondary">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-store"></i> Stores</h5>
+                    <p class="card-text text-muted small">Plateformes de dématérialisation (Steam, PSN, etc.).</p>
+                    <a href="{{ path('admin_game_stores') }}" class="btn btn-outline-secondary">Gérer les stores</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <p class="text-muted small mt-3">
+        Migration données existantes : <code>php bin/console app:migrate-game-entities</code>
+        — Alias slug IGDB vers la base : <code>php bin/console app:seed-console-slug-aliases</code>
+        — SQL manuel : <code>migrations/game_entities_migration.sql</code>
+    </p>
+</div>
+{% endblock %}

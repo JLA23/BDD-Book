@@ -18,7 +18,7 @@
             <i class="fas fa-info-circle"></i> Cet utilisateur n'a pas encore de jeux dans sa collection.
         </div>
     {% else %}
-        {% set consoleIcons = {
+        {% set fallbackIcons = {
             'PS5':'fab fa-playstation','PS4':'fab fa-playstation','PS3':'fab fa-playstation',
             'PS2':'fab fa-playstation','PS1':'fab fa-playstation','PSVita':'fab fa-playstation','PSP':'fab fa-playstation',
             'XSX':'fab fa-xbox','XOne':'fab fa-xbox','X360':'fab fa-xbox','Xbox':'fab fa-xbox',
@@ -28,7 +28,7 @@
             'PC':'fas fa-desktop','Mac':'fab fa-apple','Linux':'fab fa-linux',
             'Android':'fab fa-android','iOS':'fab fa-apple'
         } %}
-        {% set consoleColors = {
+        {% set fallbackColors = {
             'PS5':'#003791','PS4':'#003791','PS3':'#003791','PS2':'#003791','PS1':'#003791',
             'PSVita':'#003791','PSP':'#003791',
             'XSX':'#107C10','XOne':'#107C10','X360':'#107C10','Xbox':'#107C10',
@@ -38,16 +38,17 @@
             'PC':'#5a4a78','Mac':'#555555','Linux':'#FCC624',
             'Android':'#3DDC84','iOS':'#555555'
         } %}
+        {% set consoleCatalog = consoleCatalog|default({}) %}
 
         <div class="row">
             {% for item in grouped %}
                 {% set game = item.game %}
                 {% set editions = item.editions %}
-                {% set gid = game.id %}
-                {% set userConsoles = [] %}
+                {% set ownedConsoleCodes = [] %}
                 {% for ed in editions %}
-                    {% if ed.console and ed.console not in userConsoles %}
-                        {% set userConsoles = userConsoles|merge([ed.console]) %}
+                    {% set cc = ed.resolvedConsoleCode %}
+                    {% if cc and cc not in ownedConsoleCodes %}
+                        {% set ownedConsoleCodes = ownedConsoleCodes|merge([cc]) %}
                     {% endif %}
                 {% endfor %}
                 <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-4">
@@ -61,13 +62,17 @@
                                         <i class="fas fa-gamepad fa-4x text-muted"></i>
                                     </div>
                                 {% endif %}
-                                {% if userConsoles|length > 1 %}
+                                {% if ownedConsoleCodes|length > 1 %}
                                     <span class="badge position-absolute" style="top: 5px; right: 5px; background-color: #6c757d; color: white;">
                                         <i class="fas fa-gamepad"></i> Multi
                                     </span>
-                                {% elseif userConsoles|length == 1 %}
-                                    <span class="badge position-absolute" style="top: 5px; right: 5px; background-color: {{ consoleColors[userConsoles[0]] ?? '#6c757d' }}; color: white;">
-                                        <i class="{{ consoleIcons[userConsoles[0]] ?? 'fas fa-gamepad' }}"></i> {{ userConsoles[0] }}
+                                {% elseif ownedConsoleCodes|length == 1 %}
+                                    {% set code0 = ownedConsoleCodes[0] %}
+                                    {% set cat = consoleCatalog[code0] ?? null %}
+                                    {% set badgeBg = cat and cat.couleur ? cat.couleur : (fallbackColors[code0] ?? '#6c757d') %}
+                                    {% set badgeIc = cat and cat.icone ? cat.icone : (fallbackIcons[code0] ?? 'fas fa-gamepad') %}
+                                    <span class="badge position-absolute text-truncate" style="top: 5px; right: 5px; max-width: 85%; background-color: {{ badgeBg }}; color: white;">
+                                        <i class="{{ badgeIc }}"></i> {{ code0 }}
                                     </span>
                                 {% endif %}
                             </div>
@@ -76,7 +81,6 @@
                                 <p class="card-text small text-muted mb-0">
                                     {% if game.annee %}{{ game.annee }}{% endif %}
                                 </p>
-                                
                             </div>
                         </div>
                     </a>

@@ -3,6 +3,8 @@
 {% block title %}Ajouter à ma collection - {{ game.titre }}{% endblock %}
 
 {% block body %}
+{% set gameConsoles = gameConsoles|default([]) %}
+{% set gameStores = gameStores|default([]) %}
 <div class="container-fluid px-4">
     <div class="row justify-content-center">
         <div class="col-lg-6">
@@ -28,31 +30,9 @@
                                     <label><strong>Console / Plateforme</strong></label>
                                     <select name="console" class="form-control" required>
                                         <option value="">-- Sélectionner --</option>
-                                        <option value="PS5">PlayStation 5</option>
-                                        <option value="PS4">PlayStation 4</option>
-                                        <option value="PS3">PlayStation 3</option>
-                                        <option value="PS2">PlayStation 2</option>
-                                        <option value="PS1">PlayStation</option>
-                                        <option value="PSVita">PS Vita</option>
-                                        <option value="PSP">PSP</option>
-                                        <option value="XSX">Xbox Series X</option>
-                                        <option value="XOne">Xbox One</option>
-                                        <option value="X360">Xbox 360</option>
-                                        <option value="Xbox">Xbox</option>
-                                        <option value="Switch">Nintendo Switch</option>
-                                        <option value="WiiU">Wii U</option>
-                                        <option value="Wii">Wii</option>
-                                        <option value="GameCube">GameCube</option>
-                                        <option value="N64">Nintendo 64</option>
-                                        <option value="3DS">Nintendo 3DS</option>
-                                        <option value="DS">Nintendo DS</option>
-                                        <option value="GBA">Game Boy Advance</option>
-                                        <option value="GB">Game Boy</option>
-                                        <option value="PC">PC</option>
-                                        <option value="Mac">Mac</option>
-                                        <option value="Linux">Linux</option>
-                                        <option value="Android">Android</option>
-                                        <option value="iOS">iOS</option>
+                                        {% for c in gameConsoles %}
+                                            <option value="{{ c.code }}">{{ c.nom }}</option>
+                                        {% endfor %}
                                     </select>
                                 </div>
                             </div>
@@ -93,16 +73,9 @@
                                     <label><strong>Store</strong></label>
                                     <select name="store" class="form-control">
                                         <option value="">-- Sélectionner --</option>
-                                        <option value="Steam">Steam</option>
-                                        <option value="Epic Games">Epic Games</option>
-                                        <option value="GOG">GOG</option>
-                                        <option value="PlayStation Store">PlayStation Store</option>
-                                        <option value="Xbox Store">Xbox Store</option>
-                                        <option value="Nintendo eShop">Nintendo eShop</option>
-                                        <option value="Ubisoft Connect">Ubisoft Connect</option>
-                                        <option value="EA App">EA App</option>
-                                        <option value="Battle.net">Battle.net</option>
-                                        <option value="Autre">Autre</option>
+                                        {% for s in gameStores %}
+                                            <option value="{{ s.nom }}">{{ s.nom }}</option>
+                                        {% endfor %}
                                     </select>
                                 </div>
                             </div>

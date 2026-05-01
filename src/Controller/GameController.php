@@ -7,10 +7,13 @@ use App\Entity\GameImage;
 use App\Entity\LienUserGame;
 use App\Form\GameType;
 use App\Repository\GameRepository;
+use App\Repository\GameConsoleRepository;
 use App\Repository\GameImageRepository;
+use App\Repository\GameStoreRepository;
 use App\Repository\LienUserGameRepository;
 use App\Repository\UserRepository;
 use App\Service\GameApiService;
+use App\Service\LienUserGameReferenceLinker;
 use App\Service\SectionPermissionService;
 use Doctrine\ORM\EntityManagerInterface;
 use Knp\Component\Pager\PaginatorInterface;
@@ -28,16 +31,22 @@ class GameController extends AbstractController
     private EntityManagerInterface $em;
     private GameApiService $gameApi;
     private SectionPermissionService $permissionService;
+    private LienUserGameReferenceLinker $lienReferenceLinker;
 
-    public function __construct(EntityManagerInterface $em, GameApiService $gameApi, SectionPermissionService $permissionService)
-    {
+    public function __construct(
+        EntityManagerInterface $em,
+        GameApiService $gameApi,
+        SectionPermissionService $permissionService,
+        LienUserGameReferenceLinker $lienReferenceLinker,
+    ) {
         $this->em = $em;
         $this->gameApi = $gameApi;
         $this->permissionService = $permissionService;
+        $this->lienReferenceLinker = $lienReferenceLinker;
     }
 
     #[Route('/', name: 'game_index')]
-    public function index(GameRepository $gameRepo, LienUserGameRepository $lienRepo, UserRepository $userRepo): Response
+    public function index(GameRepository $gameRepo, LienUserGameRepository $lienRepo, UserRepository $userRepo, GameConsoleRepository $consoleRepo): Response
     {
         $users = $userRepo->findAll();
         $usersWithCount = [];
@@ -52,14 +61,14 @@ class GameController extends AbstractController
 
         return $this->render('game/index.html.twig', [
             'totalGames' => $gameRepo->countAll(),
-            'consoles' => $gameRepo->getDistinctConsoles(),
+            'consoles' => $consoleRepo->findAllOrdered(),
             'genres' => $gameRepo->getDistinctGenres(),
             'users' => $usersWithCount,
         ]);
     }
 
     #[Route('/liste', name: 'game_list')]
-    public function list(Request $request, GameRepository $gameRepo, PaginatorInterface $paginator): Response
+    public function list(Request $request, GameRepository $gameRepo, GameConsoleRepository $consoleRepo, PaginatorInterface $paginator): Response
     {
         $search = $request->query->get('search');
         $console = $request->query->get('console');
@@ -74,13 +83,19 @@ class GameController extends AbstractController
             24
         );
 
+        $consoleCatalog = [];
+        foreach ($consoleRepo->findAllOrdered() as $c) {
+            $consoleCatalog[$c->getCode()] = $c;
+        }
+
         return $this->render('game/list.html.twig', [
             'games' => $pagination,
             'search' => $search,
             'console' => $console,
             'genre' => $genre,
             'year' => $year,
-            'consoles' => $gameRepo->getDistinctConsoles(),
+            'consoles' => $consoleRepo->findAllOrdered(),
+            'consoleCatalog' => $consoleCatalog,
             'genres' => $gameRepo->getDistinctGenres(),
             'years' => $gameRepo->getDistinctYears(),
         ]);
@@ -106,7 +121,7 @@ class GameController extends AbstractController
     }
 
     #[Route('/utilisateur/{id}', name: 'game_user', requirements: ['id' => '\d+'])]
-    public function userCollection(int $id, UserRepository $userRepo, LienUserGameRepository $lienRepo): Response
+    public function userCollection(int $id, UserRepository $userRepo, LienUserGameRepository $lienRepo, GameConsoleRepository $consoleRepo): Response
     {
         $user = $userRepo->find($id);
         if (!$user) {
@@ -124,9 +139,15 @@ class GameController extends AbstractController
             $grouped[$gid]['editions'][] = $lien;
         }
 
+        $consoleCatalog = [];
+        foreach ($consoleRepo->findAllOrdered() as $c) {
+            $consoleCatalog[$c->getCode()] = $c;
+        }
+
         return $this->render('game/user_collection.html.twig', [
             'user' => $user,
             'grouped' => $grouped,
+            'consoleCatalog' => $consoleCatalog,
         ]);
     }
 
@@ -142,10 +163,15 @@ class GameController extends AbstractController
     }
 
     #[Route('/nouveau', name: 'game_new')]
-    public function new(Request $request, GameRepository $gameRepo, SluggerInterface $slugger): Response
+    public function new(Request $request, GameRepository $gameRepo, SluggerInterface $slugger, GameConsoleRepository $consoleRepo, GameStoreRepository $storeRepo): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
         $this->permissionService->denyAccessUnlessCanRegister('games');
+
+        $collectionRefs = [
+            'gameConsoles' => $consoleRepo->findAllOrdered(),
+            'gameStores' => $storeRepo->findAllOrdered(),
+        ];
 
         $session = $request->getSession();
         $game = new Game();
@@ -232,7 +258,7 @@ class GameController extends AbstractController
             $existing = $qb->getQuery()->getOneOrNullResult();
             if ($existing && $existing->getId() !== $game->getId()) {
                 $this->addFlash('danger', 'Ce jeu existe déjà dans la base !');
-                return $this->render('game/form.html.twig', [
+                return $this->render('game/form.html.twig', array_merge($collectionRefs, [
                     'form' => $form->createView(),
                     'game' => null,
                     'isEdit' => false,
@@ -241,7 +267,7 @@ class GameController extends AbstractController
                         'message' => 'Ce jeu existe déjà !',
                         'game' => $existing,
                     ],
-                ]);
+                ]));
             }
 
             // Gérer l'upload de la jaquette
@@ -334,7 +360,9 @@ class GameController extends AbstractController
                     // Stocker directement l'URL
                     $lien->setImagePerso($imagePersoUrl);
                 }
-                
+
+                $this->lienReferenceLinker->link($lien);
+
                 $this->em->persist($lien);
             }
 
@@ -345,14 +373,14 @@ class GameController extends AbstractController
             return $this->redirectToRoute('game_detail', ['id' => $game->getId(), 'from' => 'list']);
         }
 
-        return $this->render('game/form.html.twig', [
+        return $this->render('game/form.html.twig', array_merge($collectionRefs, [
             'form' => $form->createView(),
             'game' => $game,
             'isEdit' => false,
             'prefillImages' => $prefillImages,
             'duplicateWarning' => $duplicateWarning,
             'prefillConsole' => $request->query->get('console'),
-        ]);
+        ]));
     }
 
     #[Route('/jeu/{id}', name: 'game_detail', requirements: ['id' => '\d+'])]
@@ -381,10 +409,15 @@ class GameController extends AbstractController
     }
 
     #[Route('/jeu/{id}/modifier', name: 'game_edit', requirements: ['id' => '\d+'])]
-    public function edit(int $id, Request $request, GameRepository $gameRepo): Response
+    public function edit(int $id, Request $request, GameRepository $gameRepo, GameConsoleRepository $consoleRepo, GameStoreRepository $storeRepo): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
         $this->permissionService->denyAccessUnlessCanRegister('games');
+
+        $collectionRefs = [
+            'gameConsoles' => $consoleRepo->findAllOrdered(),
+            'gameStores' => $storeRepo->findAllOrdered(),
+        ];
 
         $game = $gameRepo->find($id);
         if (!$game) {
@@ -428,13 +461,13 @@ class GameController extends AbstractController
             return $this->redirectToRoute('game_detail', ['id' => $game->getId(), 'from' => 'list']);
         }
 
-        return $this->render('game/form.html.twig', [
+        return $this->render('game/form.html.twig', array_merge($collectionRefs, [
             'form' => $form->createView(),
             'game' => $game,
             'isEdit' => true,
             'prefillImages' => [],
             'duplicateWarning' => null,
-        ]);
+        ]));
     }
 
     #[Route('/jeu/{id}/supprimer', name: 'game_delete', requirements: ['id' => '\d+'], methods: ['POST'])]
@@ -526,6 +559,7 @@ class GameController extends AbstractController
 
         return $this->render('game/search_api.html.twig', [
             'apiConfigured' => $this->gameApi->isConfigured(),
+            'igdb_platform_filters' => $this->gameApi->getIgdbPlatformFilterChoices(),
         ]);
     }
 
@@ -583,7 +617,7 @@ class GameController extends AbstractController
             $hasConsole = false;
             if ($console) {
                 foreach ($game->getUserLinks() as $link) {
-                    if ($link->getConsole() === $console) {
+                    if ($link->getResolvedConsoleCode() === $console) {
                         $hasConsole = true;
                         break;
                     }
@@ -639,7 +673,7 @@ class GameController extends AbstractController
     }
 
     #[Route('/jeu/{id}/ajouter-collection', name: 'game_add_owner', requirements: ['id' => '\d+'])]
-    public function addOwner(int $id, Request $request, GameRepository $gameRepo, LienUserGameRepository $lienRepo, SluggerInterface $slugger): Response
+    public function addOwner(int $id, Request $request, GameRepository $gameRepo, LienUserGameRepository $lienRepo, SluggerInterface $slugger, GameConsoleRepository $consoleRepo, GameStoreRepository $storeRepo): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
         $this->permissionService->denyAccessUnlessCanRegister('games');
@@ -690,7 +724,9 @@ class GameController extends AbstractController
             } elseif ($imageUrl && filter_var($imageUrl, FILTER_VALIDATE_URL)) {
                 $lien->setImagePerso($imageUrl);
             }
-            
+
+            $this->lienReferenceLinker->link($lien);
+
             $this->em->persist($lien);
             $this->em->flush();
 
@@ -700,11 +736,13 @@ class GameController extends AbstractController
 
         return $this->render('game/add_owner.html.twig', [
             'game' => $game,
+            'gameConsoles' => $consoleRepo->findAllOrdered(),
+            'gameStores' => $storeRepo->findAllOrdered(),
         ]);
     }
 
     #[Route('/jeu/{id}/modifier-collection/{lienId}', name: 'game_edit_owner', requirements: ['id' => '\d+', 'lienId' => '\d+'])]
-    public function editOwner(int $id, int $lienId, Request $request, GameRepository $gameRepo, LienUserGameRepository $lienRepo, SluggerInterface $slugger): Response
+    public function editOwner(int $id, int $lienId, Request $request, GameRepository $gameRepo, LienUserGameRepository $lienRepo, SluggerInterface $slugger, GameConsoleRepository $consoleRepo, GameStoreRepository $storeRepo): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
 
@@ -775,7 +813,9 @@ class GameController extends AbstractController
                 }
                 $lien->setImagePerso($imageUrl);
             }
-            
+
+            $this->lienReferenceLinker->link($lien);
+
             $this->em->flush();
 
             $this->addFlash('success', 'Informations mises à jour');
@@ -785,6 +825,8 @@ class GameController extends AbstractController
         return $this->render('game/edit_owner.html.twig', [
             'game' => $game,
             'lien' => $lien,
+            'gameConsoles' => $consoleRepo->findAllOrdered(),
+            'gameStores' => $storeRepo->findAllOrdered(),
         ]);
     }
 

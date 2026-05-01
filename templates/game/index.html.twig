@@ -35,8 +35,8 @@
                                 <label class="font-weight-bold text-dark">Console</label>
                                 <select name="console" class="form-control form-control-lg">
                                     <option value="">Toutes</option>
-                                    {% for console in consoles %}
-                                        <option value="{{ console }}">{{ console }}</option>
+                                    {% for c in consoles %}
+                                        <option value="{{ c.code }}">{{ c.nom }}</option>
                                     {% endfor %}
                                 </select>
                             </div>

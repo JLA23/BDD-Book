@@ -40,30 +40,9 @@
                             <label class="small"><strong>Console / Plateforme (optionnel)</strong></label>
                             <select id="platformFilter" class="form-control form-control-sm mb-2">
                                 <option value="">Toutes les plateformes</option>
-                                <option value="167">PlayStation 5</option>
-                                <option value="48">PlayStation 4</option>
-                                <option value="16">PlayStation 3</option>
-                                <option value="9">PlayStation 2</option>
-                                <option value="7">PlayStation</option>
-                                <option value="46">PlayStation Vita</option>
-                                <option value="38">PlayStation Portable</option>
-                                <option value="169">Xbox Series X</option>
-                                <option value="12">Xbox One</option>
-                                <option value="11">Xbox 360</option>
-                                <option value="1">Xbox</option>
-                                <option value="130">Nintendo Switch</option>
-                                <option value="41">Wii U</option>
-                                <option value="5">Wii</option>
-                                <option value="21">GameCube</option>
-                                <option value="4">Nintendo 64</option>
-                                <option value="18">Nintendo 3DS</option>
-                                <option value="20">Nintendo DS</option>
-                                <option value="24">Game Boy Advance</option>
-                                <option value="6">PC (Windows)</option>
-                                <option value="14">Mac</option>
-                                <option value="3">Linux</option>
-                                <option value="34">Android</option>
-                                <option value="39">iOS</option>
+                                {% for pf in igdb_platform_filters %}
+                                    <option value="{{ pf.igdbId }}" data-console-code="{{ pf.code }}">{{ pf.label }} ({{ pf.code }})</option>
+                                {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-6">
@@ -229,8 +208,9 @@ function loadGameDetails(gameId) {
                     
                     currentGame.platforms.forEach(function(p, i) {
                         var checked = i === 0 ? 'checked' : '';
+                        var code = p.consoleCode || p.slug || '';
                         platformsHtml += '<div class="custom-control custom-radio custom-control-inline">';
-                        platformsHtml += '<input type="radio" id="platform' + i + '" name="platform" class="custom-control-input" value="' + p.slug + '" ' + checked + '>';
+                        platformsHtml += '<input type="radio" id="platform' + i + '" name="platform" class="custom-control-input" value="' + String(code).replace(/"/g, '&quot;') + '" ' + checked + '>';
                         platformsHtml += '<label class="custom-control-label" for="platform' + i + '">' + p.name + '</label>';
                         platformsHtml += '</div>';
                     });
@@ -261,8 +241,7 @@ function loadGameDetails(gameId) {
 function checkExistingGame() {
     if (!currentGame) return;
     
-    var platformSlug = $('input[name="platform"]:checked').val();
-    var consoleCode = platformToConsole(platformSlug);
+    var consoleCode = $('input[name="platform"]:checked').val() || '';
     
     $.ajax({
         url: '{{ path("game_api_check_existing") }}',
@@ -311,8 +290,7 @@ function checkExistingGame() {
 function addNewGame() {
     if (!currentGame) return;
     
-    var platformSlug = $('input[name="platform"]:checked').val();
-    var consoleCode = platformToConsole(platformSlug);
+    var consoleCode = $('input[name="platform"]:checked').val() || '';
     
     var params = new URLSearchParams({
         prefill: '1',
@@ -342,68 +320,6 @@ $('#addGameBtn').click(function() {
     addNewGame();
 });
 
-function platformToConsole(slug) {
-    // Normaliser le slug (minuscules, sans espaces)
-    slug = slug.toLowerCase().replace(/\s+/g, '');
-    
-    var mapping = {
-        // PlayStation
-        'playstation5': 'PS5',
-        'ps5': 'PS5',
-        'playstation4': 'PS4',
-        'ps4': 'PS4',
-        'playstation3': 'PS3',
-        'ps3': 'PS3',
-        'playstation2': 'PS2',
-        'ps2': 'PS2',
-        'playstation': 'PS1',
-        'playstation1': 'PS1',
-        'ps1': 'PS1',
-        'playstationvita': 'PSVita',
-        'psvita': 'PSVita',
-        'vita': 'PSVita',
-        'playstationportable': 'PSP',
-        'psp': 'PSP',
-        // Xbox
-        'xboxseriesx|s': 'XSX',
-        'xboxseriesx': 'XSX',
-        'xboxseries': 'XSX',
-        'xboxone': 'XOne',
-        'xbox360': 'X360',
-        'xbox': 'Xbox',
-        // Nintendo
-        'nintendoswitch': 'Switch',
-        'switch': 'Switch',
-        'wiiu': 'WiiU',
-        'wii': 'Wii',
-        'nintendogamecube': 'GameCube',
-        'gamecube': 'GameCube',
-        'nintendo64': 'N64',
-        'n64': 'N64',
-        'nintendo3ds': '3DS',
-        '3ds': '3DS',
-        'nintendods': 'DS',
-        'ds': 'DS',
-        'gameboyadvance': 'GBA',
-        'gba': 'GBA',
-        'gameboycolor': 'GB',
-        'gameboy': 'GB',
-        'gb': 'GB',
-        // PC
-        'pc(microsoftwindows)': 'PC',
-        'pc(microsoft windows)': 'PC',
-        'pc(windows)': 'PC',
-        'pcwindows': 'PC',
-        'windows': 'PC',
-        'pc': 'PC',
-        'mac': 'Mac',
-        'macos': 'Mac',
-        'linux': 'Linux',
-        'android': 'Android',
-        'ios': 'iOS'
-    };
-    return mapping[slug] || slug.charAt(0).toUpperCase() + slug.slice(1);
-}
 </script>
 
 <style>

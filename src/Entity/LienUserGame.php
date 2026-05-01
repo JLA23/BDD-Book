@@ -34,11 +34,29 @@ class LienUserGame
     private $game;
 
     /**
-     * @var string Type d'édition: physique ou numérique
+     * @var string Type d'édition: physique ou numérique (ancien champ, conservé pour migration)
      *
-     * @ORM\Column(name="type_edition", type="string", length=20)
+     * @ORM\Column(name="type_edition", type="string", length=20, nullable=true)
      */
     private $typeEdition = 'physique';
+
+    /**
+     * @ORM\ManyToOne(targetEntity="App\Entity\GameConsole")
+     * @ORM\JoinColumn(name="console_id", referencedColumnName="id", nullable=true)
+     */
+    private $consoleEntity;
+
+    /**
+     * @ORM\ManyToOne(targetEntity="App\Entity\GameTypeEdition")
+     * @ORM\JoinColumn(name="type_edition_id", referencedColumnName="id", nullable=true)
+     */
+    private $typeEditionEntity;
+
+    /**
+     * @ORM\ManyToOne(targetEntity="App\Entity\GameStore")
+     * @ORM\JoinColumn(name="store_id", referencedColumnName="id", nullable=true)
+     */
+    private $storeEntity;
 
     /**
      * @var string|null Nom de l'édition (Standard, Collector, GOTY, etc.)
@@ -213,6 +231,108 @@ class LienUserGame
     {
         $this->console = $console;
         return $this;
+    }
+
+    public function getConsoleEntity(): ?GameConsole
+    {
+        return $this->consoleEntity;
+    }
+
+    public function setConsoleEntity(?GameConsole $consoleEntity): self
+    {
+        $this->consoleEntity = $consoleEntity;
+        return $this;
+    }
+
+    public function getTypeEditionEntity(): ?GameTypeEdition
+    {
+        return $this->typeEditionEntity;
+    }
+
+    public function setTypeEditionEntity(?GameTypeEdition $typeEditionEntity): self
+    {
+        $this->typeEditionEntity = $typeEditionEntity;
+        return $this;
+    }
+
+    public function getStoreEntity(): ?GameStore
+    {
+        return $this->storeEntity;
+    }
+
+    public function setStoreEntity(?GameStore $storeEntity): self
+    {
+        $this->storeEntity = $storeEntity;
+        return $this;
+    }
+
+    /**
+     * Retourne le nom de la console (depuis l'entité si dispo, sinon l'ancien champ string)
+     */
+    public function getConsoleDisplay(): ?string
+    {
+        if ($this->consoleEntity) {
+            return $this->consoleEntity->getCode();
+        }
+        return $this->console;
+    }
+
+    /**
+     * Retourne l'icône de la console
+     */
+    public function getConsoleIcone(): ?string
+    {
+        return $this->consoleEntity ? $this->consoleEntity->getIcone() : null;
+    }
+
+    /**
+     * Retourne la couleur de la console
+     */
+    public function getConsoleCouleur(): ?string
+    {
+        return $this->consoleEntity ? $this->consoleEntity->getCouleur() : null;
+    }
+
+    /**
+     * Code console pour filtres / badges : FK si présente, sinon valeur brute du champ historique.
+     */
+    public function getResolvedConsoleCode(): ?string
+    {
+        if ($this->consoleEntity) {
+            return $this->consoleEntity->getCode();
+        }
+        if ($this->console !== null && trim($this->console) !== '') {
+            return trim($this->console);
+        }
+
+        return null;
+    }
+
+    /**
+     * Libellé pour affichage (nom canonique ou chaîne brute).
+     */
+    public function getConsoleLabelForDisplay(): ?string
+    {
+        if ($this->consoleEntity) {
+            return $this->consoleEntity->getNom();
+        }
+
+        return $this->console !== null && $this->console !== '' ? $this->console : null;
+    }
+
+    /**
+     * Nom du store pour affichage (édition numérique).
+     */
+    public function getStoreDisplay(): ?string
+    {
+        if (!$this->isNumerique()) {
+            return null;
+        }
+        if ($this->storeEntity) {
+            return $this->storeEntity->getNom();
+        }
+
+        return $this->store ?: null;
     }
 
     public function getCommentaire(): ?string

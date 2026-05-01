@@ -1,0 +1,89 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Admin — Mapping consoles{% endblock %}
+
+{% block body %}
+<div id="acceuilSite">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <h1 class="display-5 font-weight-bold text-danger mb-0">
+            <i class="fas fa-exchange-alt"></i> Mapping libellé → console
+        </h1>
+        <div>
+            <a href="{{ path('admin_game_index') }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-home"></i> Références jeux</a>
+            <a href="{{ path('admin_game_consoles') }}" class="btn btn-outline-danger btn-sm"><i class="fas fa-gamepad"></i> Consoles</a>
+        </div>
+    </div>
+
+    {% for label, msgs in app.flashes %}
+        {% for msg in msgs %}
+            <div class="alert alert-{{ label == 'error' ? 'danger' : label }} alert-dismissible fade show">{{ msg }}
+                <button type="button" class="close" data-dismiss="alert">&times;</button>
+            </div>
+        {% endfor %}
+    {% endfor %}
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light"><strong>Ajouter un mapping</strong></div>
+        <div class="card-body">
+            <p class="text-muted small mb-3">
+                Les comparaisons sont <strong>insensibles à la casse</strong> et après suppression des espaces en trop.
+                Utile pour rattacher d’anciennes valeurs de <code>lien_user_game.console</code> (ex. « PlayStation 5 ») au code officiel.
+            </p>
+            <form method="post" class="form-row align-items-end">
+                <div class="form-group col-md-5">
+                    <label for="libelle">Libellé brut</label>
+                    <input type="text" class="form-control" id="libelle" name="libelle" maxlength="150" required placeholder="Ex. PlayStation 5">
+                </div>
+                <div class="form-group col-md-5">
+                    <label for="console_id">Console cible</label>
+                    <select class="form-control" id="console_id" name="console_id" required>
+                        <option value="">— Choisir —</option>
+                        {% for c in consoles %}
+                            <option value="{{ c.id }}">{{ c.nom }} ({{ c.code }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group col-md-2">
+                    <button type="submit" class="btn btn-danger btn-block"><i class="fas fa-plus"></i> Ajouter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Libellé mappé</th>
+                            <th>Console</th>
+                            <th class="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in aliases %}
+                        <tr>
+                            <td><code>{{ a.libelle }}</code></td>
+                            <td>
+                                {{ a.console.nom }}
+                                <span class="text-muted">({{ a.console.code }})</span>
+                                {% if a.console.icone %}<span class="ml-1"><i class="{{ a.console.icone }}"></i></span>{% endif %}
+                            </td>
+                            <td class="text-right">
+                                <form method="post" action="{{ path('admin_game_console_alias_delete', {id: a.id}) }}" class="d-inline" onsubmit="return confirm('Supprimer ce mapping ?');">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('delete-console-alias-' ~ a.id) }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="3" class="text-center text-muted py-4">Aucun alias. Les codes exacts des consoles fonctionnent sans mapping.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

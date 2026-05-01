@@ -4,9 +4,11 @@ namespace App\Service;
 
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+
 class GameApiService
 {
     private HttpClientInterface $httpClient;
+    private IgdbConsoleMappingService $igdbConsoleMapping;
     private ?string $twitchClientId;
     private ?string $twitchClientSecret;
     private ?string $deeplApiKey;
@@ -14,12 +16,14 @@ class GameApiService
     private ?int $tokenExpires = null;
 
     public function __construct(
-        HttpClientInterface $httpClient, 
-        ?string $twitchClientId = null, 
+        HttpClientInterface $httpClient,
+        IgdbConsoleMappingService $igdbConsoleMapping,
+        ?string $twitchClientId = null,
         ?string $twitchClientSecret = null,
         ?string $deeplApiKey = null
     ) {
         $this->httpClient = $httpClient;
+        $this->igdbConsoleMapping = $igdbConsoleMapping;
         $this->twitchClientId = $twitchClientId;
         $this->twitchClientSecret = $twitchClientSecret;
         $this->deeplApiKey = $deeplApiKey;
@@ -205,7 +209,7 @@ class GameApiService
                 'body' => "where id = {$gameId};
                     fields name, first_release_date, summary, storyline, 
                            cover.url, screenshots.url,
-                           genres.name, platforms.name, platforms.abbreviation,
+                           genres.name, platforms.name, platforms.id, platforms.abbreviation,
                            involved_companies.company.name, involved_companies.developer, involved_companies.publisher,
                            age_ratings.*,
                            websites.url, websites.category,
@@ -318,15 +322,16 @@ class GameApiService
                 }
             }
 
-            // Plateformes avec slug - utiliser le nom complet en minuscules pour un meilleur mapping
+            // Plateformes : slug + code console aligné sur game_console / formulaires
             $platforms = [];
             foreach ($game['platforms'] ?? [] as $p) {
-                $name = $p['name'];
-                // Créer un slug basé sur le nom complet
-                $slug = strtolower(str_replace(' ', '', $name));
+                $name = $p['name'] ?? '';
+                $slug = $this->igdbConsoleMapping->normalizeSlug($name);
                 $platforms[] = [
                     'name' => $name,
                     'slug' => $slug,
+                    'consoleCode' => $this->igdbConsoleMapping->slugToConsoleCode($slug),
+                    'igdbPlatformId' => $p['id'] ?? null,
                 ];
             }
 
@@ -350,39 +355,18 @@ class GameApiService
         }
     }
 
-    /**
-     * Convertit une abréviation de plateforme IGDB en code console
-     */
     public function platformToConsole(string $platformSlug): string
     {
-        $slug = strtolower($platformSlug);
-        return match ($slug) {
-            'ps5' => 'PS5',
-            'ps4' => 'PS4',
-            'ps3' => 'PS3',
-            'ps2' => 'PS2',
-            'ps1', 'psx', 'playstation' => 'PS1',
-            'vita', 'psvita' => 'PSVita',
-            'psp' => 'PSP',
-            'series x', 'xsx', 'series x/s' => 'XSX',
-            'xone', 'xbox one' => 'XOne',
-            'x360', 'xbox 360' => 'X360',
-            'xbox' => 'Xbox',
-            'switch', 'nintendo switch' => 'Switch',
-            'wiiu', 'wii u' => 'WiiU',
-            'wii' => 'Wii',
-            'gc', 'gamecube', 'ngc' => 'GameCube',
-            'n64', 'nintendo 64' => 'N64',
-            '3ds', 'nintendo 3ds' => '3DS',
-            'nds', 'ds', 'nintendo ds' => 'DS',
-            'gba', 'game boy advance' => 'GBA',
-            'gb', 'gbc', 'game boy', 'game boy color' => 'GB',
-            'pc', 'win', 'windows' => 'PC',
-            'mac', 'macos' => 'Mac',
-            'linux' => 'Linux',
-            'android' => 'Android',
-            'ios' => 'iOS',
-            default => ucfirst($platformSlug),
-        };
+        return $this->igdbConsoleMapping->slugToConsoleCode($platformSlug);
+    }
+
+    /**
+     * Options du filtre « plateforme » : {@see GameConsole::igdbPlatformId} renseigné en admin.
+     *
+     * @return list<array{igdbId: int, label: string, code: string}>
+     */
+    public function getIgdbPlatformFilterChoices(): array
+    {
+        return $this->igdbConsoleMapping->getSearchFilterChoices();
     }
 }

@@ -21,10 +21,12 @@ class LienUserGameRepository extends ServiceEntityRepository
     public function findByUser(User $user): array
     {
         return $this->createQueryBuilder('l')
-            ->join('l.game', 'g')
+            ->join('l.game', 'g')->addSelect('g')
+            ->leftJoin('l.consoleEntity', 'gc')->addSelect('gc')
             ->where('l.user = :user')
             ->setParameter('user', $user)
             ->orderBy('g.titre', 'ASC')
+            ->addOrderBy('l.id', 'ASC')
             ->getQuery()
             ->getResult();
     }

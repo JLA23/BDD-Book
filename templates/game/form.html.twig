@@ -122,6 +122,8 @@
                     </div>
 
                     {% if not isEdit %}
+                    {% set gameConsoles = gameConsoles|default([]) %}
+                    {% set gameStores = gameStores|default([]) %}
                     <hr>
                     <div class="form-group">
                         <div class="custom-control custom-checkbox">
@@ -140,20 +142,10 @@
                                     <div class="col-md-3">
                                         <div class="form-group">
                                             <label>Console</label>
-                                            {% set formConsoles = {
-                                                'PS5': 'PlayStation 5', 'PS4': 'PlayStation 4', 'PS3': 'PlayStation 3',
-                                                'PS2': 'PlayStation 2', 'PS1': 'PlayStation', 'PSVita': 'PS Vita',
-                                                'PSP': 'PSP', 'XSX': 'Xbox Series X', 'XOne': 'Xbox One',
-                                                'X360': 'Xbox 360', 'Xbox': 'Xbox', 'Switch': 'Nintendo Switch',
-                                                'WiiU': 'Wii U', 'Wii': 'Wii', 'GameCube': 'GameCube',
-                                                'N64': 'Nintendo 64', '3DS': 'Nintendo 3DS', 'DS': 'Nintendo DS',
-                                                'GBA': 'Game Boy Advance', 'GB': 'Game Boy', 'PC': 'PC',
-                                                'Mac': 'Mac', 'Linux': 'Linux', 'Android': 'Android', 'iOS': 'iOS'
-                                            } %}
                                             <select name="console" class="form-control form-control-sm" required>
                                                 <option value="">-- Sélectionner --</option>
-                                                {% for code, label in formConsoles %}
-                                                    <option value="{{ code }}" {% if prefillConsole is defined and prefillConsole == code %}selected{% endif %}>{{ label }}</option>
+                                                {% for c in gameConsoles %}
+                                                    <option value="{{ c.code }}" {% if prefillConsole is defined and prefillConsole == c.code %}selected{% endif %}>{{ c.nom }}</option>
                                                 {% endfor %}
                                             </select>
                                         </div>
@@ -192,16 +184,9 @@
                                             <label>Store</label>
                                             <select name="store" class="form-control form-control-sm">
                                                 <option value="">-- Sélectionner --</option>
-                                                <option value="Steam">Steam</option>
-                                                <option value="Epic Games">Epic Games</option>
-                                                <option value="GOG">GOG</option>
-                                                <option value="PlayStation Store">PlayStation Store</option>
-                                                <option value="Xbox Store">Xbox Store</option>
-                                                <option value="Nintendo eShop">Nintendo eShop</option>
-                                                <option value="Ubisoft Connect">Ubisoft Connect</option>
-                                                <option value="EA App">EA App</option>
-                                                <option value="Battle.net">Battle.net</option>
-                                                <option value="Autre">Autre</option>
+                                                {% for s in gameStores %}
+                                                    <option value="{{ s.nom }}">{{ s.nom }}</option>
+                                                {% endfor %}
                                             </select>
                                         </div>
                                     </div>

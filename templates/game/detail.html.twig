@@ -168,9 +168,12 @@
                                 <strong>{{ lien.user.name }} {{ lien.user.lastName }}</strong>
                             </td>
                             <td>
-                                {% if lien.console %}
-                                    <span class="badge" style="background-color: {{ ownerConsoleColors[lien.console] ?? '#6c757d' }}; color: white;">
-                                        <i class="{{ ownerConsoleIcons[lien.console] ?? 'fas fa-gamepad' }}"></i> {{ lien.console }}
+                                {% set oc = lien.resolvedConsoleCode %}
+                                {% if oc %}
+                                    {% set obg = lien.consoleCouleur ?? ownerConsoleColors[oc] ?? '#6c757d' %}
+                                    {% set oic = lien.consoleIcone ?? ownerConsoleIcons[oc] ?? 'fas fa-gamepad' %}
+                                    <span class="badge" style="background-color: {{ obg }}; color: white;">
+                                        <i class="{{ oic }}"></i> {{ lien.getConsoleDisplay }}
                                     </span>
                                 {% else %}
                                     <span class="text-muted">-</span>
@@ -193,8 +196,8 @@
                                     <span class="badge badge-primary"><i class="fas fa-box"></i> Physique</span>
                                 {% else %}
                                     <span class="badge badge-info"><i class="fas fa-cloud"></i> Numérique</span>
-                                    {% if lien.store %}
-                                        <small class="text-muted ml-1">({{ lien.store }})</small>
+                                    {% if lien.storeDisplay %}
+                                        <small class="text-muted ml-1">({{ lien.storeDisplay }})</small>
                                     {% endif %}
                                 {% endif %}
                             </td>

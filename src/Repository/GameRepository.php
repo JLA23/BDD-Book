@@ -26,7 +26,10 @@ class GameRepository extends ServiceEntityRepository
 
     public function findBySearch(?string $search = null, ?string $console = null, ?string $genre = null, ?string $year = null): array
     {
-        $qb = $this->createQueryBuilder('g');
+        $qb = $this->createQueryBuilder('g')->distinct(true);
+        // Précharger liens + consoles pour les vues liste (badges) sans N+1
+        $qb->leftJoin('g.userLinks', 'link')->addSelect('link')
+            ->leftJoin('link.consoleEntity', 'gc')->addSelect('gc');
 
         if ($search) {
             $qb->andWhere('g.titre LIKE :search OR g.editeur LIKE :search OR g.developpeur LIKE :search')
@@ -34,9 +37,7 @@ class GameRepository extends ServiceEntityRepository
         }
 
         if ($console) {
-            // Recherche par console via les liens utilisateur uniquement
-            $qb->leftJoin('g.userLinks', 'link')
-               ->andWhere('link.console = :console')
+            $qb->andWhere('link.console = :console OR gc.code = :console')
                ->setParameter('console', $console);
         }
 
@@ -62,25 +63,33 @@ class GameRepository extends ServiceEntityRepository
 
     public function findByTitreAndConsole(string $titre, string $console): ?Game
     {
-        // Chercher un jeu avec ce titre ayant déjà un lien sur cette console
         return $this->createQueryBuilder('g')
             ->join('g.userLinks', 'link')
+            ->leftJoin('link.consoleEntity', 'gc')
             ->where('g.titre = :titre')
-            ->andWhere('link.console = :console')
+            ->andWhere('link.console = :console OR gc.code = :console')
             ->setParameter('titre', $titre)
             ->setParameter('console', $console)
+            ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();
     }
 
+    /**
+     * Codes console distincts présents dans les collections (chaîne legacy ou FK game_console).
+     *
+     * @return list<string>
+     */
     public function getDistinctConsoles(): array
     {
-        // Consoles depuis les liens utilisateur uniquement
         $conn = $this->getEntityManager()->getConnection();
-        $sql = "SELECT DISTINCT console FROM lien_user_game WHERE console IS NOT NULL AND console != '' ORDER BY console ASC";
-        $result = $conn->executeQuery($sql)->fetchAllAssociative();
+        $sql = 'SELECT DISTINCT COALESCE(gc.code, lug.console) AS code
+                FROM lien_user_game lug
+                LEFT JOIN game_console gc ON gc.id = lug.console_id
+                WHERE COALESCE(gc.code, lug.console) IS NOT NULL AND TRIM(COALESCE(gc.code, lug.console)) <> \'\'
+                ORDER BY code ASC';
 
-        return array_column($result, 'console');
+        return array_column($conn->executeQuery($sql)->fetchAllAssociative(), 'code');
     }
 
     public function getDistinctGenres(): array
