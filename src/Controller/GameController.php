@@ -296,6 +296,9 @@ class GameController extends AbstractController
                 $lien->setConsole($request->request->get('console'));
                 $lien->setTypeEdition($request->request->get('type_edition', 'physique'));
                 $lien->setNomEdition($request->request->get('nom_edition'));
+                if($request->request->get('nom_edition') === '') {
+                    $lien->setNomEdition('Standard');
+                }
                 
                 $dateAchat = $request->request->get('date_achat');
                 if ($dateAchat) {
