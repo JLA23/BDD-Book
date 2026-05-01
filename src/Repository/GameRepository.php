@@ -37,7 +37,7 @@ class GameRepository extends ServiceEntityRepository
         }
 
         if ($console) {
-            $qb->andWhere('link.console = :console OR gc.code = :console')
+            $qb->andWhere('gc.code = :console')
                ->setParameter('console', $console);
         }
 
@@ -67,7 +67,7 @@ class GameRepository extends ServiceEntityRepository
             ->join('g.userLinks', 'link')
             ->leftJoin('link.consoleEntity', 'gc')
             ->where('g.titre = :titre')
-            ->andWhere('link.console = :console OR gc.code = :console')
+            ->andWhere('gc.code = :console')
             ->setParameter('titre', $titre)
             ->setParameter('console', $console)
             ->setMaxResults(1)
@@ -76,17 +76,17 @@ class GameRepository extends ServiceEntityRepository
     }
 
     /**
-     * Codes console distincts présents dans les collections (chaîne legacy ou FK game_console).
+     * Codes console distincts présents dans les collections (FK game_console).
      *
      * @return list<string>
      */
     public function getDistinctConsoles(): array
     {
         $conn = $this->getEntityManager()->getConnection();
-        $sql = 'SELECT DISTINCT COALESCE(gc.code, lug.console) AS code
+        $sql = 'SELECT DISTINCT gc.code AS code
                 FROM lien_user_game lug
-                LEFT JOIN game_console gc ON gc.id = lug.console_id
-                WHERE COALESCE(gc.code, lug.console) IS NOT NULL AND TRIM(COALESCE(gc.code, lug.console)) <> \'\'
+                INNER JOIN game_console gc ON gc.id = lug.console_id
+                WHERE gc.code IS NOT NULL AND TRIM(gc.code) <> \'\'
                 ORDER BY code ASC';
 
         return array_column($conn->executeQuery($sql)->fetchAllAssociative(), 'code');

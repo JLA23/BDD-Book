@@ -34,13 +34,6 @@ class LienUserGame
     private $game;
 
     /**
-     * @var string Type d'édition: physique ou numérique (ancien champ, conservé pour migration)
-     *
-     * @ORM\Column(name="type_edition", type="string", length=20, nullable=true)
-     */
-    private $typeEdition = 'physique';
-
-    /**
      * @ORM\ManyToOne(targetEntity="App\Entity\GameConsole")
      * @ORM\JoinColumn(name="console_id", referencedColumnName="id", nullable=true)
      */
@@ -80,25 +73,11 @@ class LienUserGame
     private $dateAchat;
 
     /**
-     * @var string|null Store (Steam, Epic, PSN, Xbox, Nintendo eShop, etc.) - pour édition numérique
-     *
-     * @ORM\Column(name="store", type="string", length=100, nullable=true)
-     */
-    private $store;
-
-    /**
      * @var string|null URL ou nom de fichier de l'image personnalisée
      *
      * @ORM\Column(name="image_perso", type="string", length=500, nullable=true)
      */
     private $imagePerso;
-
-    /**
-     * @var string|null Console/Plateforme de l'édition possédée
-     *
-     * @ORM\Column(name="console", type="string", length=100, nullable=true)
-     */
-    private $console;
 
     /**
      * @var string|null Commentaire
@@ -148,23 +127,17 @@ class LienUserGame
 
     public function getTypeEdition(): string
     {
-        return $this->typeEdition;
-    }
-
-    public function setTypeEdition(string $typeEdition): self
-    {
-        $this->typeEdition = $typeEdition;
-        return $this;
+        return $this->typeEditionEntity?->getCode() ?? 'physique';
     }
 
     public function isPhysique(): bool
     {
-        return $this->typeEdition === 'physique';
+        return $this->getTypeEdition() === 'physique';
     }
 
     public function isNumerique(): bool
     {
-        return $this->typeEdition === 'numerique';
+        return $this->getTypeEdition() === 'numerique';
     }
 
     public function getNomEdition(): ?string
@@ -200,17 +173,6 @@ class LienUserGame
         return $this;
     }
 
-    public function getStore(): ?string
-    {
-        return $this->store;
-    }
-
-    public function setStore(?string $store): self
-    {
-        $this->store = $store;
-        return $this;
-    }
-
     public function getImagePerso(): ?string
     {
         return $this->imagePerso;
@@ -219,17 +181,6 @@ class LienUserGame
     public function setImagePerso(?string $imagePerso): self
     {
         $this->imagePerso = $imagePerso;
-        return $this;
-    }
-
-    public function getConsole(): ?string
-    {
-        return $this->console;
-    }
-
-    public function setConsole(?string $console): self
-    {
-        $this->console = $console;
         return $this;
     }
 
@@ -271,10 +222,7 @@ class LienUserGame
      */
     public function getConsoleDisplay(): ?string
     {
-        if ($this->consoleEntity) {
-            return $this->consoleEntity->getCode();
-        }
-        return $this->console;
+        return $this->consoleEntity?->getCode();
     }
 
     /**
@@ -298,14 +246,7 @@ class LienUserGame
      */
     public function getResolvedConsoleCode(): ?string
     {
-        if ($this->consoleEntity) {
-            return $this->consoleEntity->getCode();
-        }
-        if ($this->console !== null && trim($this->console) !== '') {
-            return trim($this->console);
-        }
-
-        return null;
+        return $this->consoleEntity?->getCode();
     }
 
     /**
@@ -313,11 +254,7 @@ class LienUserGame
      */
     public function getConsoleLabelForDisplay(): ?string
     {
-        if ($this->consoleEntity) {
-            return $this->consoleEntity->getNom();
-        }
-
-        return $this->console !== null && $this->console !== '' ? $this->console : null;
+        return $this->consoleEntity?->getNom();
     }
 
     /**
@@ -328,11 +265,7 @@ class LienUserGame
         if (!$this->isNumerique()) {
             return null;
         }
-        if ($this->storeEntity) {
-            return $this->storeEntity->getNom();
-        }
-
-        return $this->store ?: null;
+        return $this->storeEntity?->getNom();
     }
 
     public function getCommentaire(): ?string

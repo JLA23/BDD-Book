@@ -18,7 +18,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
     name: 'app:migrate-game-entities',
-    description: 'Migre les données string (console, type_edition, store) de lien_user_game vers les nouvelles entités'
+    description: 'Peuple les références jeu et migre lien_user_game vers les FK (si colonnes chaîne encore présentes)'
 )]
 class MigrateGameEntitiesCommand extends Command
 {
@@ -58,8 +58,21 @@ class MigrateGameEntitiesCommand extends Command
 
         $this->em->flush();
 
-        // === Étape 2: Migrer les données existantes ===
+        // === Étape 2: Migrer les chaînes legacy → FK (uniquement si colonnes encore présentes) ===
         $io->section('Migration des données de lien_user_game');
+        $schemaManager = $conn->createSchemaManager();
+        if (!$schemaManager->tablesExist(['lien_user_game'])) {
+            $io->warning('Table lien_user_game absente.');
+            $io->success('Références jeu prêtes.');
+            return Command::SUCCESS;
+        }
+
+        $lugTable = $schemaManager->introspectTable('lien_user_game');
+        if (!$lugTable->hasColumn('console')) {
+            $io->note('Colonnes chaîne déjà supprimées : rien à migrer depuis console / type_edition / store.');
+            $io->success('Migration terminée !');
+            return Command::SUCCESS;
+        }
 
         // Consoles via table de mapping (alias)
         try {
@@ -74,7 +87,7 @@ class MigrateGameEntitiesCommand extends Command
             $io->warning('  Impossible d\'appliquer le mapping alias (table absente ?) : ' . $e->getMessage());
         }
 
-        // Consoles
+        // Consoles (code brut)
         $result = $conn->executeQuery(
             "SELECT DISTINCT console FROM lien_user_game WHERE console IS NOT NULL AND console != '' AND console_id IS NULL"
         )->fetchAllAssociative();
@@ -118,7 +131,7 @@ class MigrateGameEntitiesCommand extends Command
         }
         $io->success("Types d'édition migrés: {$migratedTypes} lignes");
 
-        // Stores (éditions numériques pertinentes ; les autres auront store vide)
+        // Stores (éditions numériques)
         $result = $conn->executeQuery(
             "SELECT DISTINCT store FROM lien_user_game WHERE store IS NOT NULL AND store != '' AND store_id IS NULL AND type_edition = 'numerique'"
         )->fetchAllAssociative();

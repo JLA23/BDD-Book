@@ -393,6 +393,8 @@ ALTER TABLE lien_user_game ADD CONSTRAINT FK_lien_user_game_type_edition FOREIGN
 ALTER TABLE lien_user_game ADD CONSTRAINT FK_lien_user_game_store FOREIGN KEY (store_id) REFERENCES game_store (id) ON DELETE SET NULL;
 
 -- 10. Données existantes : console via alias puis via code exact
+--     (colonnes lien_user_game.console / type_edition / store requises ; après FK complètes,
+--      suppression possible via doctrine:migrations ou ALTER DROP COLUMN — voir Version20260503143000.)
 UPDATE lien_user_game lug
 INNER JOIN game_console_alias gca ON LOWER(TRIM(gca.libelle)) = LOWER(TRIM(lug.console))
 SET lug.console_id = gca.console_id

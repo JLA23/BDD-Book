@@ -75,7 +75,7 @@
                             <select name="store" class="form-control">
                                 <option value="">-- Sélectionner --</option>
                                 {% for s in gameStores %}
-                                    <option value="{{ s.nom }}" {% if lien.store == s.nom %}selected{% endif %}>{{ s.nom }}</option>
+                                    <option value="{{ s.nom }}" {% if lien.storeDisplay == s.nom %}selected{% endif %}>{{ s.nom }}</option>
                                 {% endfor %}
                             </select>
                         </div>

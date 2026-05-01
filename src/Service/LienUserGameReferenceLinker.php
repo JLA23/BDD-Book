@@ -7,7 +7,7 @@ use App\Repository\GameStoreRepository;
 use App\Repository\GameTypeEditionRepository;
 
 /**
- * Met à jour les associationsManyToOne à partir des champs chaîne conservés sur lien_user_game.
+ * Remplit console_id / type_edition_id / store_id à partir des valeurs formulaire (code console, codes/noms catalogue).
  */
 class LienUserGameReferenceLinker
 {
@@ -18,17 +18,16 @@ class LienUserGameReferenceLinker
     ) {
     }
 
-    public function link(LienUserGame $lien): void
+    public function link(LienUserGame $lien, ?string $consoleRaw, string $typeEditionCode, ?string $storeNom): void
     {
-        $lien->setConsoleEntity($this->consoleResolver->resolveFromLibelle($lien->getConsole()));
+        $lien->setConsoleEntity($this->consoleResolver->resolveFromLibelle($consoleRaw));
 
-        $typeCode = trim((string) $lien->getTypeEdition());
+        $typeCode = trim($typeEditionCode);
         $lien->setTypeEditionEntity($typeCode !== '' ? $this->typeEditionRepository->findByCode($typeCode) : null);
 
-        if ($lien->isNumerique()) {
-            $storeNom = $lien->getStore();
-            $storeNom = $storeNom !== null ? trim($storeNom) : '';
-            $lien->setStoreEntity($storeNom !== '' ? $this->storeRepository->findOneBy(['nom' => $storeNom]) : null);
+        if ($typeCode === 'numerique') {
+            $nom = $storeNom !== null ? trim($storeNom) : '';
+            $lien->setStoreEntity($nom !== '' ? $this->storeRepository->findOneBy(['nom' => $nom]) : null);
         } else {
             $lien->setStoreEntity(null);
         }

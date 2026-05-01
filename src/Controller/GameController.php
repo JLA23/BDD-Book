@@ -319,8 +319,6 @@ class GameController extends AbstractController
                 $lien = new LienUserGame();
                 $lien->setUser($this->getUser());
                 $lien->setGame($game);
-                $lien->setConsole($request->request->get('console'));
-                $lien->setTypeEdition($request->request->get('type_edition', 'physique'));
                 $lien->setNomEdition($request->request->get('nom_edition'));
                 if($request->request->get('nom_edition') === '') {
                     $lien->setNomEdition('Standard');
@@ -334,10 +332,6 @@ class GameController extends AbstractController
                 $prixAchat = $request->request->get('prix_achat');
                 if ($prixAchat) {
                     $lien->setPrixAchat((float) $prixAchat);
-                }
-                
-                if ($request->request->get('type_edition') === 'numerique') {
-                    $lien->setStore($request->request->get('store'));
                 }
                 
                 $lien->setCommentaire($request->request->get('commentaire_lien'));
@@ -361,7 +355,12 @@ class GameController extends AbstractController
                     $lien->setImagePerso($imagePersoUrl);
                 }
 
-                $this->lienReferenceLinker->link($lien);
+                $this->lienReferenceLinker->link(
+                    $lien,
+                    $request->request->get('console'),
+                    (string) $request->request->get('type_edition', 'physique'),
+                    $request->request->get('type_edition') === 'numerique' ? $request->request->get('store') : null
+                );
 
                 $this->em->persist($lien);
             }
@@ -687,8 +686,6 @@ class GameController extends AbstractController
             $lien = new LienUserGame();
             $lien->setUser($this->getUser());
             $lien->setGame($game);
-            $lien->setConsole($request->request->get('console'));
-            $lien->setTypeEdition($request->request->get('type_edition', 'physique'));
             $lien->setNomEdition($request->request->get('nom_edition'));
             
             $dateAchat = $request->request->get('date_achat');
@@ -699,10 +696,6 @@ class GameController extends AbstractController
             $prixAchat = $request->request->get('prix_achat');
             if ($prixAchat) {
                 $lien->setPrixAchat((float) $prixAchat);
-            }
-            
-            if ($request->request->get('type_edition') === 'numerique') {
-                $lien->setStore($request->request->get('store'));
             }
             
             $lien->setCommentaire($request->request->get('commentaire'));
@@ -725,7 +718,12 @@ class GameController extends AbstractController
                 $lien->setImagePerso($imageUrl);
             }
 
-            $this->lienReferenceLinker->link($lien);
+            $this->lienReferenceLinker->link(
+                $lien,
+                $request->request->get('console'),
+                (string) $request->request->get('type_edition', 'physique'),
+                $request->request->get('type_edition') === 'numerique' ? $request->request->get('store') : null
+            );
 
             $this->em->persist($lien);
             $this->em->flush();
@@ -759,8 +757,6 @@ class GameController extends AbstractController
         $game = $lien->getGame();
 
         if ($request->isMethod('POST')) {
-            $lien->setConsole($request->request->get('console'));
-            $lien->setTypeEdition($request->request->get('type_edition', 'physique'));
             $lien->setNomEdition($request->request->get('nom_edition'));
             
             $dateAchat = $request->request->get('date_achat');
@@ -771,12 +767,6 @@ class GameController extends AbstractController
             $prixAchat = $request->request->get('prix_achat');
             if ($prixAchat) {
                 $lien->setPrixAchat((float) $prixAchat);
-            }
-            
-            if ($request->request->get('type_edition') === 'numerique') {
-                $lien->setStore($request->request->get('store'));
-            } else {
-                $lien->setStore(null);
             }
             
             $lien->setCommentaire($request->request->get('commentaire'));
@@ -814,7 +804,12 @@ class GameController extends AbstractController
                 $lien->setImagePerso($imageUrl);
             }
 
-            $this->lienReferenceLinker->link($lien);
+            $this->lienReferenceLinker->link(
+                $lien,
+                $request->request->get('console'),
+                (string) $request->request->get('type_edition', 'physique'),
+                $request->request->get('type_edition') === 'numerique' ? $request->request->get('store') : null
+            );
 
             $this->em->flush();
 
