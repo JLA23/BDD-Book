@@ -14,12 +14,18 @@ final class Version20260412193411 extends AbstractMigration
 {
     public function getDescription(): string
     {
-        return '';
+        return 'Snapshot schéma complet ; ignorée si les tables existent déjà (bases historiques / migrations 202007*).';
     }
 
     public function up(Schema $schema): void
     {
-        // this up() migration is auto-generated, please modify it to your needs
+        $schemaManager = $this->connection->createSchemaManager();
+        if ($schemaManager->tablesExist(['auteur'])) {
+            $this->write('Skipping Version20260412193411: tables already exist.');
+
+            return;
+        }
+
         $this->addSql('CREATE TABLE auteur (id INT AUTO_INCREMENT NOT NULL, nom VARCHAR(255) NOT NULL, PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE brick_collection (id INT AUTO_INCREMENT NOT NULL, nom VARCHAR(255) NOT NULL, description LONGTEXT DEFAULT NULL, PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE brick_image (id INT AUTO_INCREMENT NOT NULL, brick_set_id INT NOT NULL, url VARCHAR(500) DEFAULT NULL, filename VARCHAR(255) DEFAULT NULL, position INT NOT NULL, source VARCHAR(100) DEFAULT NULL, INDEX IDX_48510A68A8CBC419 (brick_set_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
@@ -64,46 +70,6 @@ final class Version20260412193411 extends AbstractMigration
 
     public function down(Schema $schema): void
     {
-        // this down() migration is auto-generated, please modify it to your needs
-        $this->addSql('ALTER TABLE brick_image DROP FOREIGN KEY FK_48510A68A8CBC419');
-        $this->addSql('ALTER TABLE brick_set DROP FOREIGN KEY FK_8E7EFAC54827B9B2');
-        $this->addSql('ALTER TABLE brick_set DROP FOREIGN KEY FK_8E7EFAC5514956FD');
-        $this->addSql('ALTER TABLE kiosk_collec DROP FOREIGN KEY FK_D15C6B1D7F41C459');
-        $this->addSql('ALTER TABLE kiosk_collec DROP FOREIGN KEY FK_D15C6B1DB7AD1DEE');
-        $this->addSql('ALTER TABLE kiosk_num DROP FOREIGN KEY FK_595DDCF033CBFDEA');
-        $this->addSql('ALTER TABLE kiosk_num DROP FOREIGN KEY FK_595DDCF0A31F8914');
-        $this->addSql('ALTER TABLE kiosk_num DROP FOREIGN KEY FK_595DDCF07F41C459');
-        $this->addSql('ALTER TABLE kiosk_num DROP FOREIGN KEY FK_595DDCF0B7AD1DEE');
-        $this->addSql('ALTER TABLE lien_auteur_livre DROP FOREIGN KEY FK_E27EDB137D925CB');
-        $this->addSql('ALTER TABLE lien_auteur_livre DROP FOREIGN KEY FK_E27EDB160BB6FE6');
-        $this->addSql('ALTER TABLE lien_kiosk_num_user DROP FOREIGN KEY FK_20BAA69FFE6E88D7');
-        $this->addSql('ALTER TABLE lien_kiosk_num_user DROP FOREIGN KEY FK_20BAA69F159627E7');
-        $this->addSql('ALTER TABLE lien_user_brick_set DROP FOREIGN KEY FK_55397A6EA76ED395');
-        $this->addSql('ALTER TABLE lien_user_brick_set DROP FOREIGN KEY FK_55397A6EA8CBC419');
-        $this->addSql('ALTER TABLE lien_user_brick_set DROP FOREIGN KEY FK_55397A6E98D3FE22');
-        $this->addSql('ALTER TABLE lien_user_livre DROP FOREIGN KEY FK_6641BC87A76ED395');
-        $this->addSql('ALTER TABLE lien_user_livre DROP FOREIGN KEY FK_6641BC8737D925CB');
-        $this->addSql('ALTER TABLE lien_user_livre DROP FOREIGN KEY FK_6641BC8798D3FE22');
-        $this->addSql('ALTER TABLE livre DROP FOREIGN KEY FK_AC634F9912469DE2');
-        $this->addSql('ALTER TABLE livre DROP FOREIGN KEY FK_AC634F99514956FD');
-        $this->addSql('ALTER TABLE livre DROP FOREIGN KEY FK_AC634F9974281A5E');
-        $this->addSql('ALTER TABLE livre DROP FOREIGN KEY FK_AC634F9998D3FE22');
-        $this->addSql('DROP TABLE auteur');
-        $this->addSql('DROP TABLE brick_collection');
-        $this->addSql('DROP TABLE brick_image');
-        $this->addSql('DROP TABLE brick_marque');
-        $this->addSql('DROP TABLE brick_set');
-        $this->addSql('DROP TABLE category');
-        $this->addSql('DROP TABLE collection');
-        $this->addSql('DROP TABLE edition');
-        $this->addSql('DROP TABLE kiosk_collec');
-        $this->addSql('DROP TABLE kiosk_num');
-        $this->addSql('DROP TABLE lien_auteur_livre');
-        $this->addSql('DROP TABLE lien_kiosk_num_user');
-        $this->addSql('DROP TABLE lien_user_brick_set');
-        $this->addSql('DROP TABLE lien_user_livre');
-        $this->addSql('DROP TABLE livre');
-        $this->addSql('DROP TABLE monnaie');
-        $this->addSql('DROP TABLE user');
+        // Non fiable si up() a été ignoré : ne pas DROP le schéma de production.
     }
 }

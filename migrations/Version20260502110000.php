@@ -16,8 +16,16 @@ final class Version20260502110000 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        $this->addSql('ALTER TABLE game_console ADD igdb_platform_id INT DEFAULT NULL');
-        $this->addSql('CREATE UNIQUE INDEX UNIQ_GAME_CONSOLE_IGDB_PLATFORM ON game_console (igdb_platform_id)');
+        $schemaManager = $this->connection->createSchemaManager();
+        if (!$schemaManager->tablesExist(['game_console'])) {
+            return;
+        }
+
+        $gameConsole = $schemaManager->introspectTable('game_console');
+        if (!$gameConsole->hasColumn('igdb_platform_id')) {
+            $this->addSql('ALTER TABLE game_console ADD igdb_platform_id INT DEFAULT NULL');
+            $this->addSql('CREATE UNIQUE INDEX UNIQ_GAME_CONSOLE_IGDB_PLATFORM ON game_console (igdb_platform_id)');
+        }
 
         $map = [
             'PS5' => 167,
@@ -52,6 +60,16 @@ final class Version20260502110000 extends AbstractMigration
 
     public function down(Schema $schema): void
     {
+        $schemaManager = $this->connection->createSchemaManager();
+        if (!$schemaManager->tablesExist(['game_console'])) {
+            return;
+        }
+
+        $gameConsole = $schemaManager->introspectTable('game_console');
+        if (!$gameConsole->hasColumn('igdb_platform_id')) {
+            return;
+        }
+
         $this->addSql('DROP INDEX UNIQ_GAME_CONSOLE_IGDB_PLATFORM ON game_console');
         $this->addSql('ALTER TABLE game_console DROP COLUMN igdb_platform_id');
     }
