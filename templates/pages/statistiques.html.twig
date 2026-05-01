@@ -79,7 +79,70 @@
                 </div>
             </div>
         </div>
+
+        <!-- Statistiques Jeux vidéo -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header text-white" style="background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);">
+                    <h5 class="mb-0"><i class="fas fa-gamepad"></i> Mes jeux vidéo</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="border rounded p-3 text-center">
+                                <h3 class="mb-0 text-primary">{{ userJeuxCount }}</h3>
+                                <small class="text-muted">Jeux en collection</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border rounded p-3 text-center">
+                                <h3 class="mb-0 text-success">{{ userJeuxPrix|number_format(2, ',', ' ') }} €</h3>
+                                <small class="text-muted">Valeur (prix d’achat)</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3 text-center">
+                        <a href="{{ path('game_list') }}" class="btn btn-outline-secondary btn-sm" style="border-color: #6f42c1; color: #6f42c1;">
+                            <i class="fas fa-arrow-right"></i> Voir mes jeux
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistiques Briques / LEGO -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header text-white" style="background: linear-gradient(135deg, #fd7e14 0%, #ffc107 100%);">
+                    <h5 class="mb-0"><i class="fas fa-cubes"></i> Mes sets briques</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="border rounded p-3 text-center">
+                                <h3 class="mb-0 text-primary">{{ userBricksCount }}</h3>
+                                <small class="text-muted">Sets possédés</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border rounded p-3 text-center">
+                                <h3 class="mb-0 text-success">{{ userBricksPrix|number_format(2, ',', ' ') }} €</h3>
+                                <small class="text-muted">Valeur (prix d’achat)</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3 text-center">
+                        <a href="{{ path('brick_list') }}" class="btn btn-outline-warning btn-sm">
+                            <i class="fas fa-arrow-right"></i> Voir mes sets
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
+
+    {% set totalArticles = userLivresCount + userNumerosCount + userJeuxCount + userBricksCount %}
+    {% set totalValeur = userLivresPrix + userNumerosPrix + userJeuxPrix + userBricksPrix %}
 
     <!-- Résumé total -->
     <div class="card shadow-sm mt-2">
@@ -89,13 +152,14 @@
         <div class="card-body">
             <div class="row text-center">
                 <div class="col-md-4">
-                    <h2 class="text-primary">{{ userLivresCount + userNumerosCount }}</h2>
+                    <h2 class="text-primary">{{ totalArticles }}</h2>
                     <p class="text-muted mb-0">Articles au total</p>
-                    <small class="text-muted">({{ userLivresCount }} livres + {{ userNumerosCount }} numéros)</small>
+                    <small class="text-muted">{{ userLivresCount }} livres · {{ userNumerosCount }} numéros · {{ userJeuxCount }} jeux · {{ userBricksCount }} sets briques</small>
                 </div>
                 <div class="col-md-4">
-                    <h2 class="text-success">{{ (userLivresPrix + userNumerosPrix)|number_format(2, ',', ' ') }} €</h2>
-                    <p class="text-muted mb-0">Valeur totale</p>
+                    <h2 class="text-success">{{ totalValeur|number_format(2, ',', ' ') }} €</h2>
+                    <p class="text-muted mb-0">Valeur totale estimée</p>
+                    <small class="text-muted">Livres, magazines (numéros), jeux et briques</small>
                 </div>
                 <div class="col-md-4">
                     <h2 class="text-info">{{ userMagazinesCount }}</h2>
