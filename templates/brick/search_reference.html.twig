@@ -203,14 +203,15 @@ $(document).ready(function() {
         if (images.length > 0) {
             var grid = $('#imagesGrid').empty();
             images.forEach(function(img, index) {
-                var isMain = img.type === 'main';
+                var isMain = (img.type === 'alternate' && img.url.includes('_alt1.jpg'));
+                var isSecondMain = (img.type === 'main');
                 grid.append(
                     '<div class="col-md-3 col-6 mb-3">' +
                     '<div class="card ' + (isMain ? 'border-warning' : '') + '">' +
                     '<div class="position-relative">' +
                     '<img src="' + img.url + '" class="card-img-top" style="height: 150px; object-fit: contain; background: #f8f9fa;" onerror="this.closest(\'.col-md-3\').remove(); updateSelectedCount();">' +
                     '<div class="custom-control custom-checkbox position-absolute" style="top: 5px; left: 10px;">' +
-                    '<input type="checkbox" class="custom-control-input image-checkbox" id="imgCheck' + index + '" data-url="' + img.url + '" data-source="' + img.source + '" ' + (isMain ? 'checked' : '') + '>' +
+                    '<input type="checkbox" class="custom-control-input image-checkbox" id="imgCheck' + index + '" data-url="' + img.url + '" data-source="' + img.source + '" ' + ((isMain || isSecondMain) ? 'checked' : '') + '>' +
                     '<label class="custom-control-label" for="imgCheck' + index + '"></label>' +
                     '</div>' +
                     (isMain ? '<span class="badge badge-warning position-absolute" style="top: 5px; right: 5px;"><i class="fas fa-star"></i></span>' : '') +
@@ -218,6 +219,9 @@ $(document).ready(function() {
                     '<div class="card-body p-2 text-center"><small class="text-muted">' + img.source + '</small></div>' +
                     '</div></div>'
                 );
+                if (isMain) {
+                    $('#resultImage').attr('src', img.url).show();
+                }
             });
             $('#imagesSection').show();
             updateSelectedCount();

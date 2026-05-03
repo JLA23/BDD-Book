@@ -68,14 +68,25 @@ class GameController extends AbstractController
     }
 
     #[Route('/liste', name: 'game_list')]
-    public function list(Request $request, GameRepository $gameRepo, GameConsoleRepository $consoleRepo, PaginatorInterface $paginator): Response
+    public function list(Request $request, GameRepository $gameRepo, GameConsoleRepository $consoleRepo, PaginatorInterface $paginator, UserRepository $userRepo, LienUserGameRepository $lienRepo): Response
     {
         $search = $request->query->get('search');
         $console = $request->query->get('console');
-        $genre = $request->query->get('genre');
+        $user_id = $request->query->get('user');
         $year = $request->query->get('year');
 
-        $games = $gameRepo->findBySearch($search, $console, $genre, $year);
+        $games = $gameRepo->findBySearch($search, $console, $user_id, $year);
+
+        $users = $userRepo->findAll();
+        $usersWithCount = [];
+        foreach ($users as $user) {
+            $count = $lienRepo->countByUser($user);
+            // Afficher si l'utilisateur a du contenu OU s'il a la permission d'enregistrer
+            if ($count > 0 || $user->canRegisterInSection('games')) {
+                $user->gamesCount = $count;
+                $usersWithCount[] = $user;
+            }
+        }
 
         $pagination = $paginator->paginate(
             $games,
@@ -92,11 +103,11 @@ class GameController extends AbstractController
             'games' => $pagination,
             'search' => $search,
             'console' => $console,
-            'genre' => $genre,
+            'user' => $user_id,
             'year' => $year,
             'consoles' => $consoleRepo->findAllOrdered(),
             'consoleCatalog' => $consoleCatalog,
-            'genres' => $gameRepo->getDistinctGenres(),
+            'users' => $usersWithCount,
             'years' => $gameRepo->getDistinctYears(),
         ]);
     }

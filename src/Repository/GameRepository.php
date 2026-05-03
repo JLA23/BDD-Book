@@ -24,7 +24,7 @@ class GameRepository extends ServiceEntityRepository
             ->getResult();
     }
 
-    public function findBySearch(?string $search = null, ?string $console = null, ?string $genre = null, ?string $year = null): array
+    public function findBySearch(?string $search = null, ?string $console = null, ?string $user = null, ?string $year = null): array
     {
         $qb = $this->createQueryBuilder('g')->distinct(true);
         // Précharger liens + consoles pour les vues liste (badges) sans N+1
@@ -41,9 +41,9 @@ class GameRepository extends ServiceEntityRepository
                ->setParameter('console', $console);
         }
 
-        if ($genre) {
-            $qb->andWhere('g.genre LIKE :genre')
-               ->setParameter('genre', '%' . $genre . '%');
+        if ($user) {
+            $qb->andWhere('link.user = :user')
+               ->setParameter('user', $user);
         }
 
         if ($year) {

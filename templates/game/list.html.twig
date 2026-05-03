@@ -28,11 +28,11 @@
                     </select>
                 </div>
                 <div class="col-md-2 mb-2">
-                    <label class="small"><strong>Genre</strong></label>
-                    <select name="genre" class="form-control form-control-sm">
+                    <label class="small"><strong>User</strong></label>
+                    <select name="user" class="form-control form-control-sm">
                         <option value="">Tous</option>
-                        {% for g in genres %}
-                            <option value="{{ g }}" {% if genre == g %}selected{% endif %}>{{ g }}</option>
+                        {% for u in users %}
+                            <option value="{{ u.id }}" {% if user == u.id %}selected{% endif %}>{{ u.name }} {{ u.lastname }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -60,9 +60,6 @@
     {% if games|length == 0 %}
         <div class="alert alert-info">
             <i class="fas fa-info-circle"></i> Aucun jeu trouvé.
-            {% if is_granted('IS_AUTHENTICATED_FULLY') %}
-                <a href="{{ path('game_new') }}">Ajouter un jeu</a>
-            {% endif %}
         </div>
     {% else %}
         <div class="row">

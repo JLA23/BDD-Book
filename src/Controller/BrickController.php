@@ -477,6 +477,7 @@ class BrickController extends AbstractController
         $result = $this->brickApi->searchSet($reference);
 
         if ($result) {
+            dump($result);
             return $this->json([
                 'success' => true,
                 'set' => $result,

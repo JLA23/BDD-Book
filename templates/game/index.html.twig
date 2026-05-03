@@ -18,7 +18,7 @@
             <div class="card-body">
                 <form action="{{ path('game_list') }}" method="get">
                     <div class="row">
-                        <div class="col-md-5">
+                        <div class="col-md-12">
                             <div class="form-group mb-3">
                                 <label for="search" class="font-weight-bold text-dark">Que recherchez-vous ?</label>
                                 <div class="input-group input-group-lg">
@@ -30,7 +30,9 @@
                                 <small class="form-text text-muted">Recherche par titre, éditeur ou développeur</small>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
                             <div class="form-group mb-3">
                                 <label class="font-weight-bold text-dark">Console</label>
                                 <select name="console" class="form-control form-control-lg">
@@ -41,13 +43,13 @@
                                 </select>
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <div class="form-group mb-3">
-                                <label class="font-weight-bold text-dark">Genre</label>
-                                <select name="genre" class="form-control form-control-lg">
+                                <label class="font-weight-bold text-dark">Par Collection</label>
+                                <select name="user" class="form-control form-control-lg">
                                     <option value="">Tous</option>
-                                    {% for genre in genres %}
-                                        <option value="{{ genre }}">{{ genre }}</option>
+                                    {% for user in users %}
+                                        <option value="{{ user.id }}">{{ user.name }} {{ user.lastname }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
