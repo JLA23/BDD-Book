@@ -269,14 +269,21 @@ class BrickController extends AbstractController
             $position = 0;
             $addedUrls = [];
 
-            // Ajouter les images par URL soumises via le formulaire
+            // Indexer les sources depuis la session pour préserver l'origine
+            $sessionImages = $session->get('brick_prefill_images', []);
+            $sourceMap = [];
+            foreach ($sessionImages as $imgData) {
+                $sourceMap[$imgData['url']] = $imgData['source'] ?? 'API';
+            }
+
+            // Ajouter les images par URL soumises via le formulaire (dans l'ordre du drag & drop)
             $imageUrls = $request->request->all('image_urls') ?? [];
             foreach ($imageUrls as $url) {
                 if (!empty($url) && filter_var($url, FILTER_VALIDATE_URL) && !in_array($url, $addedUrls)) {
                     $image = new BrickImage();
                     $image->setUrl($url);
                     $image->setPosition($position++);
-                    $image->setSource('URL');
+                    $image->setSource($sourceMap[$url] ?? 'URL');
                     $image->setBrickSet($set);
                     $this->em->persist($image);
                     $addedUrls[] = $url;
@@ -284,7 +291,6 @@ class BrickController extends AbstractController
             }
 
             // Ajouter les images de la session (API) si pas déjà ajoutées
-            $sessionImages = $session->get('brick_prefill_images', []);
             foreach ($sessionImages as $imgData) {
                 if (!empty($imgData['url']) && !in_array($imgData['url'], $addedUrls)) {
                     $image = new BrickImage();
@@ -515,11 +521,17 @@ class BrickController extends AbstractController
 
         $data = json_decode($request->getContent(), true);
         $indexToRemove = $data['index'] ?? null;
+        $urlToRemove = $data['url'] ?? null;
 
         $session = $request->getSession();
         $images = $session->get('brick_prefill_images', []);
 
-        if ($indexToRemove !== null && isset($images[$indexToRemove])) {
+        if ($urlToRemove) {
+            $images = array_values(array_filter($images, function ($img) use ($urlToRemove) {
+                return ($img['url'] ?? '') !== $urlToRemove;
+            }));
+            $session->set('brick_prefill_images', $images);
+        } elseif ($indexToRemove !== null && isset($images[$indexToRemove])) {
             array_splice($images, $indexToRemove, 1);
             $session->set('brick_prefill_images', $images);
         }
@@ -545,6 +557,36 @@ class BrickController extends AbstractController
         $session->set('brick_prefill_images', $images);
 
         return $this->json(['success' => true, 'count' => count($images), 'images' => $images]);
+    }
+
+    #[Route('/api/reorder-pending-images', name: 'brick_api_reorder_pending_images', methods: ['POST'])]
+    public function apiReorderPendingImages(Request $request): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+
+        $data = json_decode($request->getContent(), true);
+        $urls = $data['urls'] ?? [];
+
+        $session = $request->getSession();
+        $images = $session->get('brick_prefill_images', []);
+
+        // Construire un index par URL
+        $imageMap = [];
+        foreach ($images as $img) {
+            $imageMap[$img['url']] = $img;
+        }
+
+        // Réordonner selon les URLs reçues
+        $reordered = [];
+        foreach ($urls as $url) {
+            if (isset($imageMap[$url])) {
+                $reordered[] = $imageMap[$url];
+            }
+        }
+
+        $session->set('brick_prefill_images', $reordered);
+
+        return $this->json(['success' => true, 'count' => count($reordered)]);
     }
 
     #[Route('/set/{id}/images', name: 'brick_images', requirements: ['id' => '\d+'])]

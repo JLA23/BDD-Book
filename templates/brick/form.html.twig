@@ -37,7 +37,7 @@
                     </div>
                     {% endif %}
                     
-                    {{ form_start(form, {'attr': {'class': 'needs-validation', 'novalidate': 'novalidate'}}) }}
+                    {{ form_start(form, {'attr': {'class': 'needs-validation', 'novalidate': 'novalidate', 'enctype': 'multipart/form-data'}}) }}
                     
                     <div class="row">
                         <div class="col-md-8">
@@ -150,42 +150,58 @@
                     </div>
                     {% else %}
                     <div id="pendingImagesSection" class="mb-3">
-                        <label class="d-block mb-2">Images en attente d'ajout <span id="pendingCount" class="badge badge-info">{{ prefillImages|length }}</span></label>
+                        <label class="d-block mb-2">Images en attente d'ajout <span id="pendingCount" class="badge badge-info">{{ prefillImages|length }}</span> <small class="text-muted">(glisser-déposer pour réordonner, la première = image principale)</small></label>
                         <div id="pendingImagesGrid" class="d-flex flex-wrap mb-2">
                             {% for img in prefillImages %}
                             <div class="pending-image-item position-relative m-1" data-index="{{ loop.index0 }}" data-url="{{ img.url }}">
-                                <img src="{{ img.url }}" class="rounded border" style="height: 80px; width: 80px; object-fit: cover;">
-                                <button type="button" class="btn btn-sm btn-danger position-absolute remove-pending-image" style="top: -5px; right: -5px; padding: 0 5px; font-size: 12px;">
-                                    <i class="fas fa-times"></i>
-                                </button>
+                                <div class="position-relative">
+                                    <img src="{{ img.url }}" class="rounded border {% if loop.first %}border-warning{% endif %}" style="height: 80px; width: 80px; object-fit: cover; cursor: move;">
+                                    {% if loop.first %}
+                                    <span class="badge badge-warning position-absolute main-image-badge" style="top: -5px; left: -5px; font-size: 8px;"><i class="fas fa-star"></i></span>
+                                    {% endif %}
+                                    <button type="button" class="btn btn-sm btn-danger position-absolute remove-pending-image" style="top: -5px; right: -5px; padding: 0 5px; font-size: 12px;">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
                                 <small class="d-block text-center text-muted" style="font-size: 10px;">{{ img.source|default('API') }}</small>
                             </div>
                             {% endfor %}
                         </div>
                         
-                        <div class="row">
-                            <div class="col-md-8">
-                                <div class="input-group input-group-sm">
-                                    <input type="url" id="addImageUrl" class="form-control" placeholder="Ajouter une image par URL...">
-                                    <div class="input-group-append">
-                                        <button type="button" id="addImageUrlBtn" class="btn btn-outline-secondary">
-                                            <i class="fas fa-plus"></i> Ajouter
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
                         <div id="imageUrlsContainer">
                             {% for img in prefillImages %}
                             <input type="hidden" name="image_urls[]" value="{{ img.url }}">
                             {% endfor %}
                         </div>
                     </div>
-                    
+
                     <div class="form-group">
-                        <label><i class="fas fa-upload"></i> Uploader des images</label>
-                        <input type="file" name="uploaded_images[]" class="form-control-file" multiple accept="image/*">
-                        <small class="text-muted">Vous pouvez sélectionner plusieurs fichiers</small>
+                        <label><i class="fas fa-images"></i> Ajouter des images <small class="text-muted">(optionnel)</small></label>
+                        <div class="btn-group btn-group-sm mb-2" role="group">
+                            <button type="button" class="btn btn-outline-secondary active" id="btnUploadFile">
+                                <i class="fas fa-upload"></i> Fichier
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" id="btnUploadUrl">
+                                <i class="fas fa-link"></i> URL
+                            </button>
+                        </div>
+                        <div id="fileUploadSection">
+                            <div class="custom-file">
+                                <input type="file" name="uploaded_images[]" class="custom-file-input" id="uploadedImagesInput" multiple accept="image/*">
+                                <label class="custom-file-label" for="uploadedImagesInput" data-browse="Parcourir">Choisir une image...</label>
+                            </div>
+                        </div>
+                        <div id="urlUploadSection" style="display: none;">
+                            <div class="input-group input-group-sm">
+                                <input type="url" id="addImageUrl" class="form-control" placeholder="https://...">
+                                <div class="input-group-append">
+                                    <button type="button" id="addImageUrlBtn" class="btn btn-outline-secondary">
+                                        <i class="fas fa-plus"></i> Ajouter
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <small class="text-muted">Vous pouvez sélectionner plusieurs fichiers ou ajouter des images par URL</small>
                     </div>
                     
                     <hr>
@@ -199,23 +215,28 @@
                     </div>
                     
                     <div id="collectionDetails">
-                        <div class="row">
-                            <div class="col-md-4">
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h6><i class="fas fa-user"></i> Informations de ma collection</h6>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label>Date d'acquisition</label>
+                                            <input type="date" name="date_achat" class="form-control form-control-sm" value="{{ "now"|date("Y-m-d") }}">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label>Prix d'achat <i class="fas fa-euro-sign"></i></label>
+                                            <input type="number" name="prix_achat" class="form-control form-control-sm" step="0.01" min="0" placeholder="0.00">
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="form-group">
-                                    <label><i class="fas fa-calendar"></i> Date d'acquisition</label>
-                                    <input type="date" name="date_achat" class="form-control" value="{{ "now"|date("Y-m-d") }}">
+                                    <label>Commentaire</label>
+                                    <textarea name="commentaire_lien" class="form-control form-control-sm" rows="2" placeholder="Notes personnelles..."></textarea>
                                 </div>
                             </div>
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label>Prix d'achat <i class="fas fa-euro-sign"></i></label>
-                                    <input type="number" name="prix_achat" class="form-control" step="0.01" min="0" placeholder="0.00">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label><i class="fas fa-comment"></i> Commentaire personnel</label>
-                            <textarea name="commentaire_lien" class="form-control" rows="2" placeholder="Notes personnelles..."></textarea>
                         </div>
                     </div>
                     {% endif %}
@@ -285,61 +306,108 @@
 
 {% block javascripts %}
 {{ parent() }}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script>
 $(document).ready(function() {
     // Toggle collection details
     $('#addToCollection').change(function() {
         $('#collectionDetails').toggle(this.checked);
     });
-    
+
+    // Met à jour les badges principale, les bordures, et réordonne les inputs cachés
+    function updatePendingImagesVisuals() {
+        var items = $('#pendingImagesGrid .pending-image-item');
+        items.each(function(i) {
+            var $item = $(this);
+            var $img = $item.find('img');
+            var $badge = $item.find('.main-image-badge');
+            if (i === 0) {
+                $img.addClass('border-warning');
+                if ($badge.length === 0) {
+                    $img.before('<span class="badge badge-warning position-absolute main-image-badge" style="top: -5px; left: -5px; font-size: 8px;"><i class="fas fa-star"></i></span>');
+                }
+            } else {
+                $img.removeClass('border-warning');
+                $badge.remove();
+            }
+        });
+
+        // Réordonner les inputs cachés selon l'ordre visuel
+        var $container = $('#imageUrlsContainer').empty();
+        items.each(function() {
+            var url = $(this).data('url');
+            $container.append('<input type="hidden" name="image_urls[]" value="' + url + '">');
+        });
+    }
+
+    // Initialiser SortableJS sur la grille d'images en attente
+    var sortableEl = document.getElementById('pendingImagesGrid');
+    if (sortableEl) {
+        new Sortable(sortableEl, {
+            animation: 150,
+            onEnd: function() {
+                updatePendingImagesVisuals();
+
+                // Synchroniser le nouvel ordre avec la session
+                var urls = [];
+                $('#pendingImagesGrid .pending-image-item').each(function() {
+                    urls.push($(this).data('url'));
+                });
+                $.ajax({
+                    url: '{{ path("brick_api_reorder_pending_images") }}',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ urls: urls })
+                });
+            }
+        });
+    }
+
     // Remove pending image
     $(document).on('click', '.remove-pending-image', function() {
         var item = $(this).closest('.pending-image-item');
-        var index = item.data('index');
         var url = item.data('url');
-        
-        // Remove hidden input
-        $('#imageUrlsContainer input[value="' + url + '"]').remove();
-        
+
         $.ajax({
             url: '{{ path("brick_api_remove_pending_image") }}',
             method: 'POST',
             contentType: 'application/json',
-            data: JSON.stringify({ index: index }),
+            data: JSON.stringify({ url: url }),
             success: function(response) {
                 if (response.success) {
-                    item.fadeOut(200, function() { 
+                    item.fadeOut(200, function() {
                         $(this).remove();
-                        // Reindex remaining items
-                        $('#pendingImagesGrid .pending-image-item').each(function(i) {
-                            $(this).data('index', i);
-                        });
+                        updatePendingImagesVisuals();
                         $('#pendingCount').text(response.count);
                     });
                 }
             }
         });
     });
-    
+
     // Add image by URL
     $('#addImageUrlBtn').click(function() {
         var url = $('#addImageUrl').val().trim();
         if (!url) { alert('Veuillez saisir une URL'); return; }
-        
+
         // Add hidden input for form submission
         $('#imageUrlsContainer').append('<input type="hidden" name="image_urls[]" value="' + url + '">');
-        
+
         // Add visual element
         var count = $('#pendingImagesGrid .pending-image-item').length;
+        var isFirst = (count === 0);
         var html = '<div class="pending-image-item position-relative m-1" data-index="' + count + '" data-url="' + url + '">' +
-            '<img src="' + url + '" class="rounded border" style="height: 80px; width: 80px; object-fit: cover;">' +
+            '<div class="position-relative">' +
+            '<img src="' + url + '" class="rounded border ' + (isFirst ? 'border-warning' : '') + '" style="height: 80px; width: 80px; object-fit: cover; cursor: move;">' +
+            (isFirst ? '<span class="badge badge-warning position-absolute main-image-badge" style="top: -5px; left: -5px; font-size: 8px;"><i class="fas fa-star"></i></span>' : '') +
             '<button type="button" class="btn btn-sm btn-danger position-absolute remove-pending-image" style="top: -5px; right: -5px; padding: 0 5px; font-size: 12px;">' +
             '<i class="fas fa-times"></i></button>' +
+            '</div>' +
             '<small class="d-block text-center text-muted" style="font-size: 10px;">Manuel</small></div>';
         $('#pendingImagesGrid').append(html);
         $('#pendingCount').text(count + 1);
         $('#addImageUrl').val('');
-        
+
         // Also update session
         $.ajax({
             url: '{{ path("brick_api_add_pending_image") }}',
@@ -348,11 +416,40 @@ $(document).ready(function() {
             data: JSON.stringify({ url: url })
         });
     });
-    
+
     $('#addImageUrl').keypress(function(e) {
         if (e.which == 13) { e.preventDefault(); $('#addImageUrlBtn').click(); }
     });
-    
+
+    // Toggle fichier / URL pour ajout d'images
+    $('#btnUploadFile').click(function() {
+        $(this).addClass('active');
+        $('#btnUploadUrl').removeClass('active');
+        $('#fileUploadSection').show();
+        $('#urlUploadSection').hide();
+        $('#addImageUrl').val('');
+    });
+
+    $('#btnUploadUrl').click(function() {
+        $(this).addClass('active');
+        $('#btnUploadFile').removeClass('active');
+        $('#urlUploadSection').show();
+        $('#fileUploadSection').hide();
+        $('#uploadedImagesInput').val('');
+        $('.custom-file-label').text('Choisir une image...');
+    });
+
+    // Mise à jour du label custom-file
+    $('#uploadedImagesInput').change(function(e) {
+        var files = e.target.files;
+        if (files && files.length > 0) {
+            var text = files.length === 1 ? files[0].name : files.length + ' fichiers sélectionnés';
+            $(this).next('.custom-file-label').text(text);
+        } else {
+            $(this).next('.custom-file-label').text('Choisir une image...');
+        }
+    });
+
     // Create marque
     $('#createMarqueBtn').click(function() {
         var nom = $('#newMarqueName').val().trim();
@@ -382,7 +479,7 @@ $(document).ready(function() {
             error: function() { alert('Erreur'); btn.prop('disabled', false).html('<i class="fas fa-plus"></i> Créer'); }
         });
     });
-    
+
     // Create collection
     $('#createCollectionBtn').click(function() {
         var nom = $('#newCollectionName').val().trim();

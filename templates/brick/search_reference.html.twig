@@ -66,16 +66,7 @@
                                             <p class="mb-1"><i class="fas fa-calendar"></i> Année: <strong id="resultAnnee"></strong></p>
                                             <p class="mb-1"><i class="fas fa-puzzle-piece"></i> Pièces: <strong id="resultPieces"></strong></p>
                                             <p class="mb-1"><i class="fas fa-euro-sign"></i> Prix: <strong id="resultPrix"></strong></p>
-                                            
-                                            <hr>
-                                            
-                                            <button type="button" id="importSetBtn" class="btn btn-success">
-                                                <i class="fas fa-plus"></i> Importer ce set
-                                            </button>
-                                            <a href="{{ path('brick_new') }}" class="btn btn-outline-secondary">
-                                                <i class="fas fa-edit"></i> Créer manuellement
-                                            </a>
-                                            
+
                                             <input type="hidden" id="formNom">
                                             <input type="hidden" id="formReference">
                                             <input type="hidden" id="formAnnee">
@@ -88,24 +79,39 @@
                             </div>
                             
                             <div id="imagesSection" class="mt-4" style="display: none;">
-                                <h5><i class="fas fa-images"></i> Images disponibles <small class="text-muted">(cochez celles à importer)</small></h5>
-                                <div class="alert alert-light border small mb-2">
-                                    <i class="fas fa-info-circle text-info"></i> 
-                                    Pour plus d'images, visitez 
-                                    <a href="#" id="rebrickableLink" target="_blank" class="alert-link">Rebrickable <i class="fas fa-external-link-alt"></i></a>
-                                    ou
-                                    <a href="#" id="bricksetLink" target="_blank" class="alert-link">Brickset <i class="fas fa-external-link-alt"></i></a>
-                                </div>
-                                <div class="mb-2">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="selectAllImages">
-                                        <i class="fas fa-check-square"></i> Tout sélectionner
+                                <div class="d-flex align-items-center mb-2">
+                                    <button type="button" id="imagesToggleBtn" class="btn btn-outline-info btn-sm" data-toggle="collapse" data-target="#imagesCollapse" aria-expanded="true" aria-controls="imagesCollapse">
+                                        <i class="fas fa-images"></i> Images disponibles <i class="fas fa-chevron-down ml-1 toggle-icon" style="transition: transform 0.2s ease;"></i>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="deselectAllImages">
-                                        <i class="fas fa-square"></i> Tout désélectionner
-                                    </button>
-                                    <span class="ml-2 text-muted" id="selectedCount">0 image(s)</span>
+                                    <span class="ml-2 text-muted small" id="selectedCount">0 image(s)</span>
                                 </div>
-                                <div id="imagesGrid" class="row"></div>
+                                <div class="collapse show" id="imagesCollapse">
+                                    <div class="alert alert-light border small mb-2">
+                                        <i class="fas fa-info-circle text-info"></i>
+                                        Pour plus d'images, visitez
+                                        <a href="#" id="rebrickableLink" target="_blank" class="alert-link">Rebrickable <i class="fas fa-external-link-alt"></i></a>
+                                        ou
+                                        <a href="#" id="bricksetLink" target="_blank" class="alert-link">Brickset <i class="fas fa-external-link-alt"></i></a>
+                                    </div>
+                                    <div class="mb-2">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="selectAllImages">
+                                            <i class="fas fa-check-square"></i> Tout sélectionner
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="deselectAllImages">
+                                            <i class="fas fa-square"></i> Tout désélectionner
+                                        </button>
+                                    </div>
+                                    <div id="imagesGrid" class="row"></div>
+                                </div>
+                            </div>
+
+                            <div class="mt-4 text-center">
+                                <button type="button" id="importSetBtn" class="btn btn-success btn-lg mr-2">
+                                    <i class="fas fa-plus"></i> Importer ce set
+                                </button>
+                                <a href="{{ path('brick_new') }}" class="btn btn-outline-secondary btn-lg">
+                                    <i class="fas fa-edit"></i> Créer manuellement
+                                </a>
                             </div>
                         </div>
                         
@@ -202,27 +208,39 @@ $(document).ready(function() {
         
         if (images.length > 0) {
             var grid = $('#imagesGrid').empty();
+            var firstMain = null;
             images.forEach(function(img, index) {
-                var isMain = (img.type === 'alternate' && img.url.includes('_alt1.jpg'));
-                var isSecondMain = (img.type === 'main');
+                var isDefault = (img.type === 'main');
+                var isAlternate = (img.type === 'alternate');
+                // Auto-cocher les images par défaut (main) et la première alternate
+                var autoCheck = isDefault || (isAlternate && img.url.includes('_alt1.jpg'));
+                if (isDefault && !firstMain) {
+                    firstMain = img.url;
+                }
                 grid.append(
                     '<div class="col-md-3 col-6 mb-3">' +
-                    '<div class="card ' + (isMain ? 'border-warning' : '') + '">' +
+                    '<div class="card ' + (isDefault ? 'border-warning' : '') + '">' +
                     '<div class="position-relative">' +
                     '<img src="' + img.url + '" class="card-img-top" style="height: 150px; object-fit: contain; background: #f8f9fa;" onerror="this.closest(\'.col-md-3\').remove(); updateSelectedCount();">' +
                     '<div class="custom-control custom-checkbox position-absolute" style="top: 5px; left: 10px;">' +
-                    '<input type="checkbox" class="custom-control-input image-checkbox" id="imgCheck' + index + '" data-url="' + img.url + '" data-source="' + img.source + '" ' + ((isMain || isSecondMain) ? 'checked' : '') + '>' +
+                    '<input type="checkbox" class="custom-control-input image-checkbox" id="imgCheck' + index + '" data-url="' + img.url + '" data-source="' + img.source + '" ' + (autoCheck ? 'checked' : '') + '>' +
                     '<label class="custom-control-label" for="imgCheck' + index + '"></label>' +
                     '</div>' +
-                    (isMain ? '<span class="badge badge-warning position-absolute" style="top: 5px; right: 5px;"><i class="fas fa-star"></i></span>' : '') +
+                    (isDefault ? '<span class="badge badge-warning position-absolute" style="top: 5px; right: 5px;"><i class="fas fa-star"></i></span>' : '') +
                     '</div>' +
-                    '<div class="card-body p-2 text-center"><small class="text-muted">' + img.source + '</small></div>' +
+                    '<div class="card-body p-2 text-center"><small class="text-muted">' + img.source + ' ' + (img.type === 'main' ? '(défaut)' : img.type === 'alternate' ? '(alt)' : '') + '</small></div>' +
                     '</div></div>'
                 );
-                if (isMain) {
-                    $('#resultImage').attr('src', img.url).show();
-                }
             });
+            // Mettre à jour la prévisualisation : image par défaut (main) si disponible, sinon première alternate
+            if (firstMain) {
+                $('#resultImage').attr('src', firstMain).show();
+            } else {
+                var firstAlternate = images.find(function(img) { return img.type === 'alternate'; });
+                if (firstAlternate) {
+                    $('#resultImage').attr('src', firstAlternate.url).show();
+                }
+            }
             $('#imagesSection').show();
             updateSelectedCount();
         } else {
@@ -244,14 +262,40 @@ $(document).ready(function() {
     $('#importSetBtn').click(function() {
         var selectedImages = [];
         $('.image-checkbox:checked').each(function() {
-            selectedImages.push({ url: $(this).data('url'), source: $(this).data('source') });
+            selectedImages.push({
+                url: $(this).data('url'),
+                source: $(this).data('source'),
+                type: $(this).closest('.col-md-3, .col-6').find('.card').hasClass('border-warning') ? 'alternate' : 'other'
+            });
         });
-        
+
+        // Réordonner : main (par défaut) d'abord, puis alternate, puis autres
+        var mainImages = [];
+        var alternateImages = [];
+        var otherImages = [];
+        selectedImages.forEach(function(img) {
+            var checkbox = $('.image-checkbox[data-url="' + img.url + '"]');
+            var card = checkbox.closest('.col-md-3, .col-6').find('.card');
+            if (card.hasClass('border-warning')) {
+                // Image par défaut (type main)
+                mainImages.push(img);
+            } else if (checkbox.data('source') === 'Brickset' || checkbox.data('source') === 'Rebrickable') {
+                // Image alternate des APIs
+                alternateImages.push(img);
+            } else {
+                otherImages.push(img);
+            }
+        });
+        // Réordonner proprement : main > alternate > autres
+        var orderedImages = mainImages.concat(alternateImages).concat(otherImages).map(function(img) {
+            return { url: img.url, source: img.source };
+        });
+
         $.ajax({
             url: '{{ path("brick_api_store_images") }}',
             method: 'POST',
             contentType: 'application/json',
-            data: JSON.stringify({ images: selectedImages }),
+            data: JSON.stringify({ images: orderedImages }),
             success: function() {
                 var params = new URLSearchParams();
                 params.append('prefill', '1');
@@ -283,6 +327,13 @@ $(document).ready(function() {
         });
         $('#multipleResults').show();
     }
+
+    // Animation de la flèche sur le bouton Images disponibles
+    $('#imagesCollapse').on('show.bs.collapse', function() {
+        $('#imagesToggleBtn .toggle-icon').css('transform', 'rotate(0deg)');
+    }).on('hide.bs.collapse', function() {
+        $('#imagesToggleBtn .toggle-icon').css('transform', 'rotate(-90deg)');
+    });
 });
 
 function selectSet(reference) {
