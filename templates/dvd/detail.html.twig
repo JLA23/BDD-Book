@@ -1,0 +1,110 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ dvd.titre }} - BDD-DVD{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <a href="{{ path('dvd_list') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Retour
+                </a>
+                {% if is_granted('IS_AUTHENTICATED_REMEMBERED') and app.user.canRegisterInSection('dvd') %}
+                <div>
+                    <a href="{{ path('dvd_edit', {id: dvd.id}) }}" class="btn btn-outline-primary">
+                        <i class="fas fa-edit"></i> Modifier
+                    </a>
+                    <form method="post" action="{{ path('dvd_delete', {id: dvd.id}) }}" class="d-inline" onsubmit="return confirm('Confirmer la suppression ?');">
+                        <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ dvd.id) }}">
+                        <button type="submit" class="btn btn-outline-danger">
+                            <i class="fas fa-trash"></i> Supprimer
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header" style="background: linear-gradient(135deg, #1a5276 0%, #3498db 100%);">
+                    <h4 class="mb-0 text-white">{{ dvd.titre }}</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center">
+                            <img src="{{ dvd.mainImage ?: '/images/dvd-default.svg' }}" class="img-fluid rounded shadow mb-3" style="max-height: 350px;">
+                            <div>
+                                <span class="badge badge-info mr-1">
+                                    {{ dvd.format == 'bluray' ? 'Blu-ray' : dvd.format == 'bluray4k' ? 'Blu-ray 4K' : 'DVD' }}
+                                </span>
+                                <span class="badge badge-secondary">
+                                    {{ dvd.type == 'serie' ? 'Serie' : 'Film' }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <p><strong><i class="fas fa-calendar"></i> Annee:</strong> {{ dvd.annee ?: '-' }}</p>
+                                    <p><strong><i class="fas fa-building"></i> Editeur:</strong> {{ dvd.editeur ?: '-' }}</p>
+                                </div>
+                            </div>
+                            {% if dvd.description %}
+                            <div class="mb-3">
+                                <h6>Description</h6>
+                                <p>{{ dvd.description|nl2br }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <hr>
+                    <h5><i class="fas fa-users"></i> Proprietaires</h5>
+                    {% if owners|length > 0 %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th>Utilisateur</th>
+                                        <th>Date d'achat</th>
+                                        <th>Prix</th>
+                                        <th>Commentaire</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for owner in owners %}
+                                    <tr>
+                                        <td>{{ owner.user.name }} {{ owner.user.lastname }}</td>
+                                        <td>{{ owner.dateAchat ? owner.dateAchat|date('d/m/Y') : '-' }}</td>
+                                        <td>{{ owner.prixAchat ? owner.prixAchat ~ ' €' : '-' }}</td>
+                                        <td>{{ owner.commentaire ?: '-' }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">Personne ne possede ce DVD / Blu-ray.</p>
+                    {% endif %}
+
+                    {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+                    <div class="mt-3">
+                        {% if userLinks|length == 0 %}
+                            <a href="{{ path('dvd_add_owner', {id: dvd.id}) }}" class="btn btn-success">
+                                <i class="fas fa-plus"></i> Ajouter a ma collection
+                            </a>
+                        {% else %}
+                            {% for link in userLinks %}
+                                <a href="{{ path('dvd_edit_owner', {id: dvd.id, lienId: link.id}) }}" class="btn btn-outline-primary">
+                                    <i class="fas fa-edit"></i> Modifier ma collection
+                                </a>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

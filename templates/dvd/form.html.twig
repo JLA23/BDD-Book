@@ -1,0 +1,277 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{% if isEdit %}Modifier{% else %}Nouveau{% endif %} DVD / Blu-ray - BDD-DVD{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            {% if duplicateWarning %}
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle"></i> <strong>{{ duplicateWarning.message }}</strong>
+                <p class="mb-0 mt-2">
+                    <a href="{{ path('dvd_detail', {id: duplicateWarning.dvd.id}) }}" class="alert-link">
+                        Voir l'existant: {{ duplicateWarning.dvd.titre }}
+                    </a>
+                </p>
+            </div>
+            {% endif %}
+
+            <div class="card shadow-sm">
+                <div class="card-header" style="background: linear-gradient(135deg, #1a5276 0%, #3498db 100%);">
+                    <h5 class="mb-0 text-white">
+                        <i class="fas fa-{% if isEdit %}edit{% else %}plus{% endif %}"></i>
+                        {% if isEdit %}Modifier{% else %}Nouveau{% endif %} DVD / Blu-ray
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if prefillImages is defined and prefillImages|length > 0 %}
+                    <div class="alert alert-info mb-4">
+                        <strong><i class="fas fa-info-circle"></i> Import depuis API</strong>
+                        <p class="mb-2 small">La jaquette sera automatiquement ajoutée.</p>
+                        <div class="d-flex flex-wrap">
+                            <img src="{{ prefillImages[0].url }}" alt="Jaquette" class="mr-2 mb-2 rounded border" style="height: 100px; object-fit: contain;">
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+                        {{ form_widget(form._token) }}
+                        
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="form-group">
+                                    <label for="{{ form.titre.vars.id }}"><strong>Titre</strong></label>
+                                    <input type="text" name="{{ form.titre.vars.full_name }}" id="{{ form.titre.vars.id }}" 
+                                           class="form-control" value="{{ form.titre.vars.value }}" 
+                                           placeholder="Titre du DVD / Blu-ray" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="{{ form.annee.vars.id }}"><strong>Année</strong></label>
+                                    <input type="number" name="{{ form.annee.vars.full_name }}" id="{{ form.annee.vars.id }}" 
+                                           class="form-control" value="{{ form.annee.vars.value }}" 
+                                           placeholder="Ex: 2023" min="1900" max="2100">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="{{ form.type.vars.id }}"><strong>Type</strong></label>
+                                    <select name="{{ form.type.vars.full_name }}" id="{{ form.type.vars.id }}" class="form-control">
+                                        <option value="">-- Sélectionner --</option>
+                                        <option value="film" {% if form.type.vars.value == 'film' %}selected{% endif %}>Film</option>
+                                        <option value="serie" {% if form.type.vars.value == 'serie' %}selected{% endif %}>Série</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="{{ form.format.vars.id }}"><strong>Format</strong></label>
+                                    <select name="{{ form.format.vars.full_name }}" id="{{ form.format.vars.id }}" class="form-control">
+                                        <option value="">-- Sélectionner --</option>
+                                        <option value="dvd" {% if form.format.vars.value == 'dvd' %}selected{% endif %}>DVD</option>
+                                        <option value="bluray" {% if form.format.vars.value == 'bluray' %}selected{% endif %}>Blu-ray</option>
+                                        <option value="bluray4k" {% if form.format.vars.value == 'bluray4k' %}selected{% endif %}>Blu-ray 4K</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="{{ form.editeur.vars.id }}"><strong>Éditeur / Studio</strong></label>
+                                    <input type="text" name="{{ form.editeur.vars.full_name }}" id="{{ form.editeur.vars.id }}" 
+                                           class="form-control" value="{{ form.editeur.vars.value }}" 
+                                           placeholder="Ex: Disney, Warner...">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="{{ form.description.vars.id }}"><strong>Description</strong></label>
+                            <textarea name="{{ form.description.vars.full_name }}" id="{{ form.description.vars.id }}" 
+                                      class="form-control" rows="4" placeholder="Synopsis, informations...">{{ form.description.vars.value }}</textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.coverUrl.vars.id }}"><strong>URL de la jaquette</strong></label>
+                                    <input type="url" name="{{ form.coverUrl.vars.full_name }}" id="{{ form.coverUrl.vars.id }}" 
+                                           class="form-control" value="{{ form.coverUrl.vars.value }}" 
+                                           placeholder="https://...">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label><i class="fas fa-upload"></i> Ou uploader une jaquette</label>
+                                    <div class="custom-file">
+                                        <input type="file" name="cover_upload" class="custom-file-input" id="coverUpload" accept="image/*">
+                                        <label class="custom-file-label" for="coverUpload" data-browse="Parcourir">Choisir un fichier...</label>
+                                    </div>
+                                    <small class="text-muted">Formats acceptés: JPG, PNG, GIF, WebP</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if isEdit and dvd.coverUrl %}
+                        <div class="form-group">
+                            <label>Jaquette actuelle</label>
+                            <div>
+                                <img src="{{ dvd.coverUrl }}" alt="Jaquette" class="img-thumbnail" style="max-height: 150px;">
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if not isEdit %}
+                        <hr>
+                        <div class="form-group">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input" id="addToCollection" name="add_to_collection" value="1" checked>
+                                <label class="custom-control-label" for="addToCollection">
+                                    <strong>Ajouter à ma collection</strong>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div id="collectionDetails">
+                            <div class="card bg-light mb-3">
+                                <div class="card-body">
+                                    <h6><i class="fas fa-user"></i> Informations de ma collection</h6>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label>Date d'achat</label>
+                                                <input type="date" name="date_achat" class="form-control" value="{{ 'now'|date('Y-m-d') }}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label>Prix d'achat <i class="fas fa-euro-sign"></i></label>
+                                                <input type="number" name="prix_achat" class="form-control" step="0.01" min="0" placeholder="0.00">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label><i class="fas fa-camera"></i> Photo de votre édition <small class="text-muted">(optionnel)</small></label>
+                                        <div class="btn-group btn-group-sm mb-2 d-block" role="group">
+                                            <button type="button" class="btn btn-outline-secondary active" id="btnUploadFile">
+                                                <i class="fas fa-upload"></i> Fichier
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary" id="btnUploadUrl">
+                                                <i class="fas fa-link"></i> URL
+                                            </button>
+                                        </div>
+                                        <div id="fileUploadSection">
+                                            <div class="custom-file">
+                                                <input type="file" name="image_perso" class="custom-file-input" id="imagePersoInput" accept="image/*">
+                                                <label class="custom-file-label" for="imagePersoInput" data-browse="Parcourir">Choisir une image...</label>
+                                            </div>
+                                        </div>
+                                        <div id="urlUploadSection" style="display: none;">
+                                            <input type="url" name="image_perso_url" class="form-control" id="imagePersoUrl" placeholder="https://exemple.com/image.jpg">
+                                        </div>
+                                        <small class="text-muted d-block mt-1">Photo de votre boîte, steelbook, collector...</small>
+                                        <div id="imagePersoPreview" class="mt-2 text-center" style="display: none;">
+                                            <img id="previewPersoImg" src="" class="img-thumbnail" style="max-height: 100px;">
+                                        </div>
+                                    </div>
+                                    <div class="form-group mb-0">
+                                        <label>Commentaire</label>
+                                        <textarea name="commentaire_lien" class="form-control" rows="2" placeholder="Notes personnelles..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <a href="{% if isEdit %}{{ path('dvd_detail', {id: dvd.id}) }}{% else %}{{ path('dvd_index') }}{% endif %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left"></i> Annuler
+                            </a>
+                            <button type="submit" class="btn text-white" style="background: linear-gradient(135deg, #1a5276 0%, #3498db 100%);">
+                                <i class="fas fa-save"></i> {% if isEdit %}Enregistrer{% else %}Créer le DVD / Blu-ray{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                    {{ form_end(form, {'render_rest': false}) }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+$(document).ready(function() {
+    $('#addToCollection').change(function() {
+        $('#collectionDetails').toggle(this.checked);
+    });
+
+    // Custom file label pour la jaquette principale
+    $('#coverUpload').change(function(e) {
+        var file = e.target.files[0];
+        if (file) {
+            $(this).next('.custom-file-label').text(file.name);
+        } else {
+            $(this).next('.custom-file-label').text('Choisir un fichier...');
+        }
+    });
+
+    $('#btnUploadFile').click(function() {
+        $(this).addClass('active');
+        $('#btnUploadUrl').removeClass('active');
+        $('#fileUploadSection').show();
+        $('#urlUploadSection').hide();
+        $('#imagePersoUrl').val('');
+        $('#imagePersoPreview').hide();
+    });
+
+    $('#btnUploadUrl').click(function() {
+        $(this).addClass('active');
+        $('#btnUploadFile').removeClass('active');
+        $('#urlUploadSection').show();
+        $('#fileUploadSection').hide();
+        $('#imagePersoInput').val('');
+        $('.custom-file-label').text('Choisir une image...');
+        $('#imagePersoPreview').hide();
+    });
+
+    $('#imagePersoInput').change(function(e) {
+        var file = e.target.files[0];
+        if (file) {
+            $(this).next('.custom-file-label').text(file.name);
+            if (file.type.match('image.*')) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    $('#previewPersoImg').attr('src', e.target.result);
+                    $('#imagePersoPreview').show();
+                };
+                reader.readAsDataURL(file);
+            }
+        } else {
+            $(this).next('.custom-file-label').text('Choisir une image...');
+            $('#imagePersoPreview').hide();
+        }
+    });
+
+    $('#imagePersoUrl').on('input', function() {
+        var url = $(this).val().trim();
+        if (url) {
+            $('#previewPersoImg').attr('src', url).on('load', function() {
+                $('#imagePersoPreview').show();
+            }).on('error', function() {
+                $('#imagePersoPreview').hide();
+            });
+        } else {
+            $('#imagePersoPreview').hide();
+        }
+    });
+});
+</script>
+{% endblock %}

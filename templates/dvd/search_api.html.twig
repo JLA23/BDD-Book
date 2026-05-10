@@ -1,0 +1,196 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Recherche API - BDD-DVD{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 style="color: #1a5276;"><i class="fas fa-search"></i> Recherche via API</h2>
+                <a href="{{ path('dvd_index') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Retour
+                </a>
+            </div>
+
+            {% if not apiConfigured %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i> <strong>API non configuree</strong>
+                <p class="mb-0">Ajoutez DVDFR_API_KEY dans le fichier <code>.env</code></p>
+            </div>
+            {% else %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header" style="background: linear-gradient(135deg, #1a5276 0%, #3498db 100%);">
+                    <h5 class="mb-0 text-white"><i class="fas fa-compact-disc"></i> Rechercher un DVD / Blu-ray</h5>
+                </div>
+                <div class="card-body">
+                    <div class="input-group mb-3">
+                        <input type="text" id="searchQuery" class="form-control form-control-lg" placeholder="Titre (ex: Star Wars, Le Roi Lion...)">
+                        <div class="input-group-append">
+                            <button class="btn btn-lg" id="searchBtn" style="background: linear-gradient(135deg, #1a5276 0%, #3498db 100%); color: white;">
+                                <i class="fas fa-search"></i> Rechercher
+                            </button>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="small"><strong>Format (optionnel)</strong></label>
+                            <select id="formatFilter" class="form-control form-control-sm mb-2">
+                                <option value="">Tous les formats</option>
+                                <option value="dvd">DVD</option>
+                                <option value="bluray">Blu-ray</option>
+                                <option value="bluray4k">Blu-ray 4K</option>
+                            </select>
+                        </div>
+                    </div>
+                    <small class="text-muted">Recherche via l'API DVDFR</small>
+                </div>
+            </div>
+
+            <div id="loadingSpinner" class="text-center py-5" style="display: none;">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="sr-only">Chargement...</span>
+                </div>
+                <p class="mt-2 text-muted">Recherche en cours...</p>
+            </div>
+
+            <div id="searchResults"></div>
+
+            <div id="dvdDetails" style="display: none;">
+                <div class="card shadow-sm">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #1a5276 0%, #3498db 100%);">
+                        <h5 class="mb-0 text-white"><i class="fas fa-info-circle"></i> Details</h5>
+                        <button class="btn btn-sm btn-light" onclick="$('#dvdDetails').hide(); $('#searchResults').show();">
+                            <i class="fas fa-arrow-left"></i> Retour aux resultats
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4 text-center">
+                                <img id="detailCover" src="" class="img-fluid rounded shadow mb-3" style="max-height: 300px;">
+                            </div>
+                            <div class="col-md-8">
+                                <h3 id="detailTitle"></h3>
+                                <p><strong>Annee:</strong> <span id="detailYear"></span></p>
+                                <p><strong>Editeur:</strong> <span id="detailEditor"></span></p>
+                                <p><strong>Format:</strong> <span id="detailFormat"></span></p>
+                                <p><strong>Type:</strong> <span id="detailType"></span></p>
+                                <div id="detailDescription" class="mt-3" style="max-height: 150px; overflow-y: auto;"></div>
+                            </div>
+                        </div>
+
+                        <hr>
+                        <div class="text-center" id="actionButtons">
+                            <button class="btn btn-lg btn-success" id="addDvdBtn">
+                                <i class="fas fa-plus"></i> Ajouter ce DVD / Blu-ray
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+$(document).ready(function() {
+    $('#searchBtn').click(function() {
+        var query = $('#searchQuery').val().trim();
+        if (!query) { alert('Veuillez saisir un titre'); return; }
+
+        var format = $('#formatFilter').val();
+
+        $('#loadingSpinner').show();
+        $('#searchResults').empty();
+        $('#dvdDetails').hide();
+
+        $.ajax({
+            url: '{{ path("dvd_api_search") }}',
+            method: 'GET',
+            data: { q: query, format: format },
+            success: function(response) {
+                $('#loadingSpinner').hide();
+                if (response.success && response.results.length > 0) {
+                    showResults(response.results);
+                } else {
+                    $('#searchResults').html('<div class="alert alert-warning">Aucun resultat trouve.</div>');
+                }
+            },
+            error: function() {
+                $('#loadingSpinner').hide();
+                $('#searchResults').html('<div class="alert alert-danger">Erreur lors de la recherche.</div>');
+            }
+        });
+    });
+
+    $('#searchQuery').keypress(function(e) { if (e.which == 13) $('#searchBtn').click(); });
+
+    function showResults(results) {
+        var html = '<div class="row">';
+        results.forEach(function(dvd) {
+            var formatLabel = dvd.format === 'bluray' ? 'Blu-ray' : dvd.format === 'bluray4k' ? 'Blu-ray 4K' : 'DVD';
+            var typeLabel = dvd.type === 'serie' ? 'Serie' : 'Film';
+            html += '<div class="col-md-3 col-6 mb-3">' +
+                '<div class="card h-100" style="cursor: pointer;" onclick="showDvdDetails(' + dvd.id + ')">' +
+                '<img src="' + (dvd.cover || '/images/dvd-default.svg') + '" class="card-img-top" style="height: 200px; object-fit: contain; background: #f8f9fa;" onerror="this.src=\'/images/dvd-default.svg\'">' +
+                '<div class="card-body p-2">' +
+                '<h6 class="card-title mb-1 text-truncate">' + dvd.titre + '</h6>' +
+                '<span class="badge badge-info">' + formatLabel + '</span> ' +
+                '<span class="badge badge-secondary">' + typeLabel + '</span>' +
+                '<p class="small text-muted mb-0">' + (dvd.annee || '?') + '</p>' +
+                '</div></div></div>';
+        });
+        html += '</div>';
+        $('#searchResults').html(html);
+    }
+
+    window.showDvdDetails = function(dvdId) {
+        $('#loadingSpinner').show();
+        $('#searchResults').hide();
+
+        $.ajax({
+            url: '{{ path("dvd_api_details", {dvdId: "0"}) }}'.replace('/0', '/' + encodeURIComponent(dvdId)),
+            method: 'GET',
+            success: function(response) {
+                $('#loadingSpinner').hide();
+                if (response.success) {
+                    var dvd = response.dvd;
+                    $('#detailTitle').text(dvd.titre);
+                    $('#detailYear').text(dvd.annee || '-');
+                    $('#detailEditor').text(dvd.editeur || '-');
+                    $('#detailFormat').text(dvd.format === 'bluray' ? 'Blu-ray' : dvd.format === 'bluray4k' ? 'Blu-ray 4K' : 'DVD');
+                    $('#detailType').text(dvd.type === 'serie' ? 'Serie' : 'Film');
+                    $('#detailDescription').text(dvd.description || '');
+                    $('#detailCover').attr('src', dvd.cover || '/images/dvd-default.svg');
+
+                    $('#dvdDetails').show();
+
+                    $('#addDvdBtn').off('click').click(function() {
+                        var params = new URLSearchParams();
+                        params.append('prefill', '1');
+                        params.append('titre', dvd.titre || '');
+                        params.append('annee', dvd.annee || '');
+                        params.append('editeur', dvd.editeur || '');
+                        params.append('type', dvd.type || '');
+                        params.append('format', dvd.format || '');
+                        params.append('description', dvd.description || '');
+                        params.append('cover', dvd.cover || '');
+                        params.append('externalId', dvd.id || '');
+                        window.location.href = '{{ path("dvd_new") }}?' + params.toString();
+                    });
+                }
+            },
+            error: function() {
+                $('#loadingSpinner').hide();
+                $('#searchResults').show();
+                alert('Erreur lors du chargement des details');
+            }
+        });
+    };
+});
+</script>
+{% endblock %}

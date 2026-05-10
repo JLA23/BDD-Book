@@ -37,6 +37,12 @@
                         <a class="dropdown-item" href="{{ path('game_index') }}">
                             <i class="fas fa-gamepad mr-2" style="color: #6f42c1;"></i>BDD-Games
                         </a>
+                        <a class="dropdown-item" href="{{ path('dvd_index') }}">
+                            <i class="fas fa-compact-disc mr-2" style="color: #1a5276;"></i>BDD-DVD
+                        </a>
+                        <a class="dropdown-item" href="{{ path('musique_index') }}">
+                            <i class="fas fa-music mr-2" style="color: #e74c3c;"></i>BDD-Musique
+                        </a>
                         {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
                         <div class="dropdown-divider"></div>
                         {% if app.user.canRegisterInSection('books') %}
@@ -57,6 +63,16 @@
                         {% if app.user.canRegisterInSection('games') %}
                         <a class="dropdown-item" href="{{ path('game_ajouter') }}">
                             <i class="fas fa-plus-circle mr-2" style="color: #6f42c1;"></i>Ajouter un jeu
+                        </a>
+                        {% endif %}
+                        {% if app.user.canRegisterInSection('dvd') %}
+                        <a class="dropdown-item" href="{{ path('dvd_ajouter') }}">
+                            <i class="fas fa-plus-circle mr-2" style="color: #1a5276;"></i>Ajouter un DVD / Blu-ray
+                        </a>
+                        {% endif %}
+                        {% if app.user.canRegisterInSection('musique') %}
+                        <a class="dropdown-item" href="{{ path('musique_ajouter') }}">
+                            <i class="fas fa-plus-circle mr-2" style="color: #e74c3c;"></i>Ajouter un album
                         </a>
                         {% endif %}
                         {% endif %}

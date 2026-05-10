@@ -69,9 +69,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public const SECTIONS = [
         'books' => 'BDD-Books',
-        'magazines' => 'BDD-Magazines', 
+        'magazines' => 'BDD-Magazines',
         'brick' => 'BDD-Brick',
+        'dvd' => 'BDD-DVD',
         'games' => 'BDD-Games',
+        'musique' => 'BDD-Musique',
     ];
 
     public function getId(): ?int

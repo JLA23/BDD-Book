@@ -1,0 +1,93 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Liste des DVD / Blu-ray - BDD-DVD{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 style="color: #1a5276;"><i class="fas fa-compact-disc"></i> DVD / Blu-ray</h2>
+        <a href="{{ path('dvd_index') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Retour
+        </a>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <input type="text" name="search" class="form-control" placeholder="Rechercher..." value="{{ search }}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <select name="format" class="form-control">
+                            <option value="">Tous les formats</option>
+                            <option value="dvd" {% if format == 'dvd' %}selected{% endif %}>DVD</option>
+                            <option value="bluray" {% if format == 'bluray' %}selected{% endif %}>Blu-ray</option>
+                            <option value="bluray4k" {% if format == 'bluray4k' %}selected{% endif %}>Blu-ray 4K</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <select name="year" class="form-control">
+                            <option value="">Toutes les annees</option>
+                            {% for y in years %}
+                                <option value="{{ y }}" {% if year == y %}selected{% endif %}>{{ y }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <select name="user" class="form-control">
+                            <option value="">Tous les utilisateurs</option>
+                            {% for u in users %}
+                                <option value="{{ u.id }}" {% if user == u.id %}selected{% endif %}>{{ u.name }} {{ u.lastname }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-primary btn-block">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for dvd in dvds %}
+        <div class="col-md-3 col-sm-6 mb-4">
+            <a href="{{ path('dvd_detail', {id: dvd.id}) }}" class="text-decoration-none">
+                <div class="card h-100 shadow-sm" style="transition: transform 0.2s;">
+                    <div class="position-relative">
+                        <img src="{{ dvd.mainImage ?: '/images/dvd-default.svg' }}" class="card-img-top" style="height: 250px; object-fit: contain; background: #f8f9fa;" alt="{{ dvd.titre }}">
+                        <span class="badge badge-info position-absolute" style="top: 5px; right: 5px;">
+                            {{ dvd.format == 'bluray' ? 'Blu-ray' : dvd.format == 'bluray4k' ? '4K' : 'DVD' }}
+                        </span>
+                    </div>
+                    <div class="card-body p-2">
+                        <h6 class="card-title text-dark text-truncate mb-1">{{ dvd.titre }}</h6>
+                        <p class="text-muted small mb-0">
+                            {% if dvd.annee %}{{ dvd.annee }} · {% endif %}
+                            {{ dvd.type == 'serie' ? 'Serie' : 'Film' }}
+                        </p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% else %}
+        <div class="col-12 text-center py-5">
+            <p class="text-muted">Aucun DVD / Blu-ray trouve.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="d-flex justify-content-center">
+        {{ knp_pagination_render(dvds) }}
+    </div>
+</div>
+{% endblock %}

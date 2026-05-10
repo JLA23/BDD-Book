@@ -1,0 +1,106 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}BDD-DVD - Base de données de DVD & Blu-ray{% endblock %}
+
+{% block body %}
+    <div id="acceuilSite">
+        <div class="text-center mb-4">
+            <h1 class="display-5 font-weight-bold" style="color: #1a5276;">
+                <i class="fas fa-compact-disc"></i> BDD-DVD
+            </h1>
+            <p class="lead text-muted">Base de données de DVD & Blu-ray de la famille Lefebvre</p>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header" style="background: linear-gradient(135deg, #1a5276 0%, #3498db 100%);">
+                <h5 class="mb-0 text-white"><i class="fas fa-search"></i> Rechercher un DVD / Blu-ray</h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ path('dvd_list') }}" method="get">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group mb-3">
+                                <label for="search" class="font-weight-bold text-dark">Que recherchez-vous ?</label>
+                                <div class="input-group input-group-lg">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text bg-white border-right-0"><i class="fas fa-compact-disc" style="color: #1a5276;"></i></span>
+                                    </div>
+                                    <input type="text" name="search" class="form-control border-left-0" placeholder="Titre du DVD / Blu-ray..." style="border-top-right-radius: 0.3rem !important; border-bottom-right-radius: 0.3rem !important;">
+                                </div>
+                                <small class="form-text text-muted">Recherche par titre ou éditeur</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-dark">Format</label>
+                                <select name="format" class="form-control form-control-lg">
+                                    <option value="">Tous</option>
+                                    <option value="dvd">DVD</option>
+                                    <option value="bluray">Blu-ray</option>
+                                    <option value="bluray4k">Blu-ray 4K</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-dark">Par Collection</label>
+                                <select name="user" class="form-control form-control-lg">
+                                    <option value="">Tous</option>
+                                    {% for user in users %}
+                                        <option value="{{ user.id }}">{{ user.name }} {{ user.lastname }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-lg text-white px-5" style="background: linear-gradient(135deg, #1a5276 0%, #3498db 100%);">
+                            <i class="fas fa-search"></i> Rechercher
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <a href="{{ path('dvd_list') }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                    <div class="card-body text-center py-4">
+                        <div class="mb-3">
+                            <i class="fas fa-compact-disc fa-3x" style="color: #1a5276;"></i>
+                        </div>
+                        <h5 class="card-title text-dark">Tous les DVD / Blu-ray</h5>
+                        <p class="card-text text-muted small">Parcourir le catalogue ({{ totalDvds }})</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-4 mb-3">
+                <a href="{{ path('dvd_users') }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                    <div class="card-body text-center py-4">
+                        <div class="mb-3">
+                            <i class="fas fa-users fa-3x text-success"></i>
+                        </div>
+                        <h5 class="card-title text-dark">Collections</h5>
+                        <p class="card-text text-muted small">Par utilisateur</p>
+                    </div>
+                </a>
+            </div>
+            {% if is_granted('IS_AUTHENTICATED_REMEMBERED') and app.user.canRegisterInSection('dvd') %}
+            <div class="col-md-4 mb-3">
+                <a href="{{ path('dvd_ajouter') }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                    <div class="card-body text-center py-4">
+                        <div class="mb-3">
+                            <i class="fas fa-plus-circle fa-3x" style="color: #1a5276;"></i>
+                        </div>
+                        <h5 class="card-title text-dark">Ajouter un DVD / Blu-ray</h5>
+                        <p class="card-text text-muted small">Ajouter à la base</p>
+                    </div>
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

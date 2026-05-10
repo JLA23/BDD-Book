@@ -1,0 +1,52 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Collection de {{ user.name }} - BDD-Musique{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 style="color: #e74c3c;">
+            <i class="fas fa-music"></i> Collection de {{ user.name }} {{ user.lastname }}
+        </h2>
+        <a href="{{ path('musique_users') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Retour
+        </a>
+    </div>
+
+    <div class="row">
+        {% for lien in liens %}
+        {% set musique = lien.musique %}
+        <div class="col-md-3 col-sm-6 mb-4">
+            <a href="{{ path('musique_detail', {id: musique.id}) }}" class="text-decoration-none">
+                <div class="card h-100 shadow-sm">
+                    <div class="position-relative">
+                        {% if lien.displayImage %}
+                            <img src="{{ lien.displayImage }}" class="card-img-top" style="height: 200px; object-fit: contain; background: #f8f9fa;">
+                        {% else %}
+                            <img src="{{ musique.mainImage ?: '/images/musique-default.svg' }}" class="card-img-top" style="height: 200px; object-fit: contain; background: #f8f9fa;">
+                        {% endif %}
+                        <span class="badge badge-danger position-absolute" style="top: 5px; right: 5px;">
+                            {{ musique.format == 'vinyle' ? 'Vinyle' : musique.format == 'k7' ? 'K7' : 'CD' }}
+                        </span>
+                    </div>
+                    <div class="card-body p-2">
+                        <h6 class="card-title text-dark text-truncate mb-1">{{ musique.artiste }}</h6>
+                        <p class="text-muted small mb-0 text-truncate">{{ musique.titre }}</p>
+                        {% if lien.prixAchat %}
+                            <p class="text-success small mb-0">{{ lien.prixAchat }} €</p>
+                        {% endif %}
+                        {% if lien.dateAchat %}
+                            <p class="text-muted small mb-0">{{ lien.dateAchat|date('d/m/Y') }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% else %}
+        <div class="col-12 text-center py-5">
+            <p class="text-muted">Aucun album dans cette collection.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

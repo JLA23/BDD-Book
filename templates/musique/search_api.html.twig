@@ -1,0 +1,545 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Recherche API - BDD-Musique{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 style="color: #e74c3c;"><i class="fas fa-search"></i> Recherche via API</h2>
+                <a href="{{ path('musique_index') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Retour
+                </a>
+            </div>
+
+            {% if not apiConfigured %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i> <strong>API non configurée</strong>
+                <p class="mb-0">Ajoutez les clés Discogs dans le fichier <code>.env</code> :</p>
+                <code>DISCOGS_CONSUMER_KEY=votre_key</code><br>
+                <code>DISCOGS_CONSUMER_SECRET=votre_secret</code>
+            </div>
+            {% else %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+                    <h5 class="mb-0 text-white"><i class="fas fa-music"></i> Rechercher un album</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="nav nav-tabs mb-3" id="searchTabs" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="text-tab" data-toggle="tab" href="#textSearch" role="tab">
+                                <i class="fas fa-search"></i> Par titre / artiste
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="barcode-tab" data-toggle="tab" href="#barcodeSearch" role="tab">
+                                <i class="fas fa-barcode"></i> Par code-barres
+                            </a>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="searchTabsContent">
+                        <div class="tab-pane fade show active" id="textSearch" role="tabpanel">
+                            <div class="input-group mb-3">
+                                <input type="text" id="searchQuery" class="form-control form-control-lg" placeholder="Artiste ou titre (ex: Daft Punk, Abbey Road...)">
+                                <div class="input-group-append">
+                                    <button class="btn btn-lg" id="searchBtn" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color: white;">
+                                        <i class="fas fa-search"></i> Rechercher
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="small"><strong>Format (optionnel)</strong></label>
+                                    <select id="formatFilter" class="form-control form-control-sm mb-2">
+                                        <option value="">Tous les formats</option>
+                                        <option value="cd">CD</option>
+                                        <option value="vinyle">Vinyle</option>
+                                        <option value="k7">K7 / Cassette</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <small class="text-muted">Recherche par master release (albums regroupés)</small>
+                        </div>
+
+                        <div class="tab-pane fade" id="barcodeSearch" role="tabpanel">
+                            <div class="input-group mb-3">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text"><i class="fas fa-barcode"></i></span>
+                                </div>
+                                <input type="text" id="barcodeQuery" class="form-control form-control-lg" placeholder="Code-barres EAN/UPC (ex: 0602547288639)">
+                                <div class="input-group-append d-md-none">
+                                    <button type="button" class="btn btn-lg btn-outline-secondary" id="scanBarcodeBtn" title="Scanner un code-barres">
+                                        <i class="fas fa-camera"></i>
+                                    </button>
+                                </div>
+                                <div class="input-group-append">
+                                    <button class="btn btn-lg" id="barcodeSearchBtn" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color: white;">
+                                        <i class="fas fa-search"></i> Rechercher
+                                    </button>
+                                </div>
+                            </div>
+                            <small class="text-muted d-md-none"><i class="fas fa-camera"></i> Cliquez sur l'icône caméra pour scanner le code-barres du CD/Vinyle</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="loadingSpinner" class="text-center py-5" style="display: none;">
+                <div class="spinner-border" style="color: #e74c3c;" role="status">
+                    <span class="sr-only">Chargement...</span>
+                </div>
+                <p class="mt-2 text-muted">Recherche en cours...</p>
+            </div>
+
+            <div id="searchResults"></div>
+
+            <div id="musiqueDetails" style="display: none;">
+                <div class="card shadow-sm">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+                        <h5 class="mb-0 text-white"><i class="fas fa-info-circle"></i> Détails</h5>
+                        <button class="btn btn-sm btn-light" onclick="$('#musiqueDetails').hide(); $('#searchResults').show();">
+                            <i class="fas fa-arrow-left"></i> Retour aux résultats
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4 text-center">
+                                <img id="detailCover" src="" class="img-fluid rounded shadow mb-3" style="max-height: 300px;">
+                            </div>
+                            <div class="col-md-8">
+                                <h3 id="detailArtist"></h3>
+                                <h4 id="detailTitle" class="text-muted"></h4>
+                                <p><strong>Année:</strong> <span id="detailYear"></span></p>
+                                <p><strong>Label:</strong> <span id="detailLabel"></span></p>
+                                <p><strong>Genre:</strong> <span id="detailGenre"></span></p>
+                                <p><strong>Format:</strong> <span id="detailFormat"></span></p>
+                                <p><strong>Type:</strong> <span id="detailType"></span></p>
+                            </div>
+                        </div>
+
+                        <div id="tracklistSection" class="mt-3" style="display: none;">
+                            <h5>Tracklist</h5>
+                            <ul id="tracklist" class="list-group list-group-flush" style="max-height: 200px; overflow-y: auto;"></ul>
+                        </div>
+
+                        <hr>
+                        <div class="text-center" id="actionButtons">
+                            <button class="btn btn-lg btn-success" id="addMusiqueBtn">
+                                <i class="fas fa-plus"></i> Ajouter cet album
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Overlay plein écran pour le scanner -->
+<div id="barcodeScannerOverlay">
+    <div class="scanner-header">
+        <span><i class="fas fa-barcode"></i> Scanner code-barres</span>
+        <button type="button" class="btn btn-light btn-sm" id="closeScannerBtn">
+            <i class="fas fa-times"></i> Fermer
+        </button>
+    </div>
+    <div id="barcodeReader"></div>
+    <div class="scanner-footer">
+        <div class="d-flex align-items-center justify-content-center mb-2">
+            <label class="mr-2 mb-0"><i class="fas fa-camera"></i> Caméra :</label>
+            <select id="cameraSelect" class="form-control form-control-sm" style="width: auto; max-width: 200px;">
+                <option value="">Chargement...</option>
+            </select>
+        </div>
+        <p class="mb-0 small"><i class="fas fa-info-circle"></i> Positionnez le code-barres dans le cadre</p>
+    </div>
+</div>
+
+<style>
+    #barcodeScannerOverlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: #000;
+        z-index: 999999;
+        flex-direction: column;
+    }
+    #barcodeScannerOverlay.active {
+        display: flex !important;
+    }
+    #barcodeScannerOverlay .scanner-header {
+        background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        color: white;
+        padding: 12px 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: bold;
+    }
+    #barcodeScannerOverlay #barcodeReader {
+        flex: 1;
+        width: 100%;
+        background: #000;
+    }
+    #barcodeScannerOverlay .scanner-footer {
+        background: rgba(0,0,0,0.9);
+        color: white;
+        padding: 12px 15px;
+        text-align: center;
+    }
+    html.scanner-open,
+    html.scanner-open body {
+        overflow: hidden !important;
+        height: 100% !important;
+    }
+</style>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<!-- Bibliothèque html5-qrcode pour le scan de code-barres -->
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+$(document).ready(function() {
+    // Recherche par titre/artiste
+    $('#searchBtn').click(function() {
+        var query = $('#searchQuery').val().trim();
+        if (!query) { alert('Veuillez saisir un artiste ou titre'); return; }
+
+        var format = $('#formatFilter').val();
+
+        $('#loadingSpinner').show();
+        $('#searchResults').empty().show();
+        $('#musiqueDetails').hide();
+
+        $.ajax({
+            url: '{{ path("musique_api_search") }}',
+            method: 'GET',
+            data: { q: query, format: format },
+            success: function(response) {
+                $('#loadingSpinner').hide();
+                if (response.success && response.results.length > 0) {
+                    showResults(response.results, false);
+                } else {
+                    $('#searchResults').html('<div class="alert alert-warning">Aucun résultat trouvé.</div>');
+                }
+            },
+            error: function() {
+                $('#loadingSpinner').hide();
+                $('#searchResults').html('<div class="alert alert-danger">Erreur lors de la recherche.</div>');
+            }
+        });
+    });
+
+    // Recherche par code-barres
+    $('#barcodeSearchBtn').click(function() {
+        var barcode = $('#barcodeQuery').val().trim();
+        if (!barcode) { alert('Veuillez saisir un code-barres'); return; }
+
+        $('#loadingSpinner').show();
+        $('#searchResults').empty().show();
+        $('#musiqueDetails').hide();
+
+        $.ajax({
+            url: '{{ path("musique_api_search") }}',
+            method: 'GET',
+            data: { barcode: barcode },
+            success: function(response) {
+                $('#loadingSpinner').hide();
+                if (response.success && response.results.length > 0) {
+                    showResults(response.results, true);
+                    // Si un seul résultat, afficher directement les détails
+                    if (response.results.length === 1) {
+                        showMusiqueDetails(response.results[0].id);
+                    }
+                } else {
+                    $('#searchResults').html('<div class="alert alert-warning"><i class="fas fa-barcode"></i> Aucun album trouvé pour ce code-barres. Essayez la recherche par titre.</div>');
+                }
+            },
+            error: function() {
+                $('#loadingSpinner').hide();
+                $('#searchResults').html('<div class="alert alert-danger">Erreur lors de la recherche.</div>');
+            }
+        });
+    });
+
+    $('#searchQuery').keypress(function(e) { if (e.which == 13) $('#searchBtn').click(); });
+    $('#barcodeQuery').keypress(function(e) { if (e.which == 13) $('#barcodeSearchBtn').click(); });
+
+    function showResults(results, isBarcode) {
+        var html = '';
+        if (isBarcode) {
+            html += '<div class="alert alert-info mb-3"><i class="fas fa-barcode"></i> ' + results.length + ' édition(s) trouvée(s) pour ce code-barres</div>';
+        }
+        html += '<div class="row">';
+        results.forEach(function(m) {
+            var formatLabel = m.format === 'vinyle' ? 'Vinyle' : m.format === 'k7' ? 'K7' : 'CD';
+            var typeLabel = m.type === 'single' ? 'Single' : m.type === 'ep' ? 'EP' : m.type === 'compilation' ? 'Compilation' : 'Album';
+            
+            html += '<div class="col-md-3 col-6 mb-3">' +
+                '<div class="card h-100" style="cursor: pointer;" onclick="showMusiqueDetails(\'' + m.id + '\')">' +
+                '<img src="' + (m.cover || '/images/musique-default.svg') + '" class="card-img-top" style="height: 180px; object-fit: contain; background: #f8f9fa;" onerror="this.src=\'/images/musique-default.svg\'">' +
+                '<div class="card-body p-2">' +
+                '<h6 class="card-title mb-1 text-truncate">' + m.artiste + '</h6>' +
+                '<p class="small text-muted mb-1 text-truncate">' + m.titre + '</p>' +
+                '<span class="badge badge-danger">' + formatLabel + '</span> ' +
+                '<span class="badge badge-secondary">' + typeLabel + '</span>' +
+                '<p class="small text-muted mb-0">' + (m.annee || '?') + (m.label ? ' · ' + m.label : '') + '</p>' +
+                '</div></div></div>';
+        });
+        html += '</div>';
+        $('#searchResults').html(html);
+    }
+
+    window.showMusiqueDetails = function(releaseId) {
+        $('#loadingSpinner').show();
+        $('#searchResults').hide();
+
+        $.ajax({
+            url: '{{ path("musique_api_details", {releaseId: 0}) }}'.replace('/0', '/' + releaseId),
+            method: 'GET',
+            success: function(response) {
+                $('#loadingSpinner').hide();
+                if (response.success) {
+                    var m = response.musique;
+                    
+                    $('#detailArtist').text(m.artiste);
+                    $('#detailTitle').text(m.titre);
+                    $('#detailYear').text(m.annee || '-');
+                    $('#detailLabel').text(m.label || '-');
+                    $('#detailGenre').text(m.genre || '-');
+                    $('#detailFormat').text(m.format === 'vinyle' ? 'Vinyle' : m.format === 'k7' ? 'K7' : 'CD');
+                    $('#detailType').text(m.type === 'single' ? 'Single' : m.type === 'ep' ? 'EP' : m.type === 'compilation' ? 'Compilation' : 'Album');
+                    $('#detailCover').attr('src', m.cover || '/images/musique-default.svg');
+
+                    // Tracklist
+                    if (m.tracklist && m.tracklist.length > 0) {
+                        var trackHtml = '';
+                        m.tracklist.forEach(function(t) {
+                            trackHtml += '<li class="list-group-item py-1 px-2"><small><strong>' + t.position + '</strong> ' + t.title + (t.duration ? ' <span class="text-muted">(' + t.duration + ')</span>' : '') + '</small></li>';
+                        });
+                        $('#tracklist').html(trackHtml);
+                        $('#tracklistSection').show();
+                    } else {
+                        $('#tracklistSection').hide();
+                    }
+
+                    $('#musiqueDetails').show();
+
+                    $('#addMusiqueBtn').off('click').click(function() {
+                        var params = new URLSearchParams();
+                        params.append('prefill', '1');
+                        params.append('titre', m.titre || '');
+                        params.append('artiste', m.artiste || '');
+                        params.append('annee', m.annee || '');
+                        params.append('label', m.label || '');
+                        params.append('genre', m.genre || '');
+                        params.append('type', m.type || '');
+                        params.append('format', m.format || '');
+                        params.append('description', m.description || '');
+                        params.append('cover', m.cover || '');
+                        params.append('externalId', m.id || '');
+                        // Convertir la tracklist en texte
+                        if (m.tracklist && m.tracklist.length > 0) {
+                            var trackText = m.tracklist.map(function(t) {
+                                return (t.position ? t.position + '. ' : '') + t.title + (t.duration ? ' (' + t.duration + ')' : '');
+                            }).join('\n');
+                            params.append('tracklist', trackText);
+                        }
+                        window.location.href = '{{ path("musique_new") }}?' + params.toString();
+                    });
+                }
+            },
+            error: function() {
+                $('#loadingSpinner').hide();
+                $('#searchResults').show();
+                alert('Erreur lors du chargement des détails');
+            }
+        });
+    };
+
+    // ========== SCANNER CODE-BARRES ==========
+    let html5QrCode = null;
+    let isScanning = false;
+    let availableCameras = [];
+    let currentCameraId = null;
+
+    function isSecureContext() {
+        return window.isSecureContext || location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    }
+
+    function checkCameraAvailable() {
+        return navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
+    }
+
+    $('#scanBarcodeBtn').click(function() {
+        $('#barcodeScannerOverlay').addClass('active');
+        $('html').addClass('scanner-open');
+
+        if (!isSecureContext()) {
+            showScannerError("<strong>Connexion non sécurisée</strong><br>Le scanner nécessite HTTPS.");
+            return;
+        }
+
+        if (!checkCameraAvailable()) {
+            showScannerError("<strong>Caméra non disponible</strong><br>Votre navigateur ne supporte pas la caméra.");
+            return;
+        }
+
+        requestCameraPermission();
+    });
+
+    $('#closeScannerBtn').click(function() {
+        closeScanner();
+    });
+
+    function closeScanner() {
+        stopScanner();
+        $('#barcodeScannerOverlay').removeClass('active');
+        $('html').removeClass('scanner-open');
+        $('#barcodeReader').html('');
+    }
+
+    function requestCameraPermission() {
+        $('#barcodeReader').html(
+            '<div class="d-flex align-items-center justify-content-center h-100" style="color: white;">' +
+            '<div class="text-center"><i class="fas fa-spinner fa-spin fa-3x mb-3"></i><p>Accès à la caméra...</p></div></div>'
+        );
+
+        navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } } 
+        })
+        .then(function(stream) {
+            stream.getTracks().forEach(track => track.stop());
+            $('#barcodeReader').html('');
+            startScanner();
+        })
+        .catch(function(err) {
+            let errorMessage = "";
+            if (err.name === 'NotAllowedError') {
+                errorMessage = "<strong>Permission refusée</strong><br>Autorisez l'accès à la caméra.";
+            } else if (err.name === 'NotFoundError') {
+                errorMessage = "<strong>Aucune caméra</strong><br>Pas de caméra détectée.";
+            } else {
+                errorMessage = "<strong>Erreur</strong><br>" + (err.message || "Erreur inconnue");
+            }
+            showScannerError(errorMessage);
+        });
+    }
+
+    const scannerConfig = {
+        fps: 15,
+        qrbox: function(viewfinderWidth, viewfinderHeight) {
+            return { width: Math.floor(viewfinderWidth * 0.9), height: Math.floor(viewfinderHeight * 0.5) };
+        },
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+        formatsToSupport: [
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.UPC_E,
+            Html5QrcodeSupportedFormats.CODE_128
+        ]
+    };
+
+    async function loadCameras() {
+        try {
+            const allCameras = await Html5Qrcode.getCameras();
+            availableCameras = allCameras.filter(cam => {
+                const label = cam.label.toLowerCase();
+                return label.includes('back') || label.includes('arrière') || label.includes('environment');
+            });
+            if (availableCameras.length === 0) availableCameras = allCameras;
+
+            const select = $('#cameraSelect');
+            select.empty();
+            if (availableCameras.length > 0) {
+                availableCameras.forEach((cam, index) => {
+                    let label = cam.label || `Caméra ${index + 1}`;
+                    if (label.length > 25) label = label.substring(0, 25) + '...';
+                    select.append(`<option value="${cam.id}">Objectif ${index + 1}</option>`);
+                });
+                return availableCameras.length > 1 ? availableCameras[1].id : availableCameras[0].id;
+            }
+            return null;
+        } catch(err) {
+            return null;
+        }
+    }
+
+    async function startScanner() {
+        if (isScanning) return;
+        html5QrCode = new Html5Qrcode("barcodeReader");
+
+        try {
+            const defaultCameraId = await loadCameras();
+            if (defaultCameraId) {
+                currentCameraId = defaultCameraId;
+                $('#cameraSelect').val(currentCameraId);
+                await startWithCamera(currentCameraId);
+            } else {
+                await html5QrCode.start({ facingMode: "environment" }, scannerConfig, onScanSuccess, onScanError);
+                isScanning = true;
+            }
+        } catch(err) {
+            showScannerError("<strong>Erreur</strong><br>Impossible de démarrer le scanner.");
+        }
+    }
+
+    async function startWithCamera(cameraId) {
+        await html5QrCode.start(cameraId, scannerConfig, onScanSuccess, onScanError);
+        isScanning = true;
+        currentCameraId = cameraId;
+    }
+
+    $('#cameraSelect').on('change', async function() {
+        const newCameraId = $(this).val();
+        if (newCameraId && newCameraId !== currentCameraId && isScanning) {
+            try {
+                await html5QrCode.stop();
+                isScanning = false;
+                await startWithCamera(newCameraId);
+            } catch(err) {}
+        }
+    });
+
+    function stopScanner() {
+        if (html5QrCode && isScanning) {
+            html5QrCode.stop().then(() => {
+                isScanning = false;
+                html5QrCode.clear();
+            }).catch(() => { isScanning = false; });
+        }
+    }
+
+    function onScanSuccess(decodedText) {
+        if (navigator.vibrate) navigator.vibrate(100);
+        $('#barcodeQuery').val(decodedText);
+        $('.scanner-footer p').html('<i class="fas fa-check-circle text-success"></i> Code détecté : <strong>' + decodedText + '</strong>');
+        setTimeout(function() {
+            closeScanner();
+            // Lancer automatiquement la recherche
+            $('#barcodeSearchBtn').click();
+        }, 800);
+    }
+
+    function onScanError() {}
+
+    function showScannerError(message) {
+        $('#barcodeReader').html(
+            '<div class="d-flex align-items-center justify-content-center h-100">' +
+            '<div class="alert alert-danger m-4 text-center">' +
+            '<i class="fas fa-exclamation-triangle fa-2x mb-2"></i><br>' + message +
+            '<br><button class="btn btn-outline-danger btn-sm mt-3" onclick="$(\'#closeScannerBtn\').click();">Fermer</button>' +
+            '</div></div>'
+        );
+    }
+});
+</script>
+{% endblock %}
