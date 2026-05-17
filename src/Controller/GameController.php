@@ -13,6 +13,7 @@ use App\Repository\GameStoreRepository;
 use App\Repository\LienUserGameRepository;
 use App\Repository\UserRepository;
 use App\Service\GameApiService;
+use App\Service\Media\MediaImageSyncService;
 use App\Service\LienUserGameReferenceLinker;
 use App\Service\SectionPermissionService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -38,6 +39,7 @@ class GameController extends AbstractController
         GameApiService $gameApi,
         SectionPermissionService $permissionService,
         LienUserGameReferenceLinker $lienReferenceLinker,
+        private MediaImageSyncService $mediaImageSync,
     ) {
         $this->em = $em;
         $this->gameApi = $gameApi;
@@ -378,6 +380,8 @@ class GameController extends AbstractController
 
             $session->remove('game_prefill_images');
             $this->em->flush();
+            $this->mediaImageSync->syncGame($game, $lien ?? null);
+            $this->em->flush();
 
             $this->addFlash('success', 'Jeu créé avec succès' . ($addToCollection === '1' ? ' et ajouté à votre collection' : ''));
             return $this->redirectToRoute('game_detail', ['id' => $game->getId(), 'from' => 'list']);
@@ -467,6 +471,8 @@ class GameController extends AbstractController
             }
             
             $this->em->flush();
+            $this->mediaImageSync->syncGame($game);
+            $this->em->flush();
             $this->addFlash('success', 'Jeu modifié avec succès');
             return $this->redirectToRoute('game_detail', ['id' => $game->getId(), 'from' => 'list']);
         }
@@ -544,6 +550,8 @@ class GameController extends AbstractController
                 $coverUpload->move($uploadDir, $filename);
                 $game->setCoverUrl('/uploads/games/' . $filename);
                 $this->em->flush();
+                $this->mediaImageSync->syncGame($game);
+                $this->em->flush();
                 return $this->json(['success' => true]);
             } catch (\Exception $e) {
                 return $this->json(['success' => false, 'message' => $e->getMessage()], 500);
@@ -554,6 +562,8 @@ class GameController extends AbstractController
         $coverUrl = $request->request->get('cover_url');
         if ($coverUrl) {
             $game->setCoverUrl($coverUrl);
+            $this->em->flush();
+            $this->mediaImageSync->syncGame($game);
             $this->em->flush();
             return $this->json(['success' => true]);
         }
@@ -738,6 +748,8 @@ class GameController extends AbstractController
 
             $this->em->persist($lien);
             $this->em->flush();
+            $this->mediaImageSync->syncGameUserImage($lien);
+            $this->em->flush();
 
             $this->addFlash('success', 'Jeu ajouté à votre collection');
             return $this->redirectToRoute('game_detail', ['id' => $id]);
@@ -822,6 +834,8 @@ class GameController extends AbstractController
                 $request->request->get('type_edition') === 'numerique' ? $request->request->get('store') : null
             );
 
+            $this->em->flush();
+            $this->mediaImageSync->syncGameUserImage($lien);
             $this->em->flush();
 
             $this->addFlash('success', 'Informations mises à jour');

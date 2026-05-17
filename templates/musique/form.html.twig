@@ -101,12 +101,20 @@
                         </div>
 
                         <div class="row">
-                            <div class="col-md-12">
+                            <div class="col-md-8">
                                 <div class="form-group">
                                     <label for="{{ form.label.vars.id }}"><strong>Label</strong></label>
                                     <input type="text" name="{{ form.label.vars.full_name }}" id="{{ form.label.vars.id }}" 
                                            class="form-control" value="{{ form.label.vars.value }}" 
                                            placeholder="Ex: Universal, Sony...">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="{{ form.ean.vars.id }}"><strong><i class="fas fa-barcode"></i> Code-barres (EAN)</strong></label>
+                                    <input type="text" name="{{ form.ean.vars.full_name }}" id="{{ form.ean.vars.id }}" 
+                                           class="form-control" value="{{ form.ean.vars.value }}" 
+                                           placeholder="Ex: 0602547288639">
                                 </div>
                             </div>
                         </div>

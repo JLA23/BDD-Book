@@ -106,23 +106,23 @@
         </div>
     </div>
     
-    <!-- Propriétaires -->
-    <div class="card mt-4 mb-5 shadow-sm">
-        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center" style="cursor: pointer;" data-toggle="collapse" data-target="#proprietairesCollapse" aria-expanded="true">
-            <h5 class="mb-0">
-                <i class="fas fa-users"></i> Propriétaires ({{ owners|length }})
-                <i class="fas fa-chevron-down float-right ml-2"></i>
-            </h5>
+    {% embed 'components/proprietaires_card.html.twig' with { count: owners|length } %}
+
+    
+        {% block header_actions %}
             {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
                 <a href="{{ path('game_add_owner', {id: game.id}) }}" class="btn btn-sm btn-success" onclick="event.stopPropagation();">
                     <i class="fas fa-user-plus mr-1"></i>
                     {% if userGameCount > 0 %}Ajouter une autre édition{% else %}Ajouter à ma collection{% endif %}
                 </a>
             {% endif %}
-        </div>
-        <div id="proprietairesCollapse" class="collapse show">
-        <div class="card-body p-0">
-            {% if owners|length == 0 %}
+
+    
+        {% endblock %}
+
+    
+        {% block content %}
+{% if owners|length == 0 %}
                 <div class="p-3 text-center text-muted">
                     <i class="fas fa-info-circle"></i> Aucun propriétaire pour ce jeu.
                 </div>
@@ -155,6 +155,8 @@
                             <th><i class="fas fa-tv"></i> Console</th>
                             <th><i class="fas fa-box"></i> Édition</th>
                             <th><i class="fas fa-tag"></i> Type</th>
+                            <th><i class="fas fa-calendar"></i> Date d'achat</th>
+                            <th><i class="fas fa-euro-sign"></i> Prix</th>
                             <th><i class="fas fa-comment"></i> Commentaire</th>
                             {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
                                 <th class="text-right"><i class="fas fa-cogs"></i> Actions</th>
@@ -201,6 +203,10 @@
                                     {% endif %}
                                 {% endif %}
                             </td>
+                            <td>{{ lien.dateAchat ? lien.dateAchat|date('d/m/Y') : '-' }}</td>
+                            <td>
+                                {% include 'components/owner_prix_cell.html.twig' with { prix: lien.prixAchat } %}
+                            </td>
                             <td>
                                 {% if lien.commentaire %}
                                     {{ lien.commentaire|u.truncate(50, '...') }}
@@ -229,9 +235,12 @@
                 </table>
             </div>
             {% endif %}
-        </div>
-        </div>
-    </div>
+
+    
+        {% endblock %}
+
+    
+    {% endembed %}
 </div>
 
 <!-- Modal Image -->

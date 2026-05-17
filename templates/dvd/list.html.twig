@@ -3,7 +3,7 @@
 {% block title %}Liste des DVD / Blu-ray - BDD-DVD{% endblock %}
 
 {% block body %}
-<div class="container-fluid px-4">
+<div class="container-fluid px-3 px-md-4 bdd-list-page">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 style="color: #1a5276;"><i class="fas fa-compact-disc"></i> DVD / Blu-ray</h2>
         <a href="{{ path('dvd_index') }}" class="btn btn-outline-secondary">
@@ -14,10 +14,19 @@
     <div class="card shadow-sm mb-4">
         <div class="card-body">
             <form method="get" class="row">
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <input type="text" name="search" class="form-control" placeholder="Rechercher..." value="{{ search }}">
-                    </div>
+                <div class="col-12 col-md-4 mb-2">
+                    {% include 'components/search_input_group.html.twig' with {
+                        icon: 'fas fa-compact-disc',
+                        accent: '#1a5276',
+                        name: 'search',
+                        input_id: 'searchInput',
+                        placeholder: 'Titre, éditeur ou code-barres EAN...',
+                        value: search,
+                        size: '',
+                        scanner: true,
+                        scanner_hint: true,
+                        scanner_hint_text: 'Scannez le code-barres du boîtier pour rechercher dans votre catalogue.'
+                    } %}
                 </div>
                 <div class="col-md-3">
                     <div class="form-group">
@@ -50,8 +59,8 @@
                     </div>
                 </div>
                 <div class="col-md-1">
-                    <button type="submit" class="btn btn-primary btn-block">
-                        <i class="fas fa-search"></i>
+                    <button type="submit" class="btn btn-primary btn-block" title="Rechercher">
+                        <i class="fas fa-search"></i><span class="d-none d-md-inline"> Rechercher</span>
                     </button>
                 </div>
             </form>
@@ -90,4 +99,11 @@
         {{ knp_pagination_render(dvds) }}
     </div>
 </div>
+
+{% include 'components/barcode_scanner.html.twig' with { accent_from: '#1a5276', accent_to: '#3498db' } %}
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+{% include 'components/barcode_scanner_init.html.twig' with { accent_from: '#1a5276', accent_to: '#3498db' } %}
 {% endblock %}

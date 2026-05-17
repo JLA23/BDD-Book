@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Trait\StoredImagePathTrait;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -13,6 +14,8 @@ use Doctrine\ORM\Mapping as ORM;
  */
 class Livre
 {
+    use StoredImagePathTrait;
+
     /**
      * @var int
      *
@@ -599,7 +602,15 @@ class Livre
      */
     public function getBestImage(): ?string
     {
+        if (!empty($this->storedPath)) {
+            return $this->storedPath;
+        }
+
         if (!empty($this->image2)) {
+            if (str_starts_with($this->image2, '/uploads/')) {
+                return $this->image2;
+            }
+
             return '/uploads/covers/' . $this->image2;
         }
 

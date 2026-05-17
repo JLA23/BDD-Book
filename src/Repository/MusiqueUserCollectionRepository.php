@@ -50,4 +50,14 @@ class MusiqueUserCollectionRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    public function countByMusique(\App\Entity\Musique $musique): int
+    {
+        return (int) $this->createQueryBuilder('muc')
+            ->select('COUNT(muc.id)')
+            ->where('muc.musique = :musique')
+            ->setParameter('musique', $musique)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
 }

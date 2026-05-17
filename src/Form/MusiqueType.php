@@ -73,6 +73,11 @@ class MusiqueType extends AbstractType
                 'required' => false,
                 'attr' => ['rows' => 6, 'placeholder' => "1. Titre de la piste 1\n2. Titre de la piste 2\n..."],
             ])
+            ->add('ean', TextType::class, [
+                'label' => 'Code-barres (EAN/UPC)',
+                'required' => false,
+                'attr' => ['placeholder' => 'Ex: 0602547288639'],
+            ])
             ->add('coverUrl', UrlType::class, [
                 'label' => 'URL de la pochette',
                 'required' => false,

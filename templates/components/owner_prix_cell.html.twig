@@ -1,0 +1,6 @@
+{# Affiche prix d'achat ou prix catalogue (passer prix=) #}
+{% if prix is not null and prix != '' %}
+<span class="text-success">{{ prix|number_format(2, ',', ' ') }} €</span>
+{% else %}
+<span class="text-muted">-</span>
+{% endif %}

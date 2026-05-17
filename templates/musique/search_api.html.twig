@@ -28,26 +28,55 @@
                 <div class="card-body">
                     <ul class="nav nav-tabs mb-3" id="searchTabs" role="tablist">
                         <li class="nav-item">
-                            <a class="nav-link active" id="text-tab" data-toggle="tab" href="#textSearch" role="tab">
-                                <i class="fas fa-search"></i> Par titre / artiste
+                            <a class="nav-link active" id="barcode-tab" data-toggle="tab" href="#barcodeSearch" role="tab">
+                                <i class="fas fa-barcode"></i> Par code-barres
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="barcode-tab" data-toggle="tab" href="#barcodeSearch" role="tab">
-                                <i class="fas fa-barcode"></i> Par code-barres
+                            <a class="nav-link" id="text-tab" data-toggle="tab" href="#textSearch" role="tab">
+                                <i class="fas fa-search"></i> Par Nom
                             </a>
                         </li>
                     </ul>
 
                     <div class="tab-content" id="searchTabsContent">
-                        <div class="tab-pane fade show active" id="textSearch" role="tabpanel">
-                            <div class="input-group mb-3">
-                                <input type="text" id="searchQuery" class="form-control form-control-lg" placeholder="Artiste ou titre (ex: Daft Punk, Abbey Road...)">
-                                <div class="input-group-append">
-                                    <button class="btn btn-lg" id="searchBtn" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color: white;">
-                                        <i class="fas fa-search"></i> Rechercher
-                                    </button>
-                                </div>
+                        <div class="tab-pane fade show active" id="barcodeSearch" role="tabpanel">
+                            <div class="mb-3">
+                            {% embed 'components/search_input_group.html.twig' with {
+                                icon: 'fas fa-music',
+                                accent: '#e74c3c',
+                                input_id: 'barcodeQuery',
+                                placeholder: 'Code-barres EAN/UPC (ex: 0602547288639)',
+                                inputmode: 'numeric',
+                                scanner: true,
+                                scanner_hint: true,
+                                scanner_hint_text: 'Scannez le code-barres du CD ou du vinyle.'
+                            } %}
+                                {% block append %}
+                                    {% include 'components/search_submit_append.html.twig' with {
+                                        button_id: 'barcodeSearchBtn',
+                                        button_style: 'background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color: white;'
+                                    } %}
+                                {% endblock %}
+                            {% endembed %}
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="textSearch" role="tabpanel">
+                            <div class="mb-3">
+                            {% embed 'components/search_input_group.html.twig' with {
+                                icon: 'fas fa-music',
+                                accent: '#e74c3c',
+                                input_id: 'searchQuery',
+                                placeholder: 'Artiste ou titre (ex: Daft Punk, Abbey Road...)'
+                            } %}
+                                {% block append %}
+                                    {% include 'components/search_submit_append.html.twig' with {
+                                        button_id: 'searchBtn',
+                                        button_style: 'background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color: white;'
+                                    } %}
+                                {% endblock %}
+                            {% endembed %}
                             </div>
                             <div class="row">
                                 <div class="col-md-6">
@@ -60,27 +89,7 @@
                                     </select>
                                 </div>
                             </div>
-                            <small class="text-muted">Recherche par master release (albums regroupés)</small>
-                        </div>
-
-                        <div class="tab-pane fade" id="barcodeSearch" role="tabpanel">
-                            <div class="input-group mb-3">
-                                <div class="input-group-prepend">
-                                    <span class="input-group-text"><i class="fas fa-barcode"></i></span>
-                                </div>
-                                <input type="text" id="barcodeQuery" class="form-control form-control-lg" placeholder="Code-barres EAN/UPC (ex: 0602547288639)">
-                                <div class="input-group-append d-md-none">
-                                    <button type="button" class="btn btn-lg btn-outline-secondary" id="scanBarcodeBtn" title="Scanner un code-barres">
-                                        <i class="fas fa-camera"></i>
-                                    </button>
-                                </div>
-                                <div class="input-group-append">
-                                    <button class="btn btn-lg" id="barcodeSearchBtn" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color: white;">
-                                        <i class="fas fa-search"></i> Rechercher
-                                    </button>
-                                </div>
-                            </div>
-                            <small class="text-muted d-md-none"><i class="fas fa-camera"></i> Cliquez sur l'icône caméra pour scanner le code-barres du CD/Vinyle</small>
+                            <small class="text-muted">Recherche sur Discogs</small>
                         </div>
                     </div>
                 </div>
@@ -242,6 +251,9 @@ $(document).ready(function() {
         var barcode = $('#barcodeQuery').val().trim();
         if (!barcode) { alert('Veuillez saisir un code-barres'); return; }
 
+        // Stocker le code-barres pour l'utiliser lors de l'ajout
+        currentBarcode = barcode;
+
         $('#loadingSpinner').show();
         $('#searchResults').empty().show();
         $('#musiqueDetails').hide();
@@ -332,27 +344,12 @@ $(document).ready(function() {
 
                     $('#musiqueDetails').show();
 
+                    // Stocker les données pour le bouton d'ajout
+                    window.currentMusiqueData = m;
+                    window.currentBarcode = currentBarcode;
+
                     $('#addMusiqueBtn').off('click').click(function() {
-                        var params = new URLSearchParams();
-                        params.append('prefill', '1');
-                        params.append('titre', m.titre || '');
-                        params.append('artiste', m.artiste || '');
-                        params.append('annee', m.annee || '');
-                        params.append('label', m.label || '');
-                        params.append('genre', m.genre || '');
-                        params.append('type', m.type || '');
-                        params.append('format', m.format || '');
-                        params.append('description', m.description || '');
-                        params.append('cover', m.cover || '');
-                        params.append('externalId', m.id || '');
-                        // Convertir la tracklist en texte
-                        if (m.tracklist && m.tracklist.length > 0) {
-                            var trackText = m.tracklist.map(function(t) {
-                                return (t.position ? t.position + '. ' : '') + t.title + (t.duration ? ' (' + t.duration + ')' : '');
-                            }).join('\n');
-                            params.append('tracklist', trackText);
-                        }
-                        window.location.href = '{{ path("musique_new") }}?' + params.toString();
+                        checkDuplicateAndAdd();
                     });
                 }
             },
@@ -363,6 +360,116 @@ $(document).ready(function() {
             }
         });
     };
+
+    var currentBarcode = null;
+
+    // Vérifier les doublons avant d'ajouter
+    function checkDuplicateAndAdd() {
+        var m = window.currentMusiqueData;
+        if (!m) return;
+
+        // Construire les paramètres de vérification
+        var checkParams = new URLSearchParams();
+        checkParams.append('titre', m.titre || '');
+        checkParams.append('format', m.format || '');
+        checkParams.append('artiste', m.artiste || '');
+        if (window.currentBarcode) {
+            checkParams.append('ean', window.currentBarcode);
+        }
+
+        $.ajax({
+            url: '{{ path("musique_api_check_duplicate") }}?' + checkParams.toString(),
+            method: 'GET',
+            success: function(response) {
+                if (response.found && response.duplicates.length > 0) {
+                    showDuplicateModal(response.duplicates, m);
+                } else {
+                    redirectToNewMusique(m);
+                }
+            },
+            error: function() {
+                // En cas d'erreur, continuer vers la création
+                redirectToNewMusique(m);
+            }
+        });
+    }
+
+    function redirectToNewMusique(m) {
+        var params = new URLSearchParams();
+        params.append('prefill', '1');
+        params.append('titre', m.titre || '');
+        params.append('artiste', m.artiste || '');
+        params.append('annee', m.annee || '');
+        params.append('label', m.label || '');
+        params.append('genre', m.genre || '');
+        params.append('type', m.type || '');
+        params.append('format', m.format || '');
+        params.append('description', m.description || '');
+        params.append('cover', m.cover || '');
+        params.append('externalId', m.id || '');
+        if (window.currentBarcode) {
+            params.append('ean', window.currentBarcode);
+        }
+        if (m.tracklist && m.tracklist.length > 0) {
+            var trackText = m.tracklist.map(function(t) {
+                return (t.position ? t.position + '. ' : '') + t.title + (t.duration ? ' (' + t.duration + ')' : '');
+            }).join('\n');
+            params.append('tracklist', trackText);
+        }
+        window.location.href = '{{ path("musique_new") }}?' + params.toString();
+    }
+
+    function showDuplicateModal(duplicates, newData) {
+        var dup = duplicates[0];
+        var formatLabel = dup.format === 'vinyle' ? 'Vinyle' : dup.format === 'k7' ? 'K7' : 'CD';
+        
+        var html = '<div class="modal fade" id="duplicateModal" tabindex="-1">' +
+            '<div class="modal-dialog modal-lg">' +
+            '<div class="modal-content">' +
+            '<div class="modal-header bg-warning">' +
+            '<h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Album similaire trouvé</h5>' +
+            '<button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>' +
+            '</div>' +
+            '<div class="modal-body">' +
+            '<div class="alert alert-info">' +
+            '<i class="fas fa-info-circle"></i> Un album similaire existe déjà dans la base de données.' +
+            '</div>' +
+            '<div class="row">' +
+            '<div class="col-md-4 text-center">' +
+            '<img src="' + (dup.cover || '/images/musique-default.svg') + '" class="img-fluid rounded mb-2" style="max-height: 150px;">' +
+            '</div>' +
+            '<div class="col-md-8">' +
+            '<h5>' + (dup.artiste || '') + ' - ' + (dup.titre || '') + '</h5>' +
+            '<p class="mb-1"><strong>Format:</strong> ' + formatLabel + '</p>' +
+            '<p class="mb-1"><strong>Année:</strong> ' + (dup.annee || '-') + '</p>' +
+            (dup.ean ? '<p class="mb-1"><strong>EAN:</strong> ' + dup.ean + '</p>' : '') +
+            '</div>' +
+            '</div>' +
+            '</div>' +
+            '<div class="modal-footer">' +
+            '<a href="{{ path("musique_add_owner", {id: 0}) }}'.replace('/0/', '/' + dup.id + '/') + '" class="btn btn-success">' +
+            '<i class="fas fa-user-plus"></i> J\'ai cet album (ajouter à ma collection)' +
+            '</a>' +
+            '<button type="button" class="btn btn-primary" id="createNewAnyway">' +
+            '<i class="fas fa-plus"></i> Créer une nouvelle fiche' +
+            '</button>' +
+            '<a href="{{ path("musique_detail", {id: 0}) }}'.replace('/0', '/' + dup.id) + '" class="btn btn-outline-secondary">' +
+            '<i class="fas fa-eye"></i> Voir la fiche' +
+            '</a>' +
+            '</div>' +
+            '</div></div></div>';
+
+        // Supprimer l'ancien modal s'il existe
+        $('#duplicateModal').remove();
+        $('body').append(html);
+        
+        $('#createNewAnyway').click(function() {
+            $('#duplicateModal').modal('hide');
+            redirectToNewMusique(newData);
+        });
+
+        $('#duplicateModal').modal('show');
+    }
 
     // ========== SCANNER CODE-BARRES ==========
     let html5QrCode = null;

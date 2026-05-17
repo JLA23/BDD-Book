@@ -5,10 +5,12 @@ namespace App\Controller;
 use App\Entity\Livre;
 use App\Entity\KioskCollec;
 use App\Entity\KioskNum;
+use App\Entity\DvdUserCollection;
 use App\Entity\LienUserBrickSet;
 use App\Entity\LienUserGame;
 use App\Entity\LienUserLivre;
 use App\Entity\LienKioskNumUser;
+use App\Entity\MusiqueUserCollection;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -58,9 +60,8 @@ class StatistiquesController extends AbstractController
             ->getSingleScalarResult();
             
         $userNumerosPrix = $this->em->createQueryBuilder()
-            ->select('SUM(n.prix)')
+            ->select('SUM(lknu.prixAchat)')
             ->from(LienKioskNumUser::class, 'lknu')
-            ->join('lknu.kioskNum', 'n')
             ->where('lknu.user = :user')
             ->setParameter('user', $user)
             ->getQuery()
@@ -108,6 +109,38 @@ class StatistiquesController extends AbstractController
             ->getQuery()
             ->getSingleScalarResult() ?? 0;
 
+        $userDvdCount = $this->em->createQueryBuilder()
+            ->select('COUNT(duc.id)')
+            ->from(DvdUserCollection::class, 'duc')
+            ->where('duc.user = :user')
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        $userDvdPrix = $this->em->createQueryBuilder()
+            ->select('SUM(duc.prixAchat)')
+            ->from(DvdUserCollection::class, 'duc')
+            ->where('duc.user = :user')
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->getSingleScalarResult() ?? 0;
+
+        $userMusiqueCount = $this->em->createQueryBuilder()
+            ->select('COUNT(muc.id)')
+            ->from(MusiqueUserCollection::class, 'muc')
+            ->where('muc.user = :user')
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        $userMusiquePrix = $this->em->createQueryBuilder()
+            ->select('SUM(muc.prixAchat)')
+            ->from(MusiqueUserCollection::class, 'muc')
+            ->where('muc.user = :user')
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->getSingleScalarResult() ?? 0;
+
         return $this->render('pages/statistiques.html.twig', [
             'userLivresCount' => $userLivresCount,
             'userLivresPrix' => $userLivresPrix,
@@ -118,6 +151,10 @@ class StatistiquesController extends AbstractController
             'userJeuxPrix' => $userJeuxPrix,
             'userBricksCount' => $userBricksCount,
             'userBricksPrix' => $userBricksPrix,
+            'userDvdCount' => $userDvdCount,
+            'userDvdPrix' => $userDvdPrix,
+            'userMusiqueCount' => $userMusiqueCount,
+            'userMusiquePrix' => $userMusiquePrix,
         ]);
     }
 }

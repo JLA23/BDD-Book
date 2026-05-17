@@ -1,0 +1,5 @@
+<div class="input-group-append">
+    <button type="{{ button_type|default('button') }}" class="btn btn-lg {{ btn_class|default('') }}" id="{{ button_id }}" title="{{ button_title|default('Rechercher') }}" aria-label="{{ button_title|default('Rechercher') }}"{% if button_style is defined %} style="{{ button_style }}"{% endif %}>
+        <i class="fas fa-search"></i><span class="d-none d-md-inline"> {{ button_label|default('Rechercher') }}</span>
+    </button>
+</div>

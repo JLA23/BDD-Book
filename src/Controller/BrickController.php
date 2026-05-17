@@ -17,6 +17,7 @@ use App\Repository\BrickSetRepository;
 use App\Repository\LienUserBrickSetRepository;
 use App\Repository\UserRepository;
 use App\Service\BrickApiService;
+use App\Service\Media\MediaImageSyncService;
 use App\Service\SectionPermissionService;
 use Doctrine\ORM\EntityManagerInterface;
 use Knp\Component\Pager\PaginatorInterface;
@@ -35,8 +36,12 @@ class BrickController extends AbstractController
     private BrickApiService $brickApi;
     private SectionPermissionService $permissionService;
 
-    public function __construct(EntityManagerInterface $em, BrickApiService $brickApi, SectionPermissionService $permissionService)
-    {
+    public function __construct(
+        EntityManagerInterface $em,
+        BrickApiService $brickApi,
+        SectionPermissionService $permissionService,
+        private MediaImageSyncService $mediaImageSync,
+    ) {
         $this->em = $em;
         $this->brickApi = $brickApi;
         $this->permissionService = $permissionService;
@@ -198,6 +203,9 @@ class BrickController extends AbstractController
             if ($request->query->get('prix')) {
                 $set->setPrix((float) $request->query->get('prix'));
             }
+            if ($request->query->get('ean')) {
+                $set->setEan($request->query->get('ean'));
+            }
 
             // Vérifier si la référence existe déjà
             $reference = $request->query->get('reference', '');
@@ -352,6 +360,8 @@ class BrickController extends AbstractController
 
             $session->remove('brick_prefill_images');
             $this->em->flush();
+            $this->mediaImageSync->syncBrickSetImages($set);
+            $this->em->flush();
 
             $this->addFlash('success', 'Set créé avec succès' . ($addToCollection === '1' ? ' et ajouté à votre collection' : ''));
             return $this->redirectToRoute('brick_detail', ['id' => $set->getId(), 'from' => 'list']);
@@ -448,25 +458,58 @@ class BrickController extends AbstractController
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
 
-        $reference = $request->query->get('reference', '');
+        $ean = trim((string) $request->query->get('ean', ''));
+        $reference = trim((string) $request->query->get('reference', ''));
 
-        if (empty($reference)) {
-            return $this->json(['error' => 'Référence requise'], 400);
+        if ($ean === '' && $reference === '') {
+            return $this->json(['error' => 'Référence ou code-barres requis'], 400);
         }
 
         if (!$this->brickApi->isConfigured()) {
             return $this->json(['error' => 'Aucune API configurée'], 500);
         }
 
+        if ($ean !== '') {
+            if (!$this->brickApi->isBricksetConfigured()) {
+                return $this->json(['error' => 'La recherche par code-barres nécessite une clé Brickset (BRICKSET_API_KEY)'], 400);
+            }
+
+            $existingSet = $setRepo->findByEan($ean);
+            if ($existingSet) {
+                return $this->json([
+                    'success' => true,
+                    'exists' => true,
+                    'duplicate' => [
+                        'id' => $existingSet->getId(),
+                        'nom' => $existingSet->getNom(),
+                        'reference' => $existingSet->getReference(),
+                    ],
+                ]);
+            }
+
+            $result = $this->brickApi->searchByEan($ean);
+            if ($result) {
+                return $this->json([
+                    'success' => true,
+                    'set' => $result,
+                    'images' => $result['images'] ?? [],
+                ]);
+            }
+
+            return $this->json([
+                'success' => true,
+                'results' => [],
+            ]);
+        }
+
         // Vérifier si existe déjà en base (avec et sans suffixe -1)
         $refWithSuffix = preg_match('/-\d+$/', $reference) ? $reference : $reference . '-1';
         $refWithoutSuffix = preg_replace('/-\d+$/', '', $reference);
-        
-        $existingSet = $setRepo->findByReference($reference) 
+
+        $existingSet = $setRepo->findByReference($reference)
             ?? $setRepo->findByReference($refWithSuffix)
             ?? $setRepo->findByReference($refWithoutSuffix);
-        
-        // Si le set existe, retourner immédiatement sans appeler l'API
+
         if ($existingSet) {
             return $this->json([
                 'success' => true,
@@ -479,11 +522,9 @@ class BrickController extends AbstractController
             ]);
         }
 
-        // Rechercher via les APIs seulement si le set n'existe pas
         $result = $this->brickApi->searchSet($reference);
 
         if ($result) {
-            dump($result);
             return $this->json([
                 'success' => true,
                 'set' => $result,
@@ -491,7 +532,6 @@ class BrickController extends AbstractController
             ]);
         }
 
-        // Sinon, rechercher par mot-clé
         $results = $this->brickApi->searchSets($reference, 10);
 
         return $this->json([
@@ -639,6 +679,8 @@ class BrickController extends AbstractController
                 }
             }
 
+            $this->em->flush();
+            $this->mediaImageSync->syncBrickSetImages($set);
             $this->em->flush();
             $this->addFlash('success', 'Images ajoutées avec succès');
 

@@ -23,18 +23,17 @@
                         <div class="col-md-8">
                             <div class="form-group mb-3">
                                 <label for="search" class="font-weight-bold text-dark">Que recherchez-vous ?</label>
-                                <div class="input-group input-group-lg">
-                                    <div class="input-group-prepend">
-                                        <span class="input-group-text bg-white border-right-0"><i class="fas fa-book text-primary"></i></span>
-                                    </div>
-                                    <input class='form-control border-left-0' name='value' placeholder="Titre, auteur ou ISBN..." type="text" id="search"/>
-                                    <div class="input-group-append d-md-none">
-                                        <button type="button" class="btn bg-white border-left-0" id="scanBarcodeBtn" title="Scanner un code-barres" style="border-color: #ced4da; color: #6c757d;">
-                                            <i class="fas fa-barcode"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <small class="form-text text-muted">Recherche par titre, auteur ou code ISBN. <span class="d-md-none text-primary"><i class="fas fa-camera"></i> Cliquez sur l'icône code-barres pour scanner.</span></small>
+                                {% include 'components/search_input_group.html.twig' with {
+                                    icon: 'fas fa-book',
+                                    accent: '#667eea',
+                                    name: 'value',
+                                    input_id: 'search',
+                                    placeholder: 'Titre, auteur ou ISBN...',
+                                    scanner: true,
+                                    scanner_hint: true,
+                                    scanner_hint_text: 'Utilisez l’icône caméra pour scanner un code ISBN.'
+                                } %}
+                                <small class="form-text text-muted d-none d-md-block">Recherche par titre, auteur ou code ISBN.</small>
                             </div>
                         </div>
                         <div class="col-md-4">

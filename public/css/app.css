@@ -22,8 +22,26 @@ body { background-color: #f5f7fa; }
 .navbar .btn-outline-primary:hover { background-color: white; color: #667eea; }
 #circleUser { width: 30px; height: 30px; color: white; }
 #bodyContain { padding-top: 20px; }
-#titleListe { margin: 0 20px; }
-#acceuilSite { padding-top: 20px; justify-content: center; margin-right: 5%; margin-left: 5%; max-width: 1200px; margin: 20px auto; }
+#titleListe { margin: 0; padding-left: 0.75rem; padding-right: 0.75rem; }
+@media (min-width: 768px) {
+    #titleListe { margin: 0 20px; padding-left: 0; padding-right: 0; }
+}
+#acceuilSite {
+    padding-top: 20px;
+    width: 100%;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    box-sizing: border-box;
+}
+@media (min-width: 768px) {
+    #acceuilSite {
+        padding-left: 0;
+        padding-right: 0;
+    }
+}
 #acceuilSite h2 { font-size: 2rem; text-align: center; padding-bottom: 10px; color: #333; }
 #acceuilSite .btn { margin-bottom: 10px; }
 #acceuilSite #cameraButton { position: absolute; top: 0; border-radius: 5px; right: 18px; z-index: 2; border: none; height: 38px; cursor: pointer; transform: translateX(2px); }
@@ -173,4 +191,16 @@ body { background-color: #f5f7fa; }
 }
 .navbar-brand.dropdown-toggle::after {
     margin-left: 8px;
+}
+
+/* Chevron section Propriétaires (Bootstrap 4 collapse) */
+.card-header[data-toggle="collapse"] .proprietaires-chevron {
+    transition: transform 0.2s ease;
+    display: inline-block;
+}
+.card-header[data-toggle="collapse"].collapsed .proprietaires-chevron {
+    transform: rotate(0deg);
+}
+.card-header[data-toggle="collapse"]:not(.collapsed) .proprietaires-chevron {
+    transform: rotate(180deg);
 }

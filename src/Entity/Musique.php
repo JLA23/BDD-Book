@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Trait\StoredImagePathTrait;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -14,6 +15,8 @@ use Doctrine\ORM\Mapping as ORM;
  */
 class Musique
 {
+    use StoredImagePathTrait;
+
     /**
      * @var int
      *
@@ -92,6 +95,13 @@ class Musique
      * @ORM\Column(name="external_id", type="string", length=100, nullable=true)
      */
     private $externalId;
+
+    /**
+     * @var string|null Code-barres EAN/UPC
+     *
+     * @ORM\Column(name="ean", type="string", length=50, nullable=true)
+     */
+    private $ean;
 
     /**
      * @var string|null Liste des pistes (texte)
@@ -233,6 +243,17 @@ class Musique
         return $this;
     }
 
+    public function getEan(): ?string
+    {
+        return $this->ean;
+    }
+
+    public function setEan(?string $ean): self
+    {
+        $this->ean = $ean;
+        return $this;
+    }
+
     public function getTracklist(): ?string
     {
         return $this->tracklist;
@@ -265,6 +286,10 @@ class Musique
 
     public function getMainImage(): ?string
     {
+        if (!empty($this->storedPath)) {
+            return $this->storedPath;
+        }
+
         return $this->coverUrl;
     }
 

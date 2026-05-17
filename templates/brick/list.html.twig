@@ -3,20 +3,20 @@
 {% block title %}BDD-Brick - Liste des sets{% endblock %}
 
 {% block body %}
-<div class="container-fluid px-4">
+<div class="container-fluid px-3 px-md-4 bdd-list-page">
     <div class="card mb-4">
         <div class="card-header" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
-            <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex flex-wrap justify-content-between align-items-center w-100">
                 <h5 class="mb-0 text-white">
                     <i class="fas fa-cubes"></i> BDD-Brick
                 </h5>
                 {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
-                <div>
-                    <a href="{{ path('brick_search_reference') }}" class="btn btn-light btn-sm mr-2">
-                        <i class="fas fa-search"></i> Rechercher par référence
+                <div class="d-flex flex-wrap mt-2 mt-md-0">
+                    <a href="{{ path('brick_search_reference') }}" class="btn btn-light btn-sm mr-2 mb-1">
+                        <i class="fas fa-search"></i><span class="d-none d-sm-inline"> API</span>
                     </a>
-                    <a href="{{ path('brick_ajouter') }}" class="btn btn-success btn-sm">
-                        <i class="fas fa-plus"></i> Ajouter un set
+                    <a href="{{ path('brick_ajouter') }}" class="btn btn-success btn-sm mb-1">
+                        <i class="fas fa-plus"></i> Ajouter
                     </a>
                 </div>
                 {% endif %}
@@ -25,15 +25,20 @@
         <div class="card-body">
             <form action="{{ path('brick_list') }}" method="get" class="mb-3">
                 <div class="row">
-                    <div class="col-md-3 mb-2">
-                        <div class="input-group">
-                            <div class="input-group-prepend">
-                                <span class="input-group-text bg-white"><i class="fas fa-search text-primary"></i></span>
-                            </div>
-                            <input type="text" name="search" class="form-control" value="{{ search }}" placeholder="Nom ou référence...">
-                        </div>
+                    <div class="col-12 mb-2">
+                        {% include 'components/search_input_group.html.twig' with {
+                            icon: 'fas fa-cubes',
+                            accent: '#ff6b35',
+                            name: 'search',
+                            input_id: 'searchInput',
+                            placeholder: 'Nom, référence ou EAN...',
+                            value: search,
+                            size: '',
+                            scanner: true,
+                            scanner_hint: true
+                        } %}
                     </div>
-                    <div class="col-md-2 mb-2">
+                    <div class="col-6 col-md-2 mb-2">
                         <select name="marque" class="form-control">
                             <option value="">Toutes les marques</option>
                             {% for marque in marques %}
@@ -43,7 +48,7 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-3 mb-2">
+                    <div class="col-6 col-md-3 mb-2">
                         <select name="collection" class="form-control">
                             <option value="">Toutes les collections</option>
                             {% for collection in collections %}
@@ -53,7 +58,7 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-2 mb-2">
+                    <div class="col-6 col-md-2 mb-2">
                         <select name="user" class="form-control">
                             <option value="">Tous les propriétaires</option>
                             {% for user in users %}
@@ -63,15 +68,15 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-2 mb-2">
-                        <button type="submit" class="btn btn-primary btn-block">
-                            <i class="fas fa-filter"></i> Filtrer
+                    <div class="col-12 col-md-2 mb-2">
+                        <button type="submit" class="btn btn-primary btn-block" title="Rechercher">
+                            <i class="fas fa-search"></i><span class="d-none d-md-inline"> Rechercher</span>
                         </button>
                     </div>
                 </div>
             </form>
             
-            <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex flex-wrap justify-content-between align-items-center ">
                 <small class="text-muted">
                     <i class="fas fa-cubes"></i> {{ pagination.getTotalItemCount }} set(s) trouvé(s)
                 </small>
@@ -154,4 +159,11 @@
     .brick-titre:hover { color: #ff6b35 !important; }
     .brick-cover-wrapper { border-radius: 0.25rem 0.25rem 0 0; min-height: 180px; }
 </style>
+
+{% include 'components/barcode_scanner.html.twig' with { accent_from: '#ff6b35', accent_to: '#f7931e' } %}
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+{% include 'components/barcode_scanner_init.html.twig' with { accent_from: '#ff6b35', accent_to: '#f7931e' } %}
 {% endblock %}

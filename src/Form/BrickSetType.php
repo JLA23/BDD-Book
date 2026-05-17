@@ -32,6 +32,11 @@ class BrickSetType extends AbstractType
                 'required' => true,
                 'attr' => ['class' => 'form-control', 'placeholder' => 'Ex: 75192'],
             ])
+            ->add('ean', TextType::class, [
+                'label' => 'Code-barres (EAN)',
+                'required' => false,
+                'attr' => ['class' => 'form-control', 'placeholder' => 'Ex: 5702016116934', 'inputmode' => 'numeric'],
+            ])
             ->add('marque', EntityType::class, [
                 'class' => BrickMarque::class,
                 'choice_label' => 'nom',

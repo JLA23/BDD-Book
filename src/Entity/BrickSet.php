@@ -38,6 +38,13 @@ class BrickSet
     private $reference;
 
     /**
+     * @var string|null
+     *
+     * @ORM\Column(name="ean", type="string", length=20, nullable=true)
+     */
+    private $ean;
+
+    /**
      * @var float|null
      *
      * @ORM\Column(name="prix", type="float", nullable=true)
@@ -133,6 +140,17 @@ class BrickSet
     public function setReference(string $reference): self
     {
         $this->reference = $reference;
+        return $this;
+    }
+
+    public function getEan(): ?string
+    {
+        return $this->ean;
+    }
+
+    public function setEan(?string $ean): self
+    {
+        $this->ean = $ean;
         return $this;
     }
 

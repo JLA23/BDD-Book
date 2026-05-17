@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Recherche par référence - BDD-Brick{% endblock %}
+{% block title %}Recherche API - BDD-Brick{% endblock %}
 
 {% block body %}
 <div class="container-fluid px-4">
@@ -9,7 +9,7 @@
             <div class="card shadow-sm">
                 <div class="card-header" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
                     <h5 class="mb-0 text-white">
-                        <i class="fas fa-search"></i> Recherche par référence
+                        <i class="fas fa-search"></i> Recherche API (référence ou EAN)
                     </h5>
                 </div>
                 <div class="card-body">
@@ -26,17 +26,69 @@
                     </div>
                     {% endif %}
                     
-                    <div class="form-group">
-                        <label for="referenceInput"><i class="fas fa-barcode"></i> Référence du set</label>
-                        <div class="input-group">
-                            <input type="text" id="referenceInput" class="form-control form-control-lg" placeholder="Ex: 75192, 42143...">
-                            <div class="input-group-append">
-                                <button type="button" id="searchBtn" class="btn btn-warning btn-lg">
-                                    <i class="fas fa-search"></i> Rechercher
-                                </button>
+                    <ul class="nav nav-tabs mb-3" id="searchTabs" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="reference-tab" data-toggle="tab" href="#referenceSearch" role="tab">
+                                <i class="fas fa-hashtag"></i> Par référence
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="ean-tab" data-toggle="tab" href="#eanSearch" role="tab">
+                                <i class="fas fa-barcode"></i> Par code-barres
+                            </a>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="searchTabsContent">
+                        <div class="tab-pane fade show active" id="referenceSearch" role="tabpanel">
+                            <div class="form-group mb-0">
+                                <label for="referenceInput"><i class="fas fa-hashtag"></i> Référence du set</label>
+                                {% embed 'components/search_input_group.html.twig' with {
+                                    icon: 'fas fa-cubes',
+                                    accent: '#ff6b35',
+                                    input_id: 'referenceInput',
+                                    placeholder: 'Ex: 75192, 42143...'
+                                } %}
+                                    {% block append %}
+                                        <div class="input-group-append">
+                                            <button type="button" id="searchBtn" class="btn btn-warning btn-lg" title="Rechercher">
+                                                <i class="fas fa-search"></i><span class="d-none d-md-inline"> Rechercher</span>
+                                            </button>
+                                        </div>
+                                    {% endblock %}
+                                {% endembed %}
+                                <small class="text-muted">Numéro de set (avec ou sans suffixe -1). Rebrickable et/ou Brickset.</small>
                             </div>
                         </div>
-                        <small class="text-muted">Entrez le numéro de set (avec ou sans le suffixe -1)</small>
+
+                        <div class="tab-pane fade" id="eanSearch" role="tabpanel">
+                            {% if not bricksetConfigured %}
+                            <div class="alert alert-warning small mb-2">
+                                <i class="fas fa-exclamation-triangle"></i> La recherche par code-barres nécessite une clé <code>BRICKSET_API_KEY</code>.
+                            </div>
+                            {% endif %}
+                            <div class="form-group mb-0">
+                                <label for="eanInput"><i class="fas fa-barcode"></i> Code-barres EAN</label>
+                                {% embed 'components/search_input_group.html.twig' with {
+                                    icon: 'fas fa-cubes',
+                                    accent: '#ff6b35',
+                                    input_id: 'eanInput',
+                                    placeholder: 'Ex: 5702016116934',
+                                    inputmode: 'numeric',
+                                    scanner: true,
+                                    scanner_hint: true,
+                                    scanner_hint_text: 'Scannez le code-barres du boîtier LEGO.'
+                                } %}
+                                    {% block append %}
+                                        <div class="input-group-append">
+                                            <button type="button" id="eanSearchBtn" class="btn btn-warning btn-lg" title="Rechercher" {% if not bricksetConfigured %}disabled{% endif %}>
+                                                <i class="fas fa-search"></i><span class="d-none d-md-inline"> Rechercher</span>
+                                            </button>
+                                        </div>
+                                    {% endblock %}
+                                {% endembed %}
+                            </div>
+                        </div>
                     </div>
                     
                     <div id="searchResults" class="mt-4" style="display: none;">
@@ -66,6 +118,7 @@
                                             <p class="mb-1"><i class="fas fa-calendar"></i> Année: <strong id="resultAnnee"></strong></p>
                                             <p class="mb-1"><i class="fas fa-puzzle-piece"></i> Pièces: <strong id="resultPieces"></strong></p>
                                             <p class="mb-1"><i class="fas fa-euro-sign"></i> Prix: <strong id="resultPrix"></strong></p>
+                                            <p class="mb-1" id="resultEanRow" style="display: none;"><i class="fas fa-barcode"></i> EAN: <strong id="resultEan"></strong></p>
 
                                             <input type="hidden" id="formNom">
                                             <input type="hidden" id="formReference">
@@ -73,6 +126,7 @@
                                             <input type="hidden" id="formPieces">
                                             <input type="hidden" id="formPrix">
                                             <input type="hidden" id="formTheme">
+                                            <input type="hidden" id="formEan">
                                         </div>
                                     </div>
                                 </div>
@@ -136,32 +190,57 @@
         </div>
     </div>
 </div>
+<div id="barcodeScannerOverlay">
+    <div class="scanner-header">
+        <span><i class="fas fa-barcode"></i> Scanner code-barres</span>
+        <button type="button" class="btn btn-light btn-sm" id="closeScannerBtn">
+            <i class="fas fa-times"></i> Fermer
+        </button>
+    </div>
+    <div id="barcodeReader"></div>
+    <div class="scanner-footer">
+        <div class="d-flex align-items-center justify-content-center mb-2">
+            <label class="mr-2 mb-0"><i class="fas fa-camera"></i> Caméra :</label>
+            <select id="cameraSelect" class="form-control form-control-sm" style="width: auto; max-width: 200px;">
+                <option value="">Chargement...</option>
+            </select>
+        </div>
+        <p class="mb-0 small"><i class="fas fa-info-circle"></i> Positionnez le code-barres dans le cadre</p>
+    </div>
+</div>
+<style>
+#barcodeScannerOverlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 999999; flex-direction: column; }
+#barcodeScannerOverlay.active { display: flex !important; }
+#barcodeScannerOverlay .scanner-header { background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+#barcodeScannerOverlay #barcodeReader { flex: 1; width: 100%; background: #000; }
+#barcodeScannerOverlay .scanner-footer { background: rgba(0,0,0,0.9); color: white; padding: 12px 15px; text-align: center; }
+html.scanner-open, html.scanner-open body { overflow: hidden !important; height: 100% !important; }
+</style>
+
 {% endblock %}
 
 {% block javascripts %}
 {{ parent() }}
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
 $(document).ready(function() {
-    $('#searchBtn').click(function() {
-        var reference = $('#referenceInput').val().trim();
-        if (!reference) { alert('Veuillez saisir une référence'); return; }
-        
+    function runApiSearch(queryData) {
         $('#searchResults').show();
         $('#loadingSpinner').show();
         $('#setResult, #multipleResults, #noResult, #duplicateWarning').hide();
-        
+
         $.ajax({
             url: '{{ path("brick_api_search") }}',
             method: 'GET',
-            data: { reference: reference },
+            data: queryData,
             success: function(response) {
                 $('#loadingSpinner').hide();
-                
+
                 if (response.duplicate) {
                     $('#duplicateWarning').show();
                     $('#duplicateLink').attr('href', '/brick/set/' + response.duplicate.id);
                 }
-                
+
                 if (response.set) {
                     showSetResult(response.set, response.images || []);
                 } else if (response.results && response.results.length > 0) {
@@ -177,9 +256,22 @@ $(document).ready(function() {
                 alert(msg);
             }
         });
+    }
+
+    $('#searchBtn').click(function() {
+        var reference = $('#referenceInput').val().trim();
+        if (!reference) { alert('Veuillez saisir une référence'); return; }
+        runApiSearch({ reference: reference });
+    });
+
+    $('#eanSearchBtn').click(function() {
+        var ean = $('#eanInput').val().trim();
+        if (!ean) { alert('Veuillez saisir un code-barres'); return; }
+        runApiSearch({ ean: ean });
     });
     
     $('#referenceInput').keypress(function(e) { if (e.which == 13) $('#searchBtn').click(); });
+    $('#eanInput').keypress(function(e) { if (e.which == 13) $('#eanSearchBtn').click(); });
     
     function showSetResult(set, images) {
         $('#resultNom').text(set.nom);
@@ -188,7 +280,13 @@ $(document).ready(function() {
         $('#resultAnnee').text(set.annee || '-');
         $('#resultPieces').text(set.nbPieces || '-');
         $('#resultPrix').text(set.prix ? set.prix + ' €' : '-');
-        
+        if (set.ean) {
+            $('#resultEan').text(set.ean);
+            $('#resultEanRow').show();
+        } else {
+            $('#resultEanRow').hide();
+        }
+
         if (set.image) {
             $('#resultImage').attr('src', set.image).show();
         } else {
@@ -201,6 +299,7 @@ $(document).ready(function() {
         $('#formPieces').val(set.nbPieces || '');
         $('#formPrix').val(set.prix || '');
         $('#formTheme').val(set.theme || '');
+        $('#formEan').val(set.ean || '');
         
         var ref = set.reference.replace(/-\d+$/, '');
         $('#rebrickableLink').attr('href', 'https://rebrickable.com/sets/' + set.reference + '/');
@@ -305,6 +404,7 @@ $(document).ready(function() {
                 params.append('nbPieces', $('#formPieces').val() || '');
                 params.append('prix', $('#formPrix').val() || '');
                 params.append('theme', $('#formTheme').val() || '');
+                params.append('ean', $('#formEan').val() || '');
                 window.location.href = '{{ path("brick_new") }}?' + params.toString();
             },
             error: function() { alert('Erreur'); }
@@ -328,6 +428,172 @@ $(document).ready(function() {
         $('#multipleResults').show();
     }
 
+    // Scanner code-barres (même logique que musique)
+    let html5QrCode = null;
+    let isScanning = false;
+    let availableCameras = [];
+    let currentCameraId = null;
+
+    function isSecureContext() {
+        return window.isSecureContext || location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    }
+
+    function checkCameraAvailable() {
+        return navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
+    }
+
+    $('#scanBarcodeBtn').click(function() {
+        $('#barcodeScannerOverlay').addClass('active');
+        $('html').addClass('scanner-open');
+
+        if (!isSecureContext()) {
+            showScannerError('<strong>Connexion non sécurisée</strong><br>Le scanner nécessite HTTPS.');
+            return;
+        }
+
+        if (!checkCameraAvailable()) {
+            showScannerError('<strong>Caméra non disponible</strong><br>Votre navigateur ne supporte pas la caméra.');
+            return;
+        }
+
+        requestCameraPermission();
+    });
+
+    $('#closeScannerBtn').click(function() {
+        closeScanner();
+    });
+
+    function closeScanner() {
+        stopScanner();
+        $('#barcodeScannerOverlay').removeClass('active');
+        $('html').removeClass('scanner-open');
+        $('#barcodeReader').html('');
+    }
+
+    function requestCameraPermission() {
+        $('#barcodeReader').html(
+            '<div class="d-flex align-items-center justify-content-center h-100" style="color: white;">' +
+            '<div class="text-center"><i class="fas fa-spinner fa-spin fa-3x mb-3"></i><p>Accès à la caméra...</p></div></div>'
+        );
+
+        navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
+        })
+        .then(function(stream) {
+            stream.getTracks().forEach(function(track) { track.stop(); });
+            $('#barcodeReader').html('');
+            startScanner();
+        })
+        .catch(function(err) {
+            var errorMessage = '';
+            if (err.name === 'NotAllowedError') {
+                errorMessage = '<strong>Permission refusée</strong><br>Autorisez l’accès à la caméra.';
+            } else if (err.name === 'NotFoundError') {
+                errorMessage = '<strong>Aucune caméra</strong><br>Pas de caméra détectée.';
+            } else {
+                errorMessage = '<strong>Erreur</strong><br>' + (err.message || 'Erreur inconnue');
+            }
+            showScannerError(errorMessage);
+        });
+    }
+
+    const scannerConfig = {
+        fps: 15,
+        qrbox: function(viewfinderWidth, viewfinderHeight) {
+            return { width: Math.floor(viewfinderWidth * 0.9), height: Math.floor(viewfinderHeight * 0.5) };
+        },
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+        formatsToSupport: [
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.UPC_E,
+            Html5QrcodeSupportedFormats.CODE_128
+        ]
+    };
+
+    async function loadCameras() {
+        try {
+            const allCameras = await Html5Qrcode.getCameras();
+            availableCameras = allCameras.filter(function(cam) {
+                const label = cam.label.toLowerCase();
+                return label.includes('back') || label.includes('arrière') || label.includes('environment');
+            });
+            if (availableCameras.length === 0) availableCameras = allCameras;
+
+            const select = $('#cameraSelect');
+            select.empty();
+            if (availableCameras.length > 0) {
+                availableCameras.forEach(function(cam, index) {
+                    var label = cam.label || ('Caméra ' + (index + 1));
+                    if (label.length > 25) label = label.substring(0, 25) + '...';
+                    select.append('<option value="' + cam.id + '">Objectif ' + (index + 1) + '</option>');
+                });
+                return availableCameras.length > 1 ? availableCameras[1].id : availableCameras[0].id;
+            }
+            return null;
+        } catch (err) {
+            return null;
+        }
+    }
+
+    async function startScanner() {
+        if (isScanning) return;
+        html5QrCode = new Html5Qrcode('barcodeReader');
+
+        try {
+            const defaultCameraId = await loadCameras();
+            if (defaultCameraId) {
+                currentCameraId = defaultCameraId;
+                $('#cameraSelect').val(currentCameraId);
+                await startWithCamera(currentCameraId);
+            } else {
+                await html5QrCode.start({ facingMode: 'environment' }, scannerConfig, onScanSuccess, onScanError);
+                isScanning = true;
+            }
+        } catch (err) {
+            showScannerError('<strong>Erreur</strong><br>Impossible de démarrer le scanner.');
+        }
+    }
+
+    async function startWithCamera(cameraId) {
+        await html5QrCode.start(cameraId, scannerConfig, onScanSuccess, onScanError);
+        isScanning = true;
+        currentCameraId = cameraId;
+    }
+
+    $('#cameraSelect').on('change', async function() {
+        const newCameraId = $(this).val();
+        if (newCameraId && newCameraId !== currentCameraId && isScanning) {
+            try {
+                await html5QrCode.stop();
+                isScanning = false;
+                await startWithCamera(newCameraId);
+            } catch (err) {}
+        }
+    });
+
+    function stopScanner() {
+        if (html5QrCode && isScanning) {
+            html5QrCode.stop().then(function() {
+                isScanning = false;
+                html5QrCode.clear();
+            }).catch(function() { isScanning = false; });
+        }
+    }
+
+    function onScanSuccess(decodedText) {
+        if (navigator.vibrate) navigator.vibrate(100);
+        $('#eanInput').val(decodedText);
+        $('.scanner-footer p').html('<i class="fas fa-check-circle text-success"></i> Code détecté : <strong>' + decodedText + '</strong>');
+        setTimeout(function() {
+            closeScanner();
+            $('#eanSearchBtn').click();
+        }, 800);
+    }
+
+    function onScanError() {}
+
     // Animation de la flèche sur le bouton Images disponibles
     $('#imagesCollapse').on('show.bs.collapse', function() {
         $('#imagesToggleBtn .toggle-icon').css('transform', 'rotate(0deg)');
@@ -337,6 +603,7 @@ $(document).ready(function() {
 });
 
 function selectSet(reference) {
+    $('#reference-tab').tab('show');
     $('#referenceInput').val(reference);
     $('#searchBtn').click();
 }

@@ -35,7 +35,7 @@
                     </div>
                     
                     <div class="mt-3 text-center">
-                        <a href="{{ path('index') }}" class="btn btn-outline-primary btn-sm">
+                        <a href="{{ path('listesLivres', {user: app.user.id}) }}" class="btn btn-outline-primary btn-sm">
                             <i class="fas fa-arrow-right"></i> Voir mes livres
                         </a>
                     </div>
@@ -66,14 +66,74 @@
                         <div class="col-4">
                             <div class="border rounded p-3 text-center">
                                 <h3 class="mb-0 text-success">{{ userNumerosPrix|number_format(2, ',', ' ') }} €</h3>
-                                <small class="text-muted">Valeur</small>
+                                <small class="text-muted">Valeur (prix d'achat)</small>
                             </div>
                         </div>
                     </div>
                     
                     <div class="mt-3 text-center">
-                        <a href="{{ path('magazines_list') }}" class="btn btn-outline-success btn-sm">
+                        <a href="{{ path('magazines_user', {id: app.user.id}) }}" class="btn btn-outline-success btn-sm">
                             <i class="fas fa-arrow-right"></i> Voir mes magazines
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistiques DVD / Blu-ray -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header text-white" style="background: linear-gradient(135deg, #1a5276 0%, #3498db 100%);">
+                    <h5 class="mb-0"><i class="fas fa-compact-disc"></i> Mes DVD / Blu-ray</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="border rounded p-3 text-center">
+                                <h3 class="mb-0 text-primary">{{ userDvdCount }}</h3>
+                                <small class="text-muted">DVD / Blu-ray</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border rounded p-3 text-center">
+                                <h3 class="mb-0 text-success">{{ userDvdPrix|number_format(2, ',', ' ') }} €</h3>
+                                <small class="text-muted">Valeur (prix d'achat)</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3 text-center">
+                        <a href="{{ path('dvd_user', {id: app.user.id}) }}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-arrow-right"></i> Voir mes DVD / Blu-ray
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistiques Musique -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header text-white" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+                    <h5 class="mb-0"><i class="fas fa-music"></i> Ma musique</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="border rounded p-3 text-center">
+                                <h3 class="mb-0 text-primary">{{ userMusiqueCount }}</h3>
+                                <small class="text-muted">Albums / supports</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border rounded p-3 text-center">
+                                <h3 class="mb-0 text-success">{{ userMusiquePrix|number_format(2, ',', ' ') }} €</h3>
+                                <small class="text-muted">Valeur (prix d'achat)</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3 text-center">
+                        <a href="{{ path('musique_user', {id: app.user.id}) }}" class="btn btn-outline-danger btn-sm">
+                            <i class="fas fa-arrow-right"></i> Voir ma musique
                         </a>
                     </div>
                 </div>
@@ -102,7 +162,7 @@
                         </div>
                     </div>
                     <div class="mt-3 text-center">
-                        <a href="{{ path('game_list') }}" class="btn btn-outline-secondary btn-sm" style="border-color: #6f42c1; color: #6f42c1;">
+                        <a href="{{ path('game_user', {id: app.user.id}) }}" class="btn btn-outline-secondary btn-sm" style="border-color: #6f42c1; color: #6f42c1;">
                             <i class="fas fa-arrow-right"></i> Voir mes jeux
                         </a>
                     </div>
@@ -132,7 +192,7 @@
                         </div>
                     </div>
                     <div class="mt-3 text-center">
-                        <a href="{{ path('brick_list') }}" class="btn btn-outline-warning btn-sm">
+                        <a href="{{ path('brick_list', {user: app.user.id}) }}" class="btn btn-outline-warning btn-sm">
                             <i class="fas fa-arrow-right"></i> Voir mes sets
                         </a>
                     </div>
@@ -141,8 +201,8 @@
         </div>
     </div>
 
-    {% set totalArticles = userLivresCount + userNumerosCount + userJeuxCount + userBricksCount %}
-    {% set totalValeur = userLivresPrix + userNumerosPrix + userJeuxPrix + userBricksPrix %}
+    {% set totalArticles = userLivresCount + userNumerosCount + userDvdCount + userMusiqueCount + userJeuxCount + userBricksCount %}
+    {% set totalValeur = userLivresPrix + userNumerosPrix + userDvdPrix + userMusiquePrix + userJeuxPrix + userBricksPrix %}
 
     <!-- Résumé total -->
     <div class="card shadow-sm mt-2">
@@ -154,12 +214,14 @@
                 <div class="col-md-4">
                     <h2 class="text-primary">{{ totalArticles }}</h2>
                     <p class="text-muted mb-0">Articles au total</p>
-                    <small class="text-muted">{{ userLivresCount }} livres · {{ userNumerosCount }} numéros · {{ userJeuxCount }} jeux · {{ userBricksCount }} sets briques</small>
+                    <small class="text-muted">
+                        {{ userLivresCount }} livres · {{ userNumerosCount }} numéros · {{ userDvdCount }} DVD/Blu-ray · {{ userMusiqueCount }} musique · {{ userJeuxCount }} jeux · {{ userBricksCount }} sets briques
+                    </small>
                 </div>
                 <div class="col-md-4">
                     <h2 class="text-success">{{ totalValeur|number_format(2, ',', ' ') }} €</h2>
                     <p class="text-muted mb-0">Valeur totale estimée</p>
-                    <small class="text-muted">Livres, magazines (numéros), jeux et briques</small>
+                    <small class="text-muted">Livres, magazines, DVD, musique, jeux et briques</small>
                 </div>
                 <div class="col-md-4">
                     <h2 class="text-info">{{ userMagazinesCount }}</h2>

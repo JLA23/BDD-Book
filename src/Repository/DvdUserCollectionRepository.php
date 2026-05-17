@@ -49,4 +49,14 @@ class DvdUserCollectionRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    public function countByDvd(\App\Entity\Dvd $dvd): int
+    {
+        return (int) $this->createQueryBuilder('duc')
+            ->select('COUNT(duc.id)')
+            ->where('duc.dvd = :dvd')
+            ->setParameter('dvd', $dvd)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
 }

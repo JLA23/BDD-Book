@@ -7,6 +7,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use App\Entity\Livre;
 use App\Service\BookCoverService;
+use App\Service\Media\MediaImageSyncService;
 use Symfony\Component\HttpFoundation\Request;
 use Knp\Component\Pager\PaginatorInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -19,8 +20,11 @@ class LivresController extends AbstractController
     private BookCoverService $bookCoverService;
     private EntityManagerInterface $em;
 
-    public function __construct(BookCoverService $bookCoverService, EntityManagerInterface $em)
-    {
+    public function __construct(
+        BookCoverService $bookCoverService,
+        EntityManagerInterface $em,
+        private MediaImageSyncService $mediaImageSync,
+    ) {
         $this->bookCoverService = $bookCoverService;
         $this->em = $em;
     }
@@ -500,7 +504,9 @@ class LivresController extends AbstractController
 
         // Mettre à jour le livre
         $livre->setImage2($filename);
-        $this->em->flush();    
+        $this->em->flush();
+        $this->mediaImageSync->syncLivreCover($livre);
+        $this->em->flush();
     }
 
 }

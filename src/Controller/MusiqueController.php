@@ -8,6 +8,7 @@ use App\Form\MusiqueType;
 use App\Repository\MusiqueRepository;
 use App\Repository\MusiqueUserCollectionRepository;
 use App\Repository\UserRepository;
+use App\Service\Media\MediaImageSyncService;
 use App\Service\MusiqueApiService;
 use App\Service\SectionPermissionService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -31,6 +32,7 @@ class MusiqueController extends AbstractController
         EntityManagerInterface $em,
         MusiqueApiService $musiqueApi,
         SectionPermissionService $permissionService,
+        private MediaImageSyncService $mediaImageSync,
     ) {
         $this->em = $em;
         $this->musiqueApi = $musiqueApi;
@@ -186,6 +188,9 @@ class MusiqueController extends AbstractController
             if ($request->query->get('tracklist')) {
                 $musique->setTracklist($request->query->get('tracklist'));
             }
+            if ($request->query->get('ean')) {
+                $musique->setEan($request->query->get('ean'));
+            }
 
             $existing = null;
             $titre = trim($musique->getTitre() ?? '');
@@ -303,6 +308,8 @@ class MusiqueController extends AbstractController
 
             $session->remove('musique_prefill_images');
             $this->em->flush();
+            $this->mediaImageSync->syncMusique($musique, $lien ?? null);
+            $this->em->flush();
 
             $this->addFlash('success', 'Album créé avec succès' . ($addToCollection === '1' ? ' et ajouté à votre collection' : ''));
             return $this->redirectToRoute('musique_detail', ['id' => $musique->getId()]);
@@ -376,6 +383,8 @@ class MusiqueController extends AbstractController
                 }
             }
 
+            $this->em->flush();
+            $this->mediaImageSync->syncMusique($musique);
             $this->em->flush();
             $this->addFlash('success', 'Album modifié avec succès');
             return $this->redirectToRoute('musique_detail', ['id' => $musique->getId()]);
@@ -531,6 +540,40 @@ class MusiqueController extends AbstractController
         ]);
     }
 
+    #[Route('/api/check-duplicate', name: 'musique_api_check_duplicate', methods: ['GET'])]
+    public function apiCheckDuplicate(Request $request, MusiqueRepository $musiqueRepo): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+
+        $titre = $request->query->get('titre');
+        $format = $request->query->get('format');
+        $artiste = $request->query->get('artiste');
+        $ean = $request->query->get('ean');
+
+        $duplicates = $musiqueRepo->findDuplicates($titre, $format, $artiste, $ean);
+
+        if (count($duplicates) > 0) {
+            $results = [];
+            foreach ($duplicates as $musique) {
+                $results[] = [
+                    'id' => $musique->getId(),
+                    'titre' => $musique->getTitre(),
+                    'artiste' => $musique->getArtiste(),
+                    'format' => $musique->getFormat(),
+                    'annee' => $musique->getAnnee(),
+                    'cover' => $musique->getCoverUrl(),
+                    'ean' => $musique->getEan(),
+                ];
+            }
+            return $this->json([
+                'found' => true,
+                'duplicates' => $results,
+            ]);
+        }
+
+        return $this->json(['found' => false]);
+    }
+
     #[Route('/{id}/ajouter-collection', name: 'musique_add_owner', requirements: ['id' => '\d+'])]
     public function addOwner(int $id, Request $request, MusiqueRepository $musiqueRepo, MusiqueUserCollectionRepository $lienRepo, SluggerInterface $slugger): Response
     {
@@ -578,6 +621,8 @@ class MusiqueController extends AbstractController
 
             $this->em->persist($lien);
             $this->em->flush();
+            $this->mediaImageSync->syncMusiqueUserImage($lien);
+            $this->em->flush();
 
             $this->addFlash('success', 'Album ajouté à votre collection');
             return $this->redirectToRoute('musique_detail', ['id' => $id]);
@@ -586,6 +631,40 @@ class MusiqueController extends AbstractController
         return $this->render('musique/add_owner.html.twig', [
             'musique' => $musique,
         ]);
+    }
+
+    #[Route('/{id}/retirer-collection/{lienId}', name: 'musique_remove_owner', requirements: ['id' => '\d+', 'lienId' => '\d+'], methods: ['POST'])]
+    public function removeOwner(int $id, int $lienId, Request $request, MusiqueUserCollectionRepository $lienRepo): Response
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+
+        $lien = $lienRepo->find($lienId);
+        if (!$lien || $lien->getMusique()->getId() !== $id) {
+            throw $this->createNotFoundException('Lien non trouvé');
+        }
+
+        if ($lien->getUser() !== $this->getUser()) {
+            throw $this->createAccessDeniedException();
+        }
+
+        if ($this->isCsrfTokenValid('delete' . $lien->getId(), $request->request->get('_token'))) {
+            $musique = $lien->getMusique();
+            $this->em->remove($lien);
+            $this->em->flush();
+
+            // Vérifier s'il reste des propriétaires
+            $remainingOwners = $lienRepo->countByMusique($musique);
+            if ($remainingOwners === 0) {
+                $this->em->remove($musique);
+                $this->em->flush();
+                $this->addFlash('success', 'Album retiré de votre collection et supprimé (plus aucun propriétaire)');
+                return $this->redirectToRoute('musique_list');
+            }
+
+            $this->addFlash('success', 'Album retiré de votre collection');
+        }
+
+        return $this->redirectToRoute('musique_detail', ['id' => $id]);
     }
 
     #[Route('/{id}/modifier-collection/{lienId}', name: 'musique_edit_owner', requirements: ['id' => '\d+', 'lienId' => '\d+'])]
@@ -640,6 +719,8 @@ class MusiqueController extends AbstractController
                 $lien->setImagePerso($imageUrl);
             }
 
+            $this->em->flush();
+            $this->mediaImageSync->syncMusiqueUserImage($lien);
             $this->em->flush();
             $this->addFlash('success', 'Collection mise à jour');
             return $this->redirectToRoute('musique_detail', ['id' => $id]);

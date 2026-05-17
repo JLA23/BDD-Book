@@ -19,7 +19,7 @@
     <div class="row">
         <div class="col-md-4">
             {% if couvertureImage %}
-                <img src="data:image/jpeg;base64,{{ couvertureImage }}" 
+                <img src="{{ couvertureImage }}" 
                      class="img-fluid rounded shadow" 
                      alt="Couverture N°{{ numero.num }}">
             {% else %}
@@ -84,77 +84,66 @@
                 </div>
             {% endif %}
 
-            <hr>
-
-            <div class="mt-4">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5>Propriétaires de ce numéro</h5>
-                    {% if is_granted('IS_AUTHENTICATED_FULLY') %}
-                        <a href="{{ path('numero_add_owner', {id: numero.id}) }}" class="btn btn-sm btn-success">
-                            <i class="fas fa-user-plus"></i> Ajouter un propriétaire
-                        </a>
-                    {% endif %}
-                </div>
-                
-                {% if proprietaires|length > 0 %}
-                    <ul class="list-group">
-                        {% for lien in proprietaires %}
-                            <li class="list-group-item">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <strong>{{ lien.user.name }} {{ lien.user.lastname }}</strong>
-                                        <small class="text-muted">({{ lien.user.username }})</small>
-                                    </div>
-                                    {% if is_granted('IS_AUTHENTICATED_FULLY') %}
-                                        <button type="button" class="btn btn-sm btn-outline-primary" 
-                                                data-toggle="modal" data-target="#editCommentModal{{ lien.id }}">
-                                            <i class="fas fa-comment-alt"></i>
-                                        </button>
-                                    {% endif %}
-                                </div>
-                                {% if lien.commentaire %}
-                                    <div class="mt-2 p-2 bg-light rounded">
-                                        <small class="text-muted"><i class="fas fa-comment"></i> {{ lien.commentaire|nl2br }}</small>
-                                    </div>
-                                {% endif %}
-                                
-                                <!-- Modal pour éditer le commentaire -->
-                                {% if is_granted('IS_AUTHENTICATED_FULLY') %}
-                                <div class="modal fade" id="editCommentModal{{ lien.id }}" tabindex="-1" role="dialog">
-                                    <div class="modal-dialog" role="document">
-                                        <div class="modal-content">
-                                            <form action="{{ path('numero_edit_owner_comment', {id: lien.id}) }}" method="post">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title">Commentaire de {{ lien.user.name }}</h5>
-                                                    <button type="button" class="close" data-dismiss="modal">
-                                                        <span>&times;</span>
-                                                    </button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <div class="form-group">
-                                                        <label for="commentaire{{ lien.id }}">Votre commentaire sur ce numéro</label>
-                                                        <textarea name="commentaire" id="commentaire{{ lien.id }}" 
-                                                                  class="form-control" rows="4"
-                                                                  placeholder="État du numéro, notes personnelles...">{{ lien.commentaire }}</textarea>
-                                                    </div>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
-                                                    <button type="submit" class="btn btn-primary">Enregistrer</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                                {% endif %}
-                            </li>
-                        {% endfor %}
-                    </ul>
-                {% else %}
-                    <p class="text-muted">Aucun propriétaire enregistré pour ce numéro.</p>
-                {% endif %}
-            </div>
         </div>
     </div>
+
+    {% embed 'components/proprietaires_card.html.twig' with {
+        count: proprietaires|length,
+        title: 'Propriétaires de ce numéro',
+        body_class: 'p-0'
+    } %}
+        {% block header_actions %}
+            {% if is_granted('IS_AUTHENTICATED_FULLY') %}
+                <a href="{{ path('numero_add_owner', {id: numero.id}) }}" class="btn btn-sm btn-success" onclick="event.stopPropagation();">
+                    <i class="fas fa-user-plus mr-1"></i> Ajouter un propriétaire
+                </a>
+            {% endif %}
+        {% endblock %}
+        {% block content %}
+            {% if proprietaires|length == 0 %}
+                <div class="p-3 text-center text-muted">
+                    <i class="fas fa-info-circle"></i> Aucun propriétaire enregistré pour ce numéro.
+                </div>
+            {% else %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="thead-light">
+                            <tr>
+                                <th><i class="fas fa-user"></i> Utilisateur</th>
+                                <th><i class="fas fa-calendar"></i> Date d'achat</th>
+                                <th><i class="fas fa-euro-sign"></i> Prix</th>
+                                <th><i class="fas fa-comment"></i> Commentaire</th>
+                                {% if is_granted('IS_AUTHENTICATED_FULLY') %}
+                                    <th class="text-right"><i class="fas fa-cogs"></i> Actions</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for lien in proprietaires %}
+                            <tr>
+                                <td>
+                                    <strong>{{ lien.user.name }} {{ lien.user.lastname }}</strong>
+                                    <br><small class="text-muted">{{ lien.user.username }}</small>
+                                </td>
+                                <td>{{ lien.dateAchat ? lien.dateAchat|date('d/m/Y') : '-' }}</td>
+                                <td>{% include 'components/owner_prix_cell.html.twig' with { prix: lien.prixAchat } %}</td>
+                                <td>{{ lien.commentaire ? lien.commentaire|u.truncate(50, '...') : '-' }}</td>
+                                {% if is_granted('IS_AUTHENTICATED_FULLY') %}
+                                    <td class="text-right text-nowrap">
+                                        {% if lien.user == app.user %}
+                                            <a href="{{ path('numero_edit_owner', {id: lien.id}) }}" class="btn btn-sm btn-outline-primary" title="Modifier">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        {% endif %}
+                                    </td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+        {% endblock %}
+    {% endembed %}
 </div>
 {% endblock %}

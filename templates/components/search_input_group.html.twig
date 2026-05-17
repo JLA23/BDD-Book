@@ -1,0 +1,34 @@
+{# Barre de recherche : icône section (gauche) + champ + scan mobile (droite) + append optionnel #}
+{% set _size = size|default('lg') %}
+{% set _groupClass = 'input-group bdd-search-group w-100' ~ (_size == 'lg' ? ' input-group-lg' : '') ~ (scanner|default(false) ? ' bdd-search-group--with-scanner' : '') %}
+<div class="{{ _groupClass }}" style="--bdd-search-accent: {{ accent|default('#6c757d') }};">
+    <div class="input-group-prepend">
+        <span class="input-group-text bdd-search-prepend">
+            <i class="{{ icon|default('fas fa-search') }} bdd-search-type-icon" aria-hidden="true"></i>
+        </span>
+    </div>
+    <input
+        type="{{ input_type|default('text') }}"
+        {% if name is defined and name is not null %}name="{{ name }}"{% endif %}
+        id="{{ input_id|default('searchInput') }}"
+        class="form-control bdd-search-input{{ input_extra_class|default('') }}"
+        placeholder="{{ placeholder|default('') }}"
+        {% if value is defined %}value="{{ value }}"{% endif %}
+        {% if inputmode is defined %}inputmode="{{ inputmode }}"{% endif %}
+        {% if autofocus|default(false) %}autofocus{% endif %}
+        {% if required|default(false) %}required{% endif %}
+    >
+    {% if scanner|default(false) %}
+    <div class="input-group-append d-md-none">
+        <button type="button" class="btn btn-outline-secondary bdd-search-scan-btn" id="{{ scan_id|default('scanBarcodeBtn') }}" title="Scanner un code-barres">
+            <i class="fas fa-camera"></i>
+        </button>
+    </div>
+    {% endif %}
+    {% block append %}{% endblock %}
+</div>
+{% if scanner|default(false) and scanner_hint|default(false) %}
+<small class="form-text text-muted{% if scanner_hint_mobile_only|default(true) %} d-md-none{% endif %}">
+    <i class="fas fa-camera"></i> {{ scanner_hint_text|default('Utilisez l’icône caméra pour scanner un code-barres.') }}
+</small>
+{% endif %}

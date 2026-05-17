@@ -11,6 +11,7 @@ use App\Entity\LienUserLivre;
 use App\Entity\Livre;
 use App\Form\LivreType;
 use App\Service\BookCoverService;
+use App\Service\Media\MediaImageSyncService;
 use App\Service\BookInfoScraperService;
 use App\Service\SectionPermissionService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -31,7 +32,8 @@ class AjoutLivreController extends AbstractController
         EntityManagerInterface $em,
         BookInfoScraperService $scraperService,
         BookCoverService $coverService,
-        SectionPermissionService $permissionService
+        SectionPermissionService $permissionService,
+        private MediaImageSyncService $mediaImageSync,
     ) {
         $this->em = $em;
         $this->scraperService = $scraperService;
@@ -526,6 +528,8 @@ class AjoutLivreController extends AbstractController
             'commentaire' => $form->get('commentaire')->getData(),
         ]);
 
+        $this->em->flush();
+        $this->mediaImageSync->syncLivreCover($livre);
         $this->em->flush();
 
         $this->addFlash('warning', 'Le livre "' . $livre->getTitre() . '" a été ajouté avec succès !');

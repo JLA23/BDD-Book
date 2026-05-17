@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Trait\StoredImagePathTrait;
 use App\Repository\KioskCollecRepository;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -10,6 +11,8 @@ use Doctrine\ORM\Mapping as ORM;
  */
 class KioskCollec
 {
+    use StoredImagePathTrait;
+
     /**
      * @ORM\Id
      * @ORM\GeneratedValue

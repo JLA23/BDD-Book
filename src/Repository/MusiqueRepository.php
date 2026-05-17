@@ -67,4 +67,54 @@ class MusiqueRepository extends ServiceEntityRepository
 
         return array_column($results, 'annee');
     }
+
+    /**
+     * Recherche les doublons potentiels par EAN, ou par titre+format+artiste
+     */
+    public function findDuplicates(?string $titre, ?string $format, ?string $artiste, ?string $ean): array
+    {
+        // Priorité 1: recherche par EAN si disponible
+        if ($ean) {
+            $results = $this->createQueryBuilder('m')
+                ->where('m.ean = :ean')
+                ->setParameter('ean', $ean)
+                ->getQuery()
+                ->getResult();
+            
+            if (count($results) > 0) {
+                return $results;
+            }
+        }
+
+        // Priorité 2: recherche par titre + format + artiste
+        if ($titre && $format) {
+            $qb = $this->createQueryBuilder('m')
+                ->where('LOWER(m.titre) = LOWER(:titre)')
+                ->andWhere('m.format = :format')
+                ->setParameter('titre', $titre)
+                ->setParameter('format', $format);
+
+            if ($artiste) {
+                $qb->andWhere('LOWER(m.artiste) = LOWER(:artiste)')
+                   ->setParameter('artiste', $artiste);
+            }
+
+            return $qb->getQuery()->getResult();
+        }
+
+        return [];
+    }
+
+    /**
+     * Recherche par EAN uniquement
+     */
+    public function findByEan(string $ean): ?Musique
+    {
+        return $this->createQueryBuilder('m')
+            ->where('m.ean = :ean')
+            ->setParameter('ean', $ean)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }

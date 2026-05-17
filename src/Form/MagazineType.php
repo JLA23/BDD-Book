@@ -5,7 +5,7 @@ namespace App\Form;
 use App\Entity\KioskCollec;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
-use Symfony\Component\Form\Extension\Core\Type\DateType;
+use App\Form\Type\MonthType;
 use Symfony\Component\Form\Extension\Core\Type\FileType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
@@ -28,21 +28,13 @@ class MagazineType extends AbstractType
                 'required' => false,
                 'attr' => ['class' => 'form-control']
             ])
-            ->add('debpub', DateType::class, [
-                'label' => 'Date de début de publication (mois/année)',
+            ->add('debpub', MonthType::class, [
+                'label' => 'Début de publication',
                 'required' => false,
-                'widget' => 'single_text',
-                'format' => 'yyyy-MM',
-                'html5' => false,
-                'attr' => ['class' => 'form-control', 'placeholder' => 'AAAA-MM']
             ])
-            ->add('findeb', DateType::class, [
-                'label' => 'Date de fin de publication (mois/année)',
+            ->add('findeb', MonthType::class, [
+                'label' => 'Fin de publication',
                 'required' => false,
-                'widget' => 'single_text',
-                'format' => 'yyyy-MM',
-                'html5' => false,
-                'attr' => ['class' => 'form-control', 'placeholder' => 'AAAA-MM']
             ])
             ->add('nbnum', IntegerType::class, [
                 'label' => 'Nombre de numéros',

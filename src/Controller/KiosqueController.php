@@ -13,6 +13,7 @@ use App\Repository\KioskCollecRepository;
 use App\Repository\KioskNumRepository;
 use App\Repository\LienKioskNumUserRepository;
 use App\Repository\UserRepository;
+use App\Service\Media\MediaImageSyncService;
 use App\Service\SectionPermissionService;
 use Doctrine\ORM\EntityManagerInterface;
 use Knp\Component\Pager\PaginatorInterface;
@@ -26,11 +27,16 @@ class KiosqueController extends AbstractController
 {
     private EntityManagerInterface $em;
     private SectionPermissionService $permissionService;
+    private MediaImageSyncService $mediaImageSync;
 
-    public function __construct(EntityManagerInterface $em, SectionPermissionService $permissionService)
-    {
+    public function __construct(
+        EntityManagerInterface $em,
+        SectionPermissionService $permissionService,
+        MediaImageSyncService $mediaImageSync,
+    ) {
         $this->em = $em;
         $this->permissionService = $permissionService;
+        $this->mediaImageSync = $mediaImageSync;
     }
 
     #[Route('/', name: 'magazines_list')]
@@ -92,6 +98,7 @@ class KiosqueController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            $imageData = null;
             $imageFile = $form->get('imageFile')->getData();
             if ($imageFile) {
                 $imageData = file_get_contents($imageFile->getPathname());
@@ -100,6 +107,10 @@ class KiosqueController extends AbstractController
 
             $this->em->persist($magazine);
             $this->em->flush();
+            if ($imageData !== null) {
+                $this->mediaImageSync->syncKioskCollecImage($magazine, $imageData);
+                $this->em->flush();
+            }
 
             $this->addFlash('success', 'Magazine créé avec succès');
             return $this->redirectToRoute('magazine_detail', ['id' => $magazine->getId()]);
@@ -131,15 +142,12 @@ class KiosqueController extends AbstractController
         );
 
         $images = [];
-        $magazineImage = null;
-        
-        if ($magazine->getImage()) {
-            $magazineImage = base64_encode(stream_get_contents($magazine->getImage()));
-        }
-        
+        $magazineImage = $this->resolveKioskImageSrc($magazine->getStoredPath(), $magazine->getImage());
+
         foreach ($pagination->getItems() as $numero) {
-            if ($numero->getCouverture()) {
-                $images[$numero->getId()] = base64_encode(stream_get_contents($numero->getCouverture()));
+            $src = $this->resolveKioskImageSrc($numero->getStoredPath(), $numero->getCouverture());
+            if ($src !== null) {
+                $images[$numero->getId()] = $src;
             }
         }
 
@@ -172,21 +180,23 @@ class KiosqueController extends AbstractController
 
         if ($form->isSubmitted() && $form->isValid()) {
             $imageFile = $form->get('imageFile')->getData();
+            $imageData = null;
             if ($imageFile) {
                 $imageData = file_get_contents($imageFile->getPathname());
                 $magazine->setImage($imageData);
             }
 
             $this->em->flush();
+            if ($imageData !== null) {
+                $this->mediaImageSync->syncKioskCollecImage($magazine, $imageData);
+                $this->em->flush();
+            }
 
             $this->addFlash('success', 'Magazine modifié avec succès');
             return $this->redirectToRoute('magazine_detail', ['id' => $magazine->getId()]);
         }
 
-        $currentImage = null;
-        if ($magazine->getImage()) {
-            $currentImage = base64_encode(stream_get_contents($magazine->getImage()));
-        }
+        $currentImage = $this->resolveKioskImageSrc($magazine->getStoredPath(), $magazine->getImage());
 
         return $this->render('magazines/form.html.twig', [
             'form' => $form->createView(),
@@ -219,14 +229,15 @@ class KiosqueController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            $couvertureBinary = null;
             $couvertureFile = $form->get('couvertureFile')->getData();
             if ($couvertureFile) {
-                $imageData = file_get_contents($couvertureFile->getPathname());
-                $numero->setCouverture($imageData);
+                $couvertureBinary = file_get_contents($couvertureFile->getPathname());
+                $numero->setCouverture($couvertureBinary);
             }
 
             $this->em->persist($numero);
-            
+
             // Le créateur devient automatiquement propriétaire du numéro
             $lien = new LienKioskNumUser();
             $lien->setKioskNum($numero);
@@ -238,6 +249,10 @@ class KiosqueController extends AbstractController
             $magazine->setUpdateUser($user);
             
             $this->em->flush();
+            if ($couvertureBinary !== null) {
+                $this->mediaImageSync->syncKioskNumCover($numero, $couvertureBinary);
+                $this->em->flush();
+            }
 
             $this->addFlash('success', 'Numéro ajouté avec succès');
             return $this->redirectToRoute('magazine_detail', ['id' => $magazine->getId()]);
@@ -284,8 +299,9 @@ class KiosqueController extends AbstractController
                     $numero->setUpdateDate(new \DateTime());
                     $numero->setNum((int) $numeroData['num']);
                     
-                    if (!empty($numeroData['dateParution'])) {
-                        $numero->setDateParution(new \DateTime($numeroData['dateParution']));
+                    $dateParution = $this->parseMonthYear($numeroData['dateParution'] ?? null);
+                    if ($dateParution !== null) {
+                        $numero->setDateParution($dateParution);
                     }
                     
                     if (!empty($numeroData['EAN'])) {
@@ -311,25 +327,37 @@ class KiosqueController extends AbstractController
                         $numero->setCommentaire($numeroData['commentaire']);
                     }
                     
-                    // Gérer l'image de couverture
+                    $couvertureBinary = null;
                     if (isset($files['numeros'][$index]['image']) && $files['numeros'][$index]['image']) {
-                        $imageFile = $files['numeros'][$index]['image'];
-                        $imageData = file_get_contents($imageFile->getPathname());
-                        $numero->setCouverture($imageData);
+                        $couvertureBinary = file_get_contents($files['numeros'][$index]['image']->getPathname());
+                        $numero->setCouverture($couvertureBinary);
                     }
-                    
+
                     $this->em->persist($numero);
                     $this->em->flush(); // Flush pour obtenir l'ID du numéro
+
+                    if ($couvertureBinary !== null) {
+                        $this->mediaImageSync->syncKioskNumCover($numero, $couvertureBinary);
+                    }
                     
                     // Gérer les propriétaires
                     if (!empty($numeroData['users']) && is_array($numeroData['users'])) {
+                        $commentaires = $numeroData['commentaires'] ?? [];
+                        $prixAchats = $numeroData['prix_achat'] ?? [];
+                        $datesAchat = $numeroData['dates_achat'] ?? [];
+
                         foreach ($numeroData['users'] as $userId) {
                             $proprietaire = $userRepo->find($userId);
                             if ($proprietaire) {
                                 $lien = new LienKioskNumUser();
                                 $lien->setKioskNum($numero);
                                 $lien->setUser($proprietaire);
-                                $lien->setCommentaire($numeroData['commentaire'] ?? '');
+                                $this->applyOwnerFields(
+                                    $lien,
+                                    $commentaires[$userId] ?? null,
+                                    $prixAchats[$userId] ?? null,
+                                    $datesAchat[$userId] ?? null
+                                );
                                 $this->em->persist($lien);
                             }
                         }
@@ -369,12 +397,9 @@ class KiosqueController extends AbstractController
             throw $this->createNotFoundException('Numéro non trouvé');
         }
 
-        $proprietaires = $lienRepo->findBy(['kioskNum' => $numero]);
+        $proprietaires = $lienRepo->findByNumero($numero);
 
-        $couvertureImage = null;
-        if ($numero->getCouverture()) {
-            $couvertureImage = base64_encode(stream_get_contents($numero->getCouverture()));
-        }
+        $couvertureImage = $this->resolveKioskImageSrc($numero->getStoredPath(), $numero->getCouverture());
 
         return $this->render('magazines/numero_detail.html.twig', [
             'numero' => $numero,
@@ -403,22 +428,24 @@ class KiosqueController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            $couvertureBinary = null;
             $couvertureFile = $form->get('couvertureFile')->getData();
             if ($couvertureFile) {
-                $imageData = file_get_contents($couvertureFile->getPathname());
-                $numero->setCouverture($imageData);
+                $couvertureBinary = file_get_contents($couvertureFile->getPathname());
+                $numero->setCouverture($couvertureBinary);
             }
 
             $this->em->flush();
+            if ($couvertureBinary !== null) {
+                $this->mediaImageSync->syncKioskNumCover($numero, $couvertureBinary);
+                $this->em->flush();
+            }
 
             $this->addFlash('success', 'Numéro modifié avec succès');
             return $this->redirectToRoute('numero_detail', ['id' => $numero->getId()]);
         }
 
-        $currentImage = null;
-        if ($numero->getCouverture()) {
-            $currentImage = base64_encode(stream_get_contents($numero->getCouverture()));
-        }
+        $currentImage = $this->resolveKioskImageSrc($numero->getStoredPath(), $numero->getCouverture());
 
         return $this->render('magazines/numero_form.html.twig', [
             'form' => $form->createView(),
@@ -448,13 +475,17 @@ class KiosqueController extends AbstractController
         foreach ($existingOwners as $lien) {
             $ownersData[$lien->getUser()->getId()] = [
                 'lienId' => $lien->getId(),
-                'commentaire' => $lien->getCommentaire()
+                'commentaire' => $lien->getCommentaire(),
+                'prixAchat' => $lien->getPrixAchat(),
+                'dateAchat' => $lien->getDateAchat(),
             ];
         }
 
         if ($request->isMethod('POST')) {
             $userIds = $request->request->all('user_ids') ?: [];
             $commentaires = $request->request->all('commentaires') ?: [];
+            $prixAchats = $request->request->all('prix_achat') ?: [];
+            $datesAchat = $request->request->all('dates_achat') ?: [];
             
             if (empty($userIds)) {
                 $this->addFlash('warning', 'Veuillez sélectionner au moins un utilisateur');
@@ -479,17 +510,13 @@ class KiosqueController extends AbstractController
                     $existingLien = $lienRepo->findOneBy(['kioskNum' => $numero, 'user' => $user]);
                     
                     if ($existingLien) {
-                        // Mettre à jour le commentaire si différent
-                        if ($existingLien->getCommentaire() !== $commentaire) {
-                            $existingLien->setCommentaire($commentaire);
-                            $countUpdated++;
-                        }
+                        $this->applyOwnerFields($existingLien, $commentaire, $prixAchats[$userId] ?? null, $datesAchat[$userId] ?? null);
+                        $countUpdated++;
                     } else {
-                        // Créer un nouveau lien
                         $lien = new LienKioskNumUser();
                         $lien->setKioskNum($numero);
                         $lien->setUser($user);
-                        $lien->setCommentaire($commentaire);
+                        $this->applyOwnerFields($lien, $commentaire, $prixAchats[$userId] ?? null, $datesAchat[$userId] ?? null);
                         $this->em->persist($lien);
                         $countAdded++;
                     }
@@ -525,27 +552,80 @@ class KiosqueController extends AbstractController
         ]);
     }
 
-    #[Route('/proprietaire/{id}/commentaire', name: 'numero_edit_owner_comment', requirements: ['id' => '\d+'])]
-    public function editOwnerComment(int $id, Request $request, LienKioskNumUserRepository $lienRepo): Response
+    #[Route('/proprietaire/{id}/modifier', name: 'numero_edit_owner', requirements: ['id' => '\d+'])]
+    public function editOwner(int $id, Request $request, LienKioskNumUserRepository $lienRepo): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
-        $this->permissionService->denyAccessUnlessCanRegister('magazines');
-        
+
         $lien = $lienRepo->find($id);
         if (!$lien) {
             throw $this->createNotFoundException('Lien non trouvé');
         }
-        
-        if ($request->isMethod('POST')) {
-            $commentaire = $request->request->get('commentaire');
-            $lien->setCommentaire($commentaire);
-            $this->em->flush();
-            
-            $this->addFlash('success', 'Commentaire mis à jour');
-            return $this->redirectToRoute('numero_detail', ['id' => $lien->getKioskNum()->getId()]);
+
+        if ($lien->getUser() !== $this->getUser() && !$this->isGranted('ROLE_ADMIN')) {
+            throw $this->createAccessDeniedException();
         }
-        
+
+        $numero = $lien->getKioskNum();
+        $magazine = $numero->getKioskCollec();
+
+        if ($request->isMethod('POST')) {
+            $this->applyOwnerFields(
+                $lien,
+                $request->request->get('commentaire'),
+                $request->request->get('prix_achat'),
+                $request->request->get('date_achat')
+            );
+            $this->em->flush();
+
+            $this->addFlash('success', 'Propriété mise à jour');
+            return $this->redirectToRoute('numero_detail', ['id' => $numero->getId()]);
+        }
+
+        return $this->render('magazines/edit_owner.html.twig', [
+            'lien' => $lien,
+            'numero' => $numero,
+            'magazine' => $magazine,
+        ]);
+    }
+
+    #[Route('/proprietaire/{id}/commentaire', name: 'numero_edit_owner_comment', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function editOwnerComment(int $id, Request $request, LienKioskNumUserRepository $lienRepo): Response
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+
+        $lien = $lienRepo->find($id);
+        if (!$lien) {
+            throw $this->createNotFoundException('Lien non trouvé');
+        }
+
+        if ($lien->getUser() !== $this->getUser() && !$this->isGranted('ROLE_ADMIN')) {
+            throw $this->createAccessDeniedException();
+        }
+
+        if ($request->isMethod('POST')) {
+            $lien->setCommentaire($request->request->get('commentaire'));
+            $this->em->flush();
+            $this->addFlash('success', 'Commentaire mis à jour');
+        }
+
         return $this->redirectToRoute('numero_detail', ['id' => $lien->getKioskNum()->getId()]);
+    }
+
+    #[Route('/utilisateur/{id}', name: 'magazines_user', requirements: ['id' => '\d+'])]
+    public function userCollection(int $id, UserRepository $userRepo, LienKioskNumUserRepository $lienRepo): Response
+    {
+        $user = $userRepo->find($id);
+        if (!$user) {
+            throw $this->createNotFoundException('Utilisateur non trouvé');
+        }
+
+        $liens = $lienRepo->findByUserWithNumero($user);
+
+        return $this->render('magazines/user_collection.html.twig', [
+            'user' => $user,
+            'liens' => $liens,
+        ]);
     }
 
     #[Route('/recherche', name: 'magazines_search')]
@@ -599,5 +679,73 @@ class KiosqueController extends AbstractController
             'totalResults' => $totalResults,
             'mobile' => $detect->isMobile()
         ]);
+    }
+
+    private function parseMonthYear(mixed $value): ?\DateTimeInterface
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $value = trim((string) $value);
+
+        if (preg_match('/^\d{4}-\d{2}$/', $value)) {
+            $date = \DateTime::createFromFormat('Y-m-d', $value . '-01');
+
+            return $date ?: null;
+        }
+
+        try {
+            return new \DateTime($value);
+        } catch (\Exception) {
+            return null;
+        }
+    }
+
+    private function resolveKioskImageSrc(?string $storedPath, mixed $blob): ?string
+    {
+        if ($storedPath !== null && $storedPath !== '') {
+            return $storedPath;
+        }
+
+        if ($blob === null) {
+            return null;
+        }
+
+        if (is_resource($blob)) {
+            rewind($blob);
+            $content = stream_get_contents($blob);
+        } elseif (is_string($blob)) {
+            $content = $blob;
+        } else {
+            $content = false;
+        }
+
+        if ($content === false || $content === '') {
+            return null;
+        }
+
+        return 'data:image/jpeg;base64,' . base64_encode($content);
+    }
+
+    private function applyOwnerFields(
+        LienKioskNumUser $lien,
+        ?string $commentaire,
+        mixed $prixAchat,
+        mixed $dateAchat
+    ): void {
+        $lien->setCommentaire($commentaire !== '' ? $commentaire : null);
+
+        if ($prixAchat !== null && $prixAchat !== '') {
+            $lien->setPrixAchat((float) $prixAchat);
+        } else {
+            $lien->setPrixAchat(null);
+        }
+
+        if ($dateAchat !== null && $dateAchat !== '') {
+            $lien->setDateAchat(new \DateTime((string) $dateAchat));
+        } else {
+            $lien->setDateAchat(null);
+        }
     }
 }

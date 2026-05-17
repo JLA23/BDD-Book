@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Trait\StoredImagePathTrait;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -14,6 +15,8 @@ use Doctrine\ORM\Mapping as ORM;
  */
 class Dvd
 {
+    use StoredImagePathTrait;
+
     /**
      * @var int
      *
@@ -78,6 +81,20 @@ class Dvd
      * @ORM\Column(name="external_id", type="string", length=100, nullable=true)
      */
     private $externalId;
+
+    /**
+     * @var string|null Édition commerciale (collector, steelbook, etc.)
+     *
+     * @ORM\Column(name="edition", type="string", length=255, nullable=true)
+     */
+    private $edition;
+
+    /**
+     * @var string|null Code-barres EAN-13
+     *
+     * @ORM\Column(name="ean", type="string", length=20, nullable=true)
+     */
+    private $ean;
 
     /**
      * @ORM\OneToMany(targetEntity="App\Entity\DvdUserCollection", mappedBy="dvd", cascade={"remove"})
@@ -190,6 +207,28 @@ class Dvd
         return $this;
     }
 
+    public function getEdition(): ?string
+    {
+        return $this->edition;
+    }
+
+    public function setEdition(?string $edition): self
+    {
+        $this->edition = $edition;
+        return $this;
+    }
+
+    public function getEan(): ?string
+    {
+        return $this->ean;
+    }
+
+    public function setEan(?string $ean): self
+    {
+        $this->ean = $ean;
+        return $this;
+    }
+
     /**
      * @return Collection|DvdUserCollection[]
      */
@@ -211,6 +250,10 @@ class Dvd
 
     public function getMainImage(): ?string
     {
+        if (!empty($this->storedPath)) {
+            return $this->storedPath;
+        }
+
         return $this->coverUrl;
     }
 

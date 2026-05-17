@@ -13,7 +13,7 @@
 
         <div class="card mb-4">
             <div class="card-header" style="background: linear-gradient(135deg, #1a5276 0%, #3498db 100%);">
-                <h5 class="mb-0 text-white"><i class="fas fa-search"></i> Rechercher un DVD / Blu-ray</h5>
+                <h5 class="mb-0 text-white"><i class="fas fa-search"></i><span class="d-none d-md-inline"> Rechercher</span> un DVD / Blu-ray</h5>
             </div>
             <div class="card-body">
                 <form action="{{ path('dvd_list') }}" method="get">
@@ -21,13 +21,17 @@
                         <div class="col-md-12">
                             <div class="form-group mb-3">
                                 <label for="search" class="font-weight-bold text-dark">Que recherchez-vous ?</label>
-                                <div class="input-group input-group-lg">
-                                    <div class="input-group-prepend">
-                                        <span class="input-group-text bg-white border-right-0"><i class="fas fa-compact-disc" style="color: #1a5276;"></i></span>
-                                    </div>
-                                    <input type="text" name="search" class="form-control border-left-0" placeholder="Titre du DVD / Blu-ray..." style="border-top-right-radius: 0.3rem !important; border-bottom-right-radius: 0.3rem !important;">
-                                </div>
-                                <small class="form-text text-muted">Recherche par titre ou éditeur</small>
+                                {% include 'components/search_input_group.html.twig' with {
+                                    icon: 'fas fa-compact-disc',
+                                    accent: '#1a5276',
+                                    name: 'search',
+                                    input_id: 'searchInput',
+                                    placeholder: 'Titre, éditeur ou code-barres EAN...',
+                                    scanner: true,
+                                    scanner_hint: true,
+                                    scanner_hint_text: 'Scannez le code-barres du boîtier pour rechercher dans votre catalogue.'
+                                } %}
+                                <small class="form-text text-muted d-none d-md-block">Recherche par titre, éditeur ou code-barres EAN.</small>
                             </div>
                         </div>
                     </div>
@@ -58,7 +62,7 @@
 
                     <div class="text-center">
                         <button type="submit" class="btn btn-lg text-white px-5" style="background: linear-gradient(135deg, #1a5276 0%, #3498db 100%);">
-                            <i class="fas fa-search"></i> Rechercher
+                            <i class="fas fa-search"></i><span class="d-none d-md-inline"> Rechercher</span>
                         </button>
                     </div>
                 </form>
@@ -103,4 +107,11 @@
             {% endif %}
         </div>
     </div>
+
+{% include 'components/barcode_scanner.html.twig' with { accent_from: '#1a5276', accent_to: '#3498db' } %}
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+{% include 'components/barcode_scanner_init.html.twig' with { accent_from: '#1a5276', accent_to: '#3498db' } %}
 {% endblock %}

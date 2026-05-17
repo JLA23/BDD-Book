@@ -50,6 +50,16 @@ class DvdType extends AbstractType
                 'required' => false,
                 'attr' => ['placeholder' => 'Ex: Disney, Warner...'],
             ])
+            ->add('edition', TextType::class, [
+                'label' => 'Édition',
+                'required' => false,
+                'attr' => ['placeholder' => 'Ex: Collector, Steelbook, Édition limitée...'],
+            ])
+            ->add('ean', TextType::class, [
+                'label' => 'Code-barres (EAN)',
+                'required' => false,
+                'attr' => ['placeholder' => 'Ex: 8717418510732'],
+            ])
             ->add('description', TextareaType::class, [
                 'label' => 'Description',
                 'required' => false,

@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Trait\StoredImagePathTrait;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -14,6 +15,8 @@ use Doctrine\ORM\Mapping as ORM;
  */
 class Game
 {
+    use StoredImagePathTrait;
+
     /**
      * @var int
      *
@@ -263,12 +266,18 @@ class Game
 
     public function getMainImage(): ?string
     {
+        if (!empty($this->storedPath)) {
+            return $this->storedPath;
+        }
+
         if ($this->coverUrl) {
             return $this->coverUrl;
         }
+
         foreach ($this->images as $image) {
-            return $image->getUrl() ?: '/uploads/game/' . $image->getFilename();
+            return $image->getDisplayUrl();
         }
+
         return null;
     }
 

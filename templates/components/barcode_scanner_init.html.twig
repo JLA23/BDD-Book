@@ -1,0 +1,14 @@
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="{{ asset('js/bdd-barcode-scanner.js') }}"></script>
+<script>
+$(document).ready(function() {
+    if (typeof BddBarcodeScanner !== 'undefined' && document.getElementById('barcodeScannerOverlay')) {
+        BddBarcodeScanner.init({
+            inputSelector: '{{ input_selector|default('#searchInput') }}',
+            btnSelector: '{{ btn_selector|default('#scanBarcodeBtn') }}',
+            accentFrom: '{{ accent_from|default('#667eea') }}',
+            accentTo: '{{ accent_to|default('#764ba2') }}'
+        });
+    }
+});
+</script>

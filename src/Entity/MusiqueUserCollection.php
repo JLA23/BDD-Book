@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Trait\StoredImagePathTrait;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -12,6 +13,8 @@ use Doctrine\ORM\Mapping as ORM;
  */
 class MusiqueUserCollection
 {
+    use StoredImagePathTrait;
+
     /**
      * @var int
      *
@@ -157,12 +160,18 @@ class MusiqueUserCollection
 
     public function getDisplayImage(): ?string
     {
+        if (!empty($this->storedPath)) {
+            return $this->storedPath;
+        }
+
         if ($this->imagePerso) {
             if (filter_var($this->imagePerso, FILTER_VALIDATE_URL)) {
                 return $this->imagePerso;
             }
+
             return '/uploads/musique/user/' . $this->imagePerso;
         }
+
         return null;
     }
 }

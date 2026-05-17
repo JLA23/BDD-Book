@@ -3,7 +3,7 @@
 {% block title %}Liste des jeux - BDD-Games{% endblock %}
 
 {% block body %}
-<div class="container-fluid px-4">
+<div class="container-fluid px-3 px-md-4 bdd-list-page">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 style="color: #6f42c1;"><i class="fas fa-gamepad"></i> Tous les jeux</h2>
         <a href="{{ path('game_index') }}" class="btn btn-outline-secondary">
@@ -14,9 +14,17 @@
     <div class="card shadow-sm mb-4">
         <div class="card-body">
             <form action="{{ path('game_list') }}" method="get" class="row align-items-end">
-                <div class="col-md-3 mb-2">
-                    <label class="small"><strong>Recherche</strong></label>
-                    <input type="text" name="search" class="form-control form-control-sm" value="{{ search }}" placeholder="Titre, éditeur...">
+                <div class="col-12 col-md-3 mb-2">
+                    <label class="small d-md-none"><strong>Recherche</strong></label>
+                    {% include 'components/search_input_group.html.twig' with {
+                        icon: 'fas fa-gamepad',
+                        accent: '#6f42c1',
+                        name: 'search',
+                        input_id: 'searchInput',
+                        placeholder: 'Titre, éditeur...',
+                        value: search,
+                        size: ''
+                    } %}
                 </div>
                 <div class="col-md-2 mb-2">
                     <label class="small"><strong>Console</strong></label>
@@ -47,7 +55,7 @@
                 </div>
                 <div class="col-md-3 mb-2">
                     <button type="submit" class="btn btn-sm btn-block" style="background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%); color: white;">
-                        <i class="fas fa-search"></i> Filtrer
+                        <i class="fas fa-search"></i><span class="d-none d-md-inline"> Rechercher</span>
                     </button>
                     <a href="{{ path('game_list') }}" class="btn btn-sm btn-block btn-outline-secondary mt-1">
                         <i class="fas fa-times"></i> Réinitialiser

@@ -27,23 +27,41 @@
                     <h5 class="mb-0 text-white"><i class="fas fa-gamepad"></i> Rechercher un jeu</h5>
                 </div>
                 <div class="card-body">
-                    <div class="input-group mb-3">
-                        <input type="text" id="searchQuery" class="form-control form-control-lg" placeholder="Titre du jeu (ex: Zelda, God of War, Elden Ring...)">
-                        <div class="input-group-append">
-                            <button class="btn btn-lg" id="searchBtn" style="background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%); color: white;">
-                                <i class="fas fa-search"></i> Rechercher
-                            </button>
-                        </div>
+                    <div class="mb-3">
+                    {% embed 'components/search_input_group.html.twig' with {
+                        icon: 'fas fa-gamepad',
+                        accent: '#6f42c1',
+                        input_id: 'searchQuery',
+                        placeholder: 'Titre du jeu (ex: Zelda, God of War, Elden Ring...)'
+                    } %}
+                        {% block append %}
+                            {% include 'components/search_submit_append.html.twig' with {
+                                button_id: 'searchBtn',
+                                button_style: 'background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%); color: white;'
+                            } %}
+                        {% endblock %}
+                    {% endembed %}
                     </div>
+                    {% if igdb_platform_filters|length == 0 %}
+                    <div class="alert alert-warning small">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Aucune console n’a d’ID plateforme IGDB. Exécutez
+                        <code>php bin/console app:sync-game-console-igdb-ids</code>
+                        sur le serveur, ou renseignez l’ID dans l’admin Jeux → Consoles.
+                    </div>
+                    {% endif %}
                     <div class="row">
                         <div class="col-md-6">
                             <label class="small"><strong>Console / Plateforme (optionnel)</strong></label>
-                            <select id="platformFilter" class="form-control form-control-sm mb-2">
+                            <select id="platformFilter" class="form-control form-control-sm mb-2" {% if igdb_platform_filters|length == 0 %}disabled{% endif %}>
                                 <option value="">Toutes les plateformes</option>
                                 {% for pf in igdb_platform_filters %}
-                                    <option value="{{ pf.igdbId }}" data-console-code="{{ pf.code }}">{{ pf.label }} ({{ pf.code }})</option>
+                                    <option value="{{ pf.igdbId }}" data-console-code="{{ pf.code }}">{{ pf.label }} ({{ pf.code }}){% if pf.fromDefault|default(false) %} *{% endif %}</option>
                                 {% endfor %}
                             </select>
+                            {% if igdb_platform_filters|length > 0 %}
+                            <small class="text-muted d-block">Les consoles marquées * utilisent l’ID IGDB par défaut (non encore enregistré en base).</small>
+                            {% endif %}
                         </div>
                         <div class="col-md-6">
                             <label class="small"><strong>Année (optionnel)</strong></label>

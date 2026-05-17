@@ -2,7 +2,9 @@
 
 namespace App\Repository;
 
+use App\Entity\KioskNum;
 use App\Entity\LienKioskNumUser;
+use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -17,6 +19,37 @@ class LienKioskNumUserRepository extends ServiceEntityRepository
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, LienKioskNumUser::class);
+    }
+
+    /**
+     * @return LienKioskNumUser[]
+     */
+    public function findByUserWithNumero(User $user): array
+    {
+        return $this->createQueryBuilder('l')
+            ->innerJoin('l.kioskNum', 'n')->addSelect('n')
+            ->innerJoin('n.kioskCollec', 'kc')->addSelect('kc')
+            ->where('l.user = :user')
+            ->setParameter('user', $user)
+            ->orderBy('kc.nom', 'ASC')
+            ->addOrderBy('n.num', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * @return LienKioskNumUser[]
+     */
+    public function findByNumero(KioskNum $numero): array
+    {
+        return $this->createQueryBuilder('l')
+            ->innerJoin('l.user', 'u')->addSelect('u')
+            ->where('l.kioskNum = :numero')
+            ->setParameter('numero', $numero)
+            ->orderBy('u.name', 'ASC')
+            ->addOrderBy('u.lastname', 'ASC')
+            ->getQuery()
+            ->getResult();
     }
 
     // /**

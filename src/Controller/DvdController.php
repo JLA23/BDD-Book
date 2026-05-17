@@ -9,6 +9,7 @@ use App\Repository\DvdRepository;
 use App\Repository\DvdUserCollectionRepository;
 use App\Repository\UserRepository;
 use App\Service\DvdApiService;
+use App\Service\Media\MediaImageSyncService;
 use App\Service\SectionPermissionService;
 use Doctrine\ORM\EntityManagerInterface;
 use Knp\Component\Pager\PaginatorInterface;
@@ -31,6 +32,7 @@ class DvdController extends AbstractController
         EntityManagerInterface $em,
         DvdApiService $dvdApi,
         SectionPermissionService $permissionService,
+        private MediaImageSyncService $mediaImageSync,
     ) {
         $this->em = $em;
         $this->dvdApi = $dvdApi;
@@ -134,9 +136,7 @@ class DvdController extends AbstractController
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
         $this->permissionService->denyAccessUnlessCanRegister('dvd');
 
-        return $this->render('dvd/ajouter_choix.html.twig', [
-            'apiConfigured' => $this->dvdApi->isConfigured(),
-        ]);
+        return $this->render('dvd/ajouter_choix.html.twig');
     }
 
     #[Route('/nouveau', name: 'dvd_new')]
@@ -176,6 +176,12 @@ class DvdController extends AbstractController
             }
             if ($request->query->get('externalId')) {
                 $dvd->setExternalId($request->query->get('externalId'));
+            }
+            if ($request->query->get('edition')) {
+                $dvd->setEdition($request->query->get('edition'));
+            }
+            if ($request->query->get('ean')) {
+                $dvd->setEan($request->query->get('ean'));
             }
 
             $existing = null;
@@ -286,6 +292,8 @@ class DvdController extends AbstractController
 
             $session->remove('dvd_prefill_images');
             $this->em->flush();
+            $this->mediaImageSync->syncDvd($dvd, $lien ?? null);
+            $this->em->flush();
 
             $this->addFlash('success', 'DVD/Blu-ray créé avec succès' . ($addToCollection === '1' ? ' et ajouté à votre collection' : ''));
             return $this->redirectToRoute('dvd_detail', ['id' => $dvd->getId()]);
@@ -360,6 +368,8 @@ class DvdController extends AbstractController
             }
 
             $this->em->flush();
+            $this->mediaImageSync->syncDvd($dvd);
+            $this->em->flush();
             $this->addFlash('success', 'DVD/Blu-ray modifié avec succès');
             return $this->redirectToRoute('dvd_detail', ['id' => $dvd->getId()]);
         }
@@ -400,7 +410,7 @@ class DvdController extends AbstractController
         $this->permissionService->denyAccessUnlessCanRegister('dvd');
 
         return $this->render('dvd/search_api.html.twig', [
-            'apiConfigured' => $this->dvdApi->isConfigured(),
+            'hasSignedApiKey' => $this->dvdApi->hasSignedApiKey(),
         ]);
     }
 
@@ -409,22 +419,22 @@ class DvdController extends AbstractController
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
 
-        $query = $request->query->get('q', '');
+        $query = trim((string) $request->query->get('q', ''));
+        $barcode = trim((string) $request->query->get('barcode', ''));
         $format = $request->query->get('format');
 
-        if (empty($query)) {
-            return $this->json(['error' => 'Recherche requise'], 400);
+        if ($query === '' && $barcode === '') {
+            return $this->json(['error' => 'Titre ou code-barres requis'], 400);
         }
 
-        if (!$this->dvdApi->isConfigured()) {
-            return $this->json(['error' => 'API non configurée'], 500);
-        }
-
-        $results = $this->dvdApi->search($query, $format, 20);
+        $results = $barcode !== ''
+            ? $this->dvdApi->searchByGencode($barcode, $format, 20)
+            : $this->dvdApi->search($query, $format, 20);
 
         return $this->json([
             'success' => true,
             'results' => $results,
+            'searchType' => $barcode !== '' ? 'barcode' : 'text',
         ]);
     }
 
@@ -432,10 +442,6 @@ class DvdController extends AbstractController
     public function apiDetails(string $dvdId, Request $request): JsonResponse
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
-
-        if (!$this->dvdApi->isConfigured()) {
-            return $this->json(['error' => 'API non configurée'], 500);
-        }
 
         $details = $this->dvdApi->getDetails($dvdId);
 
@@ -503,6 +509,8 @@ class DvdController extends AbstractController
 
             $this->em->persist($lien);
             $this->em->flush();
+            $this->mediaImageSync->syncDvdUserImage($lien);
+            $this->em->flush();
 
             $this->addFlash('success', 'DVD/Blu-ray ajouté à votre collection');
             return $this->redirectToRoute('dvd_detail', ['id' => $id]);
@@ -566,6 +574,8 @@ class DvdController extends AbstractController
             }
 
             $this->em->flush();
+            $this->mediaImageSync->syncDvdUserImage($lien);
+            $this->em->flush();
             $this->addFlash('success', 'Collection mise à jour');
             return $this->redirectToRoute('dvd_detail', ['id' => $id]);
         }
@@ -574,5 +584,38 @@ class DvdController extends AbstractController
             'dvd' => $dvd,
             'lien' => $lien,
         ]);
+    }
+
+    #[Route('/{id}/retirer-collection/{lienId}', name: 'dvd_remove_owner', requirements: ['id' => '\d+', 'lienId' => '\d+'], methods: ['POST'])]
+    public function removeOwner(int $id, int $lienId, Request $request, DvdUserCollectionRepository $lienRepo): Response
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+
+        $lien = $lienRepo->find($lienId);
+        if (!$lien || $lien->getDvd()->getId() !== $id) {
+            throw $this->createNotFoundException('Lien non trouvé');
+        }
+
+        if ($lien->getUser() !== $this->getUser()) {
+            throw $this->createAccessDeniedException();
+        }
+
+        if ($this->isCsrfTokenValid('delete' . $lien->getId(), $request->request->get('_token'))) {
+            $dvd = $lien->getDvd();
+            $this->em->remove($lien);
+            $this->em->flush();
+
+            $remainingOwners = $lienRepo->countByDvd($dvd);
+            if ($remainingOwners === 0) {
+                $this->em->remove($dvd);
+                $this->em->flush();
+                $this->addFlash('success', 'DVD / Blu-ray retiré de votre collection et supprimé (plus aucun propriétaire)');
+                return $this->redirectToRoute('dvd_list');
+            }
+
+            $this->addFlash('success', 'DVD / Blu-ray retiré de votre collection');
+        }
+
+        return $this->redirectToRoute('dvd_detail', ['id' => $id]);
     }
 }

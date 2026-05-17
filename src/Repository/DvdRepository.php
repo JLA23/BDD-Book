@@ -31,8 +31,20 @@ class DvdRepository extends ServiceEntityRepository
             ->leftJoin('ul.user', 'u');
 
         if ($search) {
-            $qb->andWhere('LOWER(d.titre) LIKE LOWER(:search)')
+            $conditions = [
+                'LOWER(d.titre) LIKE LOWER(:search)',
+                'LOWER(d.editeur) LIKE LOWER(:search)',
+                'd.ean LIKE :search',
+            ];
+            $eanDigits = preg_replace('/\D/', '', $search);
+            if ($eanDigits !== '') {
+                $conditions[] = 'd.ean LIKE :eanDigits';
+            }
+            $qb->andWhere(implode(' OR ', $conditions))
                ->setParameter('search', '%' . $search . '%');
+            if ($eanDigits !== '') {
+                $qb->setParameter('eanDigits', '%' . $eanDigits . '%');
+            }
         }
 
         if ($format) {

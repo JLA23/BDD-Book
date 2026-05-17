@@ -13,7 +13,7 @@
 
         <div class="card mb-4">
             <div class="card-header" style="background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);">
-                <h5 class="mb-0 text-white"><i class="fas fa-search"></i> Rechercher un jeu</h5>
+                <h5 class="mb-0 text-white"><i class="fas fa-search"></i><span class="d-none d-md-inline"> Rechercher</span> un jeu</h5>
             </div>
             <div class="card-body">
                 <form action="{{ path('game_list') }}" method="get">
@@ -21,12 +21,13 @@
                         <div class="col-md-12">
                             <div class="form-group mb-3">
                                 <label for="search" class="font-weight-bold text-dark">Que recherchez-vous ?</label>
-                                <div class="input-group input-group-lg">
-                                    <div class="input-group-prepend">
-                                        <span class="input-group-text bg-white border-right-0"><i class="fas fa-gamepad" style="color: #6f42c1;"></i></span>
-                                    </div>
-                                    <input type="text" name="search" class="form-control border-left-0" placeholder="Titre du jeu..." style="border-top-right-radius: 0.3rem !important; border-bottom-right-radius: 0.3rem !important;">
-                                </div>
+                                {% include 'components/search_input_group.html.twig' with {
+                                    icon: 'fas fa-gamepad',
+                                    accent: '#6f42c1',
+                                    name: 'search',
+                                    input_id: 'searchInput',
+                                    placeholder: 'Titre du jeu...'
+                                } %}
                                 <small class="form-text text-muted">Recherche par titre, éditeur ou développeur</small>
                             </div>
                         </div>
@@ -58,7 +59,7 @@
                     
                     <div class="text-center">
                         <button type="submit" class="btn btn-lg text-white px-5" style="background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);">
-                            <i class="fas fa-search"></i> Rechercher
+                            <i class="fas fa-search"></i><span class="d-none d-md-inline"> Rechercher</span>
                         </button>
                     </div>
                 </form>

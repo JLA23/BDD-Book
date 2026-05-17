@@ -1,0 +1,19 @@
+{# Overlay scanner + init JS. Paramètres : input_id, accent_from, accent_to #}
+<div id="barcodeScannerOverlay" style="--bdd-scanner-from: {{ accent_from|default('#667eea') }}; --bdd-scanner-to: {{ accent_to|default('#764ba2') }};">
+    <div class="scanner-header">
+        <span><i class="fas fa-barcode"></i> Scanner code-barres</span>
+        <button type="button" class="btn btn-light btn-sm" id="closeScannerBtn">
+            <i class="fas fa-times"></i> Fermer
+        </button>
+    </div>
+    <div id="barcodeReader"></div>
+    <div class="scanner-footer">
+        <div class="d-flex align-items-center justify-content-center mb-2">
+            <label class="mr-2 mb-0"><i class="fas fa-camera"></i> Caméra :</label>
+            <select id="cameraSelect" class="form-control form-control-sm" style="width: auto; max-width: 200px;">
+                <option value="">Chargement...</option>
+            </select>
+        </div>
+        <p class="mb-0 small"><i class="fas fa-info-circle"></i> Positionnez le code-barres dans le cadre</p>
+    </div>
+</div>

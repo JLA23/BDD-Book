@@ -13,37 +13,87 @@
                 </a>
             </div>
 
-            {% if not apiConfigured %}
-            <div class="alert alert-warning">
-                <i class="fas fa-exclamation-triangle"></i> <strong>API non configuree</strong>
-                <p class="mb-0">Ajoutez DVDFR_API_KEY dans le fichier <code>.env</code></p>
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                Recherche via l’<a href="https://www.dvdfr.com/api/documentation.php" target="_blank" rel="noopener">API DVDFr</a> (titre ou code-barres EAN, sans clé).
+                {% if hasSignedApiKey %}
+                    <span class="d-block small mt-1 mb-0">Clé API configurée : appels fiche signés activés.</span>
+                {% else %}
+                    <span class="d-block small mt-1 mb-0">Une clé <code>DVDFR_API_KEY</code> est optionnelle (appels signés / quotas étendus).</span>
+                {% endif %}
             </div>
-            {% else %}
+
             <div class="card shadow-sm mb-4">
                 <div class="card-header" style="background: linear-gradient(135deg, #1a5276 0%, #3498db 100%);">
                     <h5 class="mb-0 text-white"><i class="fas fa-compact-disc"></i> Rechercher un DVD / Blu-ray</h5>
                 </div>
                 <div class="card-body">
-                    <div class="input-group mb-3">
-                        <input type="text" id="searchQuery" class="form-control form-control-lg" placeholder="Titre (ex: Star Wars, Le Roi Lion...)">
-                        <div class="input-group-append">
-                            <button class="btn btn-lg" id="searchBtn" style="background: linear-gradient(135deg, #1a5276 0%, #3498db 100%); color: white;">
-                                <i class="fas fa-search"></i> Rechercher
-                            </button>
+                    <ul class="nav nav-tabs mb-3" id="searchTabs" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="barcode-tab" data-toggle="tab" href="#barcodeSearch" role="tab">
+                                <i class="fas fa-barcode"></i> Par code-barres
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="text-tab" data-toggle="tab" href="#textSearch" role="tab">
+                                <i class="fas fa-search"></i> Par titre
+                            </a>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="searchTabsContent">
+                        <div class="tab-pane fade show active" id="barcodeSearch" role="tabpanel">
+                            <div class="mb-3">
+                            {% embed 'components/search_input_group.html.twig' with {
+                                icon: 'fas fa-compact-disc',
+                                accent: '#1a5276',
+                                input_id: 'barcodeQuery',
+                                placeholder: 'Code-barres EAN-13 (ex: 8717418510732)',
+                                inputmode: 'numeric',
+                                scanner: true,
+                                scanner_hint: true,
+                                scanner_hint_text: 'Scannez le code-barres du boîtier.'
+                            } %}
+                                {% block append %}
+                                    {% include 'components/search_submit_append.html.twig' with {
+                                        button_id: 'barcodeSearchBtn',
+                                        button_style: 'background: linear-gradient(135deg, #1a5276 0%, #3498db 100%); color: white;'
+                                    } %}
+                                {% endblock %}
+                            {% endembed %}
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="textSearch" role="tabpanel">
+                            <div class="mb-3">
+                            {% embed 'components/search_input_group.html.twig' with {
+                                icon: 'fas fa-compact-disc',
+                                accent: '#1a5276',
+                                input_id: 'searchQuery',
+                                placeholder: 'Titre (ex: Star Wars, Le Roi Lion...)'
+                            } %}
+                                {% block append %}
+                                    {% include 'components/search_submit_append.html.twig' with {
+                                        button_id: 'searchBtn',
+                                        button_style: 'background: linear-gradient(135deg, #1a5276 0%, #3498db 100%); color: white;'
+                                    } %}
+                                {% endblock %}
+                            {% endembed %}
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="small"><strong>Format (optionnel)</strong></label>
+                                    <select id="formatFilter" class="form-control form-control-sm mb-2">
+                                        <option value="">Tous les formats</option>
+                                        <option value="dvd">DVD</option>
+                                        <option value="bluray">Blu-ray</option>
+                                        <option value="bluray4k">Blu-ray 4K / UHD</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <small class="text-muted">Les articles (le, la, les…) sont retirés automatiquement du titre envoyé à DVDFr.</small>
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label class="small"><strong>Format (optionnel)</strong></label>
-                            <select id="formatFilter" class="form-control form-control-sm mb-2">
-                                <option value="">Tous les formats</option>
-                                <option value="dvd">DVD</option>
-                                <option value="bluray">Blu-ray</option>
-                                <option value="bluray4k">Blu-ray 4K</option>
-                            </select>
-                        </div>
-                    </div>
-                    <small class="text-muted">Recherche via l'API DVDFR</small>
                 </div>
             </div>
 
@@ -59,22 +109,24 @@
             <div id="dvdDetails" style="display: none;">
                 <div class="card shadow-sm">
                     <div class="card-header d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #1a5276 0%, #3498db 100%);">
-                        <h5 class="mb-0 text-white"><i class="fas fa-info-circle"></i> Details</h5>
+                        <h5 class="mb-0 text-white"><i class="fas fa-info-circle"></i> Détails</h5>
                         <button class="btn btn-sm btn-light" onclick="$('#dvdDetails').hide(); $('#searchResults').show();">
-                            <i class="fas fa-arrow-left"></i> Retour aux resultats
+                            <i class="fas fa-arrow-left"></i> Retour aux résultats
                         </button>
                     </div>
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-4 text-center">
-                                <img id="detailCover" src="" class="img-fluid rounded shadow mb-3" style="max-height: 300px;">
+                                <img id="detailCover" src="" class="img-fluid rounded shadow mb-3" style="max-height: 300px;" alt="">
                             </div>
                             <div class="col-md-8">
                                 <h3 id="detailTitle"></h3>
-                                <p><strong>Annee:</strong> <span id="detailYear"></span></p>
-                                <p><strong>Editeur:</strong> <span id="detailEditor"></span></p>
-                                <p><strong>Format:</strong> <span id="detailFormat"></span></p>
-                                <p><strong>Type:</strong> <span id="detailType"></span></p>
+                                <p><strong>Année :</strong> <span id="detailYear"></span></p>
+                                <p><strong>Éditeur :</strong> <span id="detailEditor"></span></p>
+                                <p><strong>Format :</strong> <span id="detailFormat"></span></p>
+                                <p><strong>Type :</strong> <span id="detailType"></span></p>
+                                <p id="detailEanRow" style="display: none;"><strong>Code-barres :</strong> <span id="detailEan"></span></p>
+                                <p id="detailEditionRow" style="display: none;"><strong>Édition :</strong> <span id="detailEdition"></span></p>
                                 <div id="detailDescription" class="mt-3" style="max-height: 150px; overflow-y: auto;"></div>
                             </div>
                         </div>
@@ -88,16 +140,85 @@
                     </div>
                 </div>
             </div>
-            {% endif %}
         </div>
     </div>
 </div>
+
+<div id="barcodeScannerOverlay">
+    <div class="scanner-header">
+        <span><i class="fas fa-barcode"></i> Scanner code-barres</span>
+        <button type="button" class="btn btn-light btn-sm" id="closeScannerBtn">
+            <i class="fas fa-times"></i> Fermer
+        </button>
+    </div>
+    <div id="barcodeReader"></div>
+    <div class="scanner-footer">
+        <div class="d-flex align-items-center justify-content-center mb-2">
+            <label class="mr-2 mb-0"><i class="fas fa-camera"></i> Caméra :</label>
+            <select id="cameraSelect" class="form-control form-control-sm" style="width: auto; max-width: 200px;">
+                <option value="">Chargement...</option>
+            </select>
+        </div>
+        <p class="mb-0 small"><i class="fas fa-info-circle"></i> Positionnez le code-barres dans le cadre</p>
+    </div>
+</div>
+
+<style>
+    #barcodeScannerOverlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: #000;
+        z-index: 999999;
+        flex-direction: column;
+    }
+    #barcodeScannerOverlay.active {
+        display: flex !important;
+    }
+    #barcodeScannerOverlay .scanner-header {
+        background: linear-gradient(135deg, #1a5276 0%, #3498db 100%);
+        color: white;
+        padding: 12px 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: bold;
+    }
+    #barcodeScannerOverlay #barcodeReader {
+        flex: 1;
+        width: 100%;
+        background: #000;
+    }
+    #barcodeScannerOverlay .scanner-footer {
+        background: rgba(0,0,0,0.9);
+        color: white;
+        padding: 12px 15px;
+        text-align: center;
+    }
+    html.scanner-open,
+    html.scanner-open body {
+        overflow: hidden !important;
+        height: 100% !important;
+    }
+</style>
 {% endblock %}
 
 {% block javascripts %}
 {{ parent() }}
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
 $(document).ready(function() {
+    var currentBarcode = null;
+
+    function formatLabel(fmt) {
+        if (fmt === 'bluray') return 'Blu-ray';
+        if (fmt === 'bluray4k') return 'Blu-ray 4K';
+        return 'DVD';
+    }
+
     $('#searchBtn').click(function() {
         var query = $('#searchQuery').val().trim();
         if (!query) { alert('Veuillez saisir un titre'); return; }
@@ -105,7 +226,7 @@ $(document).ready(function() {
         var format = $('#formatFilter').val();
 
         $('#loadingSpinner').show();
-        $('#searchResults').empty();
+        $('#searchResults').empty().show();
         $('#dvdDetails').hide();
 
         $.ajax({
@@ -115,32 +236,69 @@ $(document).ready(function() {
             success: function(response) {
                 $('#loadingSpinner').hide();
                 if (response.success && response.results.length > 0) {
-                    showResults(response.results);
+                    showResults(response.results, false);
                 } else {
-                    $('#searchResults').html('<div class="alert alert-warning">Aucun resultat trouve.</div>');
+                    $('#searchResults').html('<div class="alert alert-warning">Aucun résultat trouvé.</div>');
                 }
             },
-            error: function() {
+            error: function(xhr) {
                 $('#loadingSpinner').hide();
-                $('#searchResults').html('<div class="alert alert-danger">Erreur lors de la recherche.</div>');
+                var msg = (xhr.responseJSON && xhr.responseJSON.error) ? xhr.responseJSON.error : 'Erreur lors de la recherche.';
+                $('#searchResults').html('<div class="alert alert-danger">' + msg + '</div>');
+            }
+        });
+    });
+
+    $('#barcodeSearchBtn').click(function() {
+        var barcode = $('#barcodeQuery').val().trim();
+        if (!barcode) { alert('Veuillez saisir un code-barres'); return; }
+
+        currentBarcode = barcode;
+
+        $('#loadingSpinner').show();
+        $('#searchResults').empty().show();
+        $('#dvdDetails').hide();
+
+        $.ajax({
+            url: '{{ path("dvd_api_search") }}',
+            method: 'GET',
+            data: { barcode: barcode },
+            success: function(response) {
+                $('#loadingSpinner').hide();
+                if (response.success && response.results.length > 0) {
+                    showResults(response.results, true);
+                    if (response.results.length === 1) {
+                        showDvdDetails(response.results[0].id);
+                    }
+                } else {
+                    $('#searchResults').html('<div class="alert alert-warning"><i class="fas fa-barcode"></i> Aucun DVD trouvé pour ce code-barres. Essayez la recherche par titre.</div>');
+                }
+            },
+            error: function(xhr) {
+                $('#loadingSpinner').hide();
+                var msg = (xhr.responseJSON && xhr.responseJSON.error) ? xhr.responseJSON.error : 'Erreur lors de la recherche.';
+                $('#searchResults').html('<div class="alert alert-danger">' + msg + '</div>');
             }
         });
     });
 
     $('#searchQuery').keypress(function(e) { if (e.which == 13) $('#searchBtn').click(); });
+    $('#barcodeQuery').keypress(function(e) { if (e.which == 13) $('#barcodeSearchBtn').click(); });
 
-    function showResults(results) {
-        var html = '<div class="row">';
+    function showResults(results, isBarcode) {
+        var html = '';
+        if (isBarcode) {
+            html += '<div class="alert alert-info mb-3"><i class="fas fa-barcode"></i> ' + results.length + ' édition(s) trouvée(s) pour ce code-barres</div>';
+        }
+        html += '<div class="row">';
         results.forEach(function(dvd) {
-            var formatLabel = dvd.format === 'bluray' ? 'Blu-ray' : dvd.format === 'bluray4k' ? 'Blu-ray 4K' : 'DVD';
-            var typeLabel = dvd.type === 'serie' ? 'Serie' : 'Film';
             html += '<div class="col-md-3 col-6 mb-3">' +
-                '<div class="card h-100" style="cursor: pointer;" onclick="showDvdDetails(' + dvd.id + ')">' +
+                '<div class="card h-100" style="cursor: pointer;" onclick="showDvdDetails(\'' + dvd.id + '\')">' +
                 '<img src="' + (dvd.cover || '/images/dvd-default.svg') + '" class="card-img-top" style="height: 200px; object-fit: contain; background: #f8f9fa;" onerror="this.src=\'/images/dvd-default.svg\'">' +
                 '<div class="card-body p-2">' +
-                '<h6 class="card-title mb-1 text-truncate">' + dvd.titre + '</h6>' +
-                '<span class="badge badge-info">' + formatLabel + '</span> ' +
-                '<span class="badge badge-secondary">' + typeLabel + '</span>' +
+                '<h6 class="card-title mb-1 text-truncate" title="' + $('<div>').text(dvd.titre).html() + '">' + dvd.titre + '</h6>' +
+                '<span class="badge badge-info">' + formatLabel(dvd.format) + '</span> ' +
+                '<span class="badge badge-secondary">' + (dvd.type === 'serie' ? 'Série' : 'Film') + '</span>' +
                 '<p class="small text-muted mb-0">' + (dvd.annee || '?') + '</p>' +
                 '</div></div></div>';
         });
@@ -162,8 +320,21 @@ $(document).ready(function() {
                     $('#detailTitle').text(dvd.titre);
                     $('#detailYear').text(dvd.annee || '-');
                     $('#detailEditor').text(dvd.editeur || '-');
-                    $('#detailFormat').text(dvd.format === 'bluray' ? 'Blu-ray' : dvd.format === 'bluray4k' ? 'Blu-ray 4K' : 'DVD');
-                    $('#detailType').text(dvd.type === 'serie' ? 'Serie' : 'Film');
+                    $('#detailFormat').text(formatLabel(dvd.format));
+                    $('#detailType').text(dvd.type === 'serie' ? 'Série' : 'Film');
+                    var ean = dvd.ean || currentBarcode || '';
+                    if (ean) {
+                        $('#detailEan').text(ean);
+                        $('#detailEanRow').show();
+                    } else {
+                        $('#detailEanRow').hide();
+                    }
+                    if (dvd.edition) {
+                        $('#detailEdition').text(dvd.edition);
+                        $('#detailEditionRow').show();
+                    } else {
+                        $('#detailEditionRow').hide();
+                    }
                     $('#detailDescription').text(dvd.description || '');
                     $('#detailCover').attr('src', dvd.cover || '/images/dvd-default.svg');
 
@@ -180,17 +351,200 @@ $(document).ready(function() {
                         params.append('description', dvd.description || '');
                         params.append('cover', dvd.cover || '');
                         params.append('externalId', dvd.id || '');
+                        if (dvd.edition) {
+                            params.append('edition', dvd.edition);
+                        }
+                        if (ean) {
+                            params.append('ean', ean);
+                        }
                         window.location.href = '{{ path("dvd_new") }}?' + params.toString();
                     });
                 }
             },
-            error: function() {
+            error: function(xhr) {
                 $('#loadingSpinner').hide();
                 $('#searchResults').show();
-                alert('Erreur lors du chargement des details');
+                var msg = (xhr.responseJSON && xhr.responseJSON.error) ? xhr.responseJSON.error : 'Erreur lors du chargement des détails.';
+                alert(msg);
             }
         });
     };
+
+    // Scanner code-barres (même logique que musique)
+    let html5QrCode = null;
+    let isScanning = false;
+    let availableCameras = [];
+    let currentCameraId = null;
+
+    function isSecureContext() {
+        return window.isSecureContext || location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    }
+
+    function checkCameraAvailable() {
+        return navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
+    }
+
+    $('#scanBarcodeBtn').click(function() {
+        $('#barcodeScannerOverlay').addClass('active');
+        $('html').addClass('scanner-open');
+
+        if (!isSecureContext()) {
+            showScannerError('<strong>Connexion non sécurisée</strong><br>Le scanner nécessite HTTPS.');
+            return;
+        }
+
+        if (!checkCameraAvailable()) {
+            showScannerError('<strong>Caméra non disponible</strong><br>Votre navigateur ne supporte pas la caméra.');
+            return;
+        }
+
+        requestCameraPermission();
+    });
+
+    $('#closeScannerBtn').click(function() {
+        closeScanner();
+    });
+
+    function closeScanner() {
+        stopScanner();
+        $('#barcodeScannerOverlay').removeClass('active');
+        $('html').removeClass('scanner-open');
+        $('#barcodeReader').html('');
+    }
+
+    function requestCameraPermission() {
+        $('#barcodeReader').html(
+            '<div class="d-flex align-items-center justify-content-center h-100" style="color: white;">' +
+            '<div class="text-center"><i class="fas fa-spinner fa-spin fa-3x mb-3"></i><p>Accès à la caméra...</p></div></div>'
+        );
+
+        navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
+        })
+        .then(function(stream) {
+            stream.getTracks().forEach(function(track) { track.stop(); });
+            $('#barcodeReader').html('');
+            startScanner();
+        })
+        .catch(function(err) {
+            var errorMessage = '';
+            if (err.name === 'NotAllowedError') {
+                errorMessage = '<strong>Permission refusée</strong><br>Autorisez l’accès à la caméra.';
+            } else if (err.name === 'NotFoundError') {
+                errorMessage = '<strong>Aucune caméra</strong><br>Pas de caméra détectée.';
+            } else {
+                errorMessage = '<strong>Erreur</strong><br>' + (err.message || 'Erreur inconnue');
+            }
+            showScannerError(errorMessage);
+        });
+    }
+
+    const scannerConfig = {
+        fps: 15,
+        qrbox: function(viewfinderWidth, viewfinderHeight) {
+            return { width: Math.floor(viewfinderWidth * 0.9), height: Math.floor(viewfinderHeight * 0.5) };
+        },
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+        formatsToSupport: [
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.UPC_E,
+            Html5QrcodeSupportedFormats.CODE_128
+        ]
+    };
+
+    async function loadCameras() {
+        try {
+            const allCameras = await Html5Qrcode.getCameras();
+            availableCameras = allCameras.filter(function(cam) {
+                const label = cam.label.toLowerCase();
+                return label.includes('back') || label.includes('arrière') || label.includes('environment');
+            });
+            if (availableCameras.length === 0) availableCameras = allCameras;
+
+            const select = $('#cameraSelect');
+            select.empty();
+            if (availableCameras.length > 0) {
+                availableCameras.forEach(function(cam, index) {
+                    var label = cam.label || ('Caméra ' + (index + 1));
+                    if (label.length > 25) label = label.substring(0, 25) + '...';
+                    select.append('<option value="' + cam.id + '">Objectif ' + (index + 1) + '</option>');
+                });
+                return availableCameras.length > 1 ? availableCameras[1].id : availableCameras[0].id;
+            }
+            return null;
+        } catch (err) {
+            return null;
+        }
+    }
+
+    async function startScanner() {
+        if (isScanning) return;
+        html5QrCode = new Html5Qrcode('barcodeReader');
+
+        try {
+            const defaultCameraId = await loadCameras();
+            if (defaultCameraId) {
+                currentCameraId = defaultCameraId;
+                $('#cameraSelect').val(currentCameraId);
+                await startWithCamera(currentCameraId);
+            } else {
+                await html5QrCode.start({ facingMode: 'environment' }, scannerConfig, onScanSuccess, onScanError);
+                isScanning = true;
+            }
+        } catch (err) {
+            showScannerError('<strong>Erreur</strong><br>Impossible de démarrer le scanner.');
+        }
+    }
+
+    async function startWithCamera(cameraId) {
+        await html5QrCode.start(cameraId, scannerConfig, onScanSuccess, onScanError);
+        isScanning = true;
+        currentCameraId = cameraId;
+    }
+
+    $('#cameraSelect').on('change', async function() {
+        const newCameraId = $(this).val();
+        if (newCameraId && newCameraId !== currentCameraId && isScanning) {
+            try {
+                await html5QrCode.stop();
+                isScanning = false;
+                await startWithCamera(newCameraId);
+            } catch (err) {}
+        }
+    });
+
+    function stopScanner() {
+        if (html5QrCode && isScanning) {
+            html5QrCode.stop().then(function() {
+                isScanning = false;
+                html5QrCode.clear();
+            }).catch(function() { isScanning = false; });
+        }
+    }
+
+    function onScanSuccess(decodedText) {
+        if (navigator.vibrate) navigator.vibrate(100);
+        $('#barcodeQuery').val(decodedText);
+        $('.scanner-footer p').html('<i class="fas fa-check-circle text-success"></i> Code détecté : <strong>' + decodedText + '</strong>');
+        setTimeout(function() {
+            closeScanner();
+            $('#barcodeSearchBtn').click();
+        }, 800);
+    }
+
+    function onScanError() {}
+
+    function showScannerError(message) {
+        $('#barcodeReader').html(
+            '<div class="d-flex align-items-center justify-content-center h-100">' +
+            '<div class="alert alert-danger m-4 text-center">' +
+            '<i class="fas fa-exclamation-triangle fa-2x mb-2"></i><br>' + message +
+            '<br><button class="btn btn-outline-danger btn-sm mt-3" onclick="$(\'#closeScannerBtn\').click();">Fermer</button>' +
+            '</div></div>'
+        );
+    }
 });
 </script>
 {% endblock %}

@@ -22,20 +22,19 @@
                     <div class="col-md-10">
                         <div class="form-group mb-md-0">
                             <label>ISBN</label>
-                            <div class="input-group">
-                                <input type="text" name="query" id="isbnInput" class="form-control" 
-                                       value="{{ query }}" 
-                                       placeholder="Entrez un ISBN (ex: 978-2-07-036822-8)..."
-                                       autofocus>
-                                <div class="input-group-append d-md-none">
-                                    <button type="button" class="btn btn-outline-secondary" id="scanBarcodeBtn" title="Scanner un code-barres">
-                                        <i class="fas fa-barcode"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <small class="form-text text-muted d-md-none">
-                                <i class="fas fa-camera text-primary"></i> Cliquez sur l'icône code-barres pour scanner.
-                            </small>
+                            {% include 'components/search_input_group.html.twig' with {
+                                icon: 'fas fa-book',
+                                accent: '#667eea',
+                                name: 'query',
+                                input_id: 'isbnInput',
+                                placeholder: 'Entrez un ISBN (ex: 978-2-07-036822-8)...',
+                                value: query,
+                                size: '',
+                                autofocus: true,
+                                scanner: true,
+                                scanner_hint: true,
+                                scanner_hint_text: 'Utilisez l’icône caméra pour scanner un code ISBN.'
+                            } %}
                         </div>
                     </div>
                     <div class="col-md-2">

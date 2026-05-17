@@ -89,6 +89,25 @@
                             </div>
                         </div>
 
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="form-group">
+                                    <label for="{{ form.edition.vars.id }}"><strong>Édition</strong></label>
+                                    <input type="text" name="{{ form.edition.vars.full_name }}" id="{{ form.edition.vars.id }}"
+                                           class="form-control" value="{{ form.edition.vars.value }}"
+                                           placeholder="Ex: Collector, Steelbook, Édition limitée...">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="{{ form.ean.vars.id }}"><strong>Code-barres (EAN)</strong></label>
+                                    <input type="text" name="{{ form.ean.vars.full_name }}" id="{{ form.ean.vars.id }}"
+                                           class="form-control" value="{{ form.ean.vars.value }}"
+                                           placeholder="Ex: 8717418510732" inputmode="numeric">
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="form-group">
                             <label for="{{ form.description.vars.id }}"><strong>Description</strong></label>
                             <textarea name="{{ form.description.vars.full_name }}" id="{{ form.description.vars.id }}" 

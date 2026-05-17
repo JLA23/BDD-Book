@@ -16,22 +16,17 @@
                     </div>
                     <h5 class="card-title">Rechercher via API</h5>
                     <p class="card-text text-muted flex-grow-1">
-                        Rechercher un DVD ou Blu-ray par son <strong>titre</strong> via l'API DVDFR.
+                        Rechercher par <strong>code-barres EAN</strong> (scan caméra sur mobile) ou par <strong>titre</strong> via l'API DVDFr.
                         Les informations seront récupérées automatiquement.
                     </p>
-                    {% if apiConfigured %}
-                        <div class="mb-3">
-                            <span class="badge badge-light border">
-                                <i class="fas fa-compact-disc mr-1"></i>DVDFR
-                            </span>
-                        </div>
-                    {% else %}
-                        <div class="mb-3">
-                            <span class="badge badge-warning">
-                                <i class="fas fa-exclamation-triangle mr-1"></i>API non configurée
-                            </span>
-                        </div>
-                    {% endif %}
+                    <div class="mb-3">
+                        <span class="badge badge-light border mr-1">
+                            <i class="fas fa-compact-disc mr-1"></i>API DVDFr
+                        </span>
+                        <span class="badge badge-light border">
+                            <i class="fas fa-barcode mr-1"></i>Scan EAN
+                        </span>
+                    </div>
                     <a href="{{ path('dvd_search_api') }}" class="btn btn-block mt-auto text-white" style="background: linear-gradient(135deg, #1a5276 0%, #3498db 100%);">
                         <i class="fas fa-search mr-1"></i> Rechercher via API
                     </a>

@@ -6,7 +6,7 @@ use App\Entity\KioskNum;
 use App\Entity\Monnaie;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\Extension\Core\Type\DateType;
+use App\Form\Type\MonthType;
 use Symfony\Component\Form\Extension\Core\Type\FileType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
@@ -25,13 +25,9 @@ class NumeroMagazineType extends AbstractType
                 'label' => 'Numéro',
                 'attr' => ['class' => 'form-control']
             ])
-            ->add('dateParution', DateType::class, [
-                'label' => 'Date de parution (mois/année)',
+            ->add('dateParution', MonthType::class, [
+                'label' => 'Date de parution',
                 'required' => false,
-                'widget' => 'single_text',
-                'format' => 'yyyy-MM',
-                'html5' => false,
-                'attr' => ['class' => 'form-control', 'placeholder' => 'AAAA-MM']
             ])
             ->add('EAN', TextType::class, [
                 'label' => 'Code EAN',

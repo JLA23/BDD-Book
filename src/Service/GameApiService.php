@@ -112,10 +112,20 @@ class GameApiService
         }
 
         try {
-            // Utiliser search pour une recherche plus efficace, puis filtrer en PHP
-            $queryBody = "search \"{$query}\";";
-            $queryBody .= " fields name, first_release_date, cover.url, genres.name, platforms.name, platforms.id, rating, aggregated_rating;";
-            $queryBody .= " limit 50;";
+            $escapedQuery = str_replace(['\\', '"'], ['\\\\', '\\"'], trim($query));
+            $platformId = $this->igdbConsoleMapping->resolveIgdbPlatformFilterValue($platform) ?? 0;
+            $yearInt = $year !== null && $year !== '' ? (int) $year : 0;
+
+            // Ne pas filtrer les plateformes dans la requête IGDB (search + where platforms
+            // rate souvent des éditions multi-plateformes) : on filtre en PHP sur platforms.id.
+            $fetchLimit = max(1, min($limit, 50));
+            if ($platformId > 0) {
+                $fetchLimit = 50;
+            }
+
+            $queryBody = 'search "' . $escapedQuery . '";';
+            $queryBody .= ' fields name, first_release_date, cover.url, genres.name, platforms.name, platforms.id, rating, aggregated_rating;';
+            $queryBody .= ' limit ' . $fetchLimit . ';';
 
             $response = $this->httpClient->request('POST', 'https://api.igdb.com/v4/games', [
                 'headers' => [
@@ -127,41 +137,25 @@ class GameApiService
 
             $games = $response->toArray();
 
-            // Filtrer par plateforme et année côté PHP
-            if ($platform || $year) {
-                $games = array_filter($games, function($game) use ($platform, $year) {
-                    // Filtre par plateforme
-                    if ($platform && isset($game['platforms'])) {
-                        $hasPlatform = false;
-                        foreach ($game['platforms'] as $p) {
-                            if ((is_array($p) && isset($p['id']) && $p['id'] == $platform) ||
-                                (is_int($p) && $p == $platform)) {
-                                $hasPlatform = true;
-                                break;
-                            }
-                        }
-                        if (!$hasPlatform) return false;
-                    }
-
-                    // Filtre par année
-                    if ($year && isset($game['first_release_date'])) {
-                        $gameYear = date('Y', $game['first_release_date']);
-                        if ($gameYear != $year) return false;
-                    }
-
-                    return true;
-                });
-
-                // Limiter après filtrage
-                $games = array_slice($games, 0, $limit);
+            if ($platformId > 0) {
+                $games = array_values(array_filter(
+                    $games,
+                    fn (array $game): bool => $this->gameHasPlatform($game, $platformId)
+                ));
             }
+            if ($yearInt > 0) {
+                $games = array_values(array_filter(
+                    $games,
+                    fn (array $game): bool => $this->gameMatchesYear($game, $yearInt)
+                ));
+            }
+            $games = \array_slice($games, 0, max(1, min($limit, 50)));
 
             $results = [];
 
             foreach ($games as $game) {
                 $cover = null;
                 if (isset($game['cover']['url'])) {
-                    // Convertir en grande image (t_cover_big)
                     $cover = str_replace('t_thumb', 't_cover_big', $game['cover']['url']);
                     if (!str_starts_with($cover, 'http')) {
                         $cover = 'https:' . $cover;
@@ -173,8 +167,8 @@ class GameApiService
                     'titre' => $game['name'],
                     'annee' => isset($game['first_release_date']) ? (int) date('Y', $game['first_release_date']) : null,
                     'cover' => $cover,
-                    'genres' => implode(', ', array_map(fn($g) => $g['name'], $game['genres'] ?? [])),
-                    'platforms' => array_map(fn($p) => $p['name'], $game['platforms'] ?? []),
+                    'genres' => implode(', ', array_map(static fn ($g) => $g['name'] ?? '', $game['genres'] ?? [])),
+                    'platforms' => $this->extractPlatformLabels($game['platforms'] ?? []),
                     'rating' => isset($game['rating']) ? round($game['rating'] / 10, 1) : null,
                     'metacritic' => isset($game['aggregated_rating']) ? round($game['aggregated_rating']) : null,
                 ];
@@ -184,6 +178,46 @@ class GameApiService
         } catch (\Exception $e) {
             return [];
         }
+    }
+
+    /**
+     * @param list<int|array{id?: int, name?: string}> $platforms
+     *
+     * @return list<string>
+     */
+    private function extractPlatformLabels(array $platforms): array
+    {
+        $labels = [];
+        foreach ($platforms as $platform) {
+            if (is_array($platform) && !empty($platform['name'])) {
+                $labels[] = (string) $platform['name'];
+            }
+        }
+
+        return $labels;
+    }
+
+    private function gameHasPlatform(array $game, int $platformId): bool
+    {
+        foreach ($game['platforms'] ?? [] as $platform) {
+            if (is_array($platform) && isset($platform['id']) && (int) $platform['id'] === $platformId) {
+                return true;
+            }
+            if (is_int($platform) && $platform === $platformId) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function gameMatchesYear(array $game, int $year): bool
+    {
+        if (!isset($game['first_release_date'])) {
+            return false;
+        }
+
+        return (int) date('Y', (int) $game['first_release_date']) === $year;
     }
 
     /**

@@ -1,0 +1,45 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Collection magazines de {{ user.name }} - BDD-Magazines{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 style="color: #11998e;">
+            <i class="fas fa-newspaper"></i> Magazines de {{ user.name }} {{ user.lastname }}
+        </h2>
+        <a href="{{ path('magazines_list') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Retour
+        </a>
+    </div>
+
+    {% if liens|length == 0 %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> Aucun numéro enregistré pour cet utilisateur.
+        </div>
+    {% else %}
+        <div class="row">
+            {% for lien in liens %}
+                {% set numero = lien.kioskNum %}
+                {% set magazine = numero.kioskCollec %}
+                <div class="col-md-3 col-sm-6 mb-4">
+                    <a href="{{ path('numero_detail', {id: numero.id}) }}" class="text-decoration-none">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-body">
+                                <h6 class="card-title text-dark mb-1">{{ magazine.nom }}</h6>
+                                <p class="text-muted mb-1">N°{{ numero.num }}</p>
+                                {% if lien.prixAchat is not null %}
+                                    <small class="text-success">{{ lien.prixAchat|number_format(2, ',', ' ') }} €</small>
+                                {% endif %}
+                                {% if numero.dateParution %}
+                                    <small class="text-muted d-block">{{ numero.dateParution|date('m/Y') }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

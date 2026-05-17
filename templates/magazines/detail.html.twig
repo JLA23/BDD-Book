@@ -18,7 +18,7 @@
     <div class="row mb-4">
         <div class="col-md-3">
             {% if magazineImage %}
-                <img src="data:image/jpeg;base64,{{ magazineImage }}" 
+                <img src="{{ magazineImage }}" 
                      class="img-fluid rounded" 
                      alt="{{ magazine.nom }}">
             {% else %}
@@ -92,7 +92,7 @@
                 <div class="col-md-3 col-lg-2 mb-4">
                     <div class="card h-100">
                         {% if images[numero.id] is defined %}
-                            <img src="data:image/jpeg;base64,{{ images[numero.id] }}" 
+                            <img src="{{ images[numero.id] }}" 
                                  class="card-img-top" 
                                  alt="N°{{ numero.num }}"
                                  style="height: 150px; object-fit: cover;">

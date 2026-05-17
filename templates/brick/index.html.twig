@@ -13,7 +13,7 @@
 
         <div class="card mb-4">
             <div class="card-header" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
-                <h5 class="mb-0 text-white"><i class="fas fa-search"></i> Rechercher un set</h5>
+                <h5 class="mb-0 text-white"><i class="fas fa-search"></i><span class="d-none d-md-inline"> Rechercher</span> un set</h5>
             </div>
             <div class="card-body">
                 <form action="{{ path('brick_list') }}" method="get">
@@ -21,13 +21,16 @@
                         <div class="col-md-5">
                             <div class="form-group mb-3">
                                 <label for="search" class="font-weight-bold text-dark">Que recherchez-vous ?</label>
-                                <div class="input-group input-group-lg">
-                                    <div class="input-group-prepend">
-                                        <span class="input-group-text bg-white border-right-0"><i class="fas fa-cubes" style="color: #ff6b35;"></i></span>
-                                    </div>
-                                    <input type="text" name="search" class="form-control border-left-0" placeholder="Nom du set ou référence..." style="border-top-right-radius: 0.3rem !important; border-bottom-right-radius: 0.3rem !important;">
-                                </div>
-                                <small class="form-text text-muted">Recherche par nom ou numéro de référence</small>
+                                {% include 'components/search_input_group.html.twig' with {
+                                    icon: 'fas fa-cubes',
+                                    accent: '#ff6b35',
+                                    name: 'search',
+                                    input_id: 'searchInput',
+                                    placeholder: 'Nom, référence ou code-barres EAN...',
+                                    scanner: true,
+                                    scanner_hint: true
+                                } %}
+                                <small class="form-text text-muted d-none d-md-block">Recherche par nom, référence ou code-barres EAN.</small>
                             </div>
                         </div>
                         <div class="col-md-3">
@@ -56,7 +59,7 @@
                     
                     <div class="text-center">
                         <button type="submit" class="btn btn-lg text-white px-5" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);">
-                            <i class="fas fa-search"></i> Rechercher
+                            <i class="fas fa-search"></i><span class="d-none d-md-inline"> Rechercher</span>
                         </button>
                     </div>
                 </form>
@@ -123,4 +126,245 @@
             {% endif %}
         </div>
     </div>
+    <!-- Overlay plein écran pour le scanner -->
+    <div id="barcodeScannerOverlay">
+        <div class="scanner-header">
+            <span><i class="fas fa-barcode"></i> Scanner code-barres</span>
+            <button type="button" class="btn btn-light btn-sm" id="closeScannerBtn">
+                <i class="fas fa-times"></i> Fermer
+            </button>
+        </div>
+        <div id="barcodeReader"></div>
+        <div class="scanner-footer">
+            <div class="d-flex align-items-center justify-content-center mb-2">
+                <label class="mr-2 mb-0"><i class="fas fa-camera"></i> Caméra :</label>
+                <select id="cameraSelect" class="form-control form-control-sm" style="width: auto; max-width: 200px;">
+                    <option value="">Chargement...</option>
+                </select>
+            </div>
+            <p class="mb-0 small"><i class="fas fa-info-circle"></i> Positionnez le code-barres dans le cadre</p>
+        </div>
+    </div>
+
+    <style>
+        #barcodeScannerOverlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            z-index: 999999;
+            flex-direction: column;
+        }
+        #barcodeScannerOverlay.active {
+            display: flex !important;
+        }
+        #barcodeScannerOverlay .scanner-header {
+            background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+            color: white;
+            padding: 12px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+        }
+        #barcodeScannerOverlay #barcodeReader {
+            flex: 1;
+            width: 100%;
+            background: #000;
+        }
+        #barcodeScannerOverlay .scanner-footer {
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 12px 15px;
+            text-align: center;
+        }
+        html.scanner-open,
+        html.scanner-open body {
+            overflow: hidden !important;
+            height: 100% !important;
+        }
+    </style>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+$(document).ready(function() {
+    let html5QrCode = null;
+    let isScanning = false;
+    let availableCameras = [];
+    let currentCameraId = null;
+
+    function isSecureContext() {
+        return window.isSecureContext || location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    }
+
+    function checkCameraAvailable() {
+        return navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
+    }
+
+    $('#scanBarcodeBtn').click(function() {
+        $('#barcodeScannerOverlay').addClass('active');
+        $('html').addClass('scanner-open');
+
+        if (!isSecureContext()) {
+            showScannerError("<strong>Connexion non sécurisée</strong><br>Le scanner nécessite HTTPS.");
+            return;
+        }
+
+        if (!checkCameraAvailable()) {
+            showScannerError("<strong>Caméra non disponible</strong><br>Votre navigateur ne supporte pas la caméra.");
+            return;
+        }
+
+        requestCameraPermission();
+    });
+
+    $('#closeScannerBtn').click(function() {
+        closeScanner();
+    });
+
+    function closeScanner() {
+        stopScanner();
+        $('#barcodeScannerOverlay').removeClass('active');
+        $('html').removeClass('scanner-open');
+        $('#barcodeReader').html('');
+    }
+
+    function requestCameraPermission() {
+        $('#barcodeReader').html(
+            '<div class="d-flex align-items-center justify-content-center h-100" style="color: white;">' +
+            '<div class="text-center"><i class="fas fa-spinner fa-spin fa-3x mb-3"></i><p>Accès à la caméra...</p></div></div>'
+        );
+
+        navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } } 
+        })
+        .then(function(stream) {
+            stream.getTracks().forEach(track => track.stop());
+            $('#barcodeReader').html('');
+            startScanner();
+        })
+        .catch(function(err) {
+            let errorMessage = "";
+            if (err.name === 'NotAllowedError') {
+                errorMessage = "<strong>Permission refusée</strong><br>Autorisez l'accès à la caméra.";
+            } else if (err.name === 'NotFoundError') {
+                errorMessage = "<strong>Aucune caméra</strong><br>Pas de caméra détectée.";
+            } else {
+                errorMessage = "<strong>Erreur</strong><br>" + (err.message || "Erreur inconnue");
+            }
+            showScannerError(errorMessage);
+        });
+    }
+
+    const scannerConfig = {
+        fps: 15,
+        qrbox: function(viewfinderWidth, viewfinderHeight) {
+            return { width: Math.floor(viewfinderWidth * 0.9), height: Math.floor(viewfinderHeight * 0.5) };
+        },
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+        formatsToSupport: [
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.UPC_E,
+            Html5QrcodeSupportedFormats.CODE_128
+        ]
+    };
+
+    async function loadCameras() {
+        try {
+            const allCameras = await Html5Qrcode.getCameras();
+            availableCameras = allCameras.filter(cam => {
+                const label = cam.label.toLowerCase();
+                return label.includes('back') || label.includes('arrière') || label.includes('environment');
+            });
+            if (availableCameras.length === 0) availableCameras = allCameras;
+
+            const select = $('#cameraSelect');
+            select.empty();
+            if (availableCameras.length > 0) {
+                availableCameras.forEach((cam, index) => {
+                    select.append(`<option value="${cam.id}">Objectif ${index + 1}</option>`);
+                });
+                return availableCameras.length > 1 ? availableCameras[1].id : availableCameras[0].id;
+            }
+            return null;
+        } catch(err) {
+            return null;
+        }
+    }
+
+    async function startScanner() {
+        if (isScanning) return;
+        html5QrCode = new Html5Qrcode("barcodeReader");
+
+        try {
+            const defaultCameraId = await loadCameras();
+            if (defaultCameraId) {
+                currentCameraId = defaultCameraId;
+                $('#cameraSelect').val(currentCameraId);
+                await startWithCamera(currentCameraId);
+            } else {
+                await html5QrCode.start({ facingMode: "environment" }, scannerConfig, onScanSuccess, onScanError);
+                isScanning = true;
+            }
+        } catch(err) {
+            showScannerError("<strong>Erreur</strong><br>Impossible de démarrer le scanner.");
+        }
+    }
+
+    async function startWithCamera(cameraId) {
+        await html5QrCode.start(cameraId, scannerConfig, onScanSuccess, onScanError);
+        isScanning = true;
+        currentCameraId = cameraId;
+    }
+
+    $('#cameraSelect').on('change', async function() {
+        const newCameraId = $(this).val();
+        if (newCameraId && newCameraId !== currentCameraId && isScanning) {
+            try {
+                await html5QrCode.stop();
+                isScanning = false;
+                await startWithCamera(newCameraId);
+            } catch(err) {}
+        }
+    });
+
+    function stopScanner() {
+        if (html5QrCode && isScanning) {
+            html5QrCode.stop().then(() => {
+                isScanning = false;
+                html5QrCode.clear();
+            }).catch(() => { isScanning = false; });
+        }
+    }
+
+    function onScanSuccess(decodedText) {
+        if (navigator.vibrate) navigator.vibrate(100);
+        $('#searchInput').val(decodedText);
+        $('.scanner-footer p').html('<i class="fas fa-check-circle text-success"></i> Code détecté : <strong>' + decodedText + '</strong>');
+        setTimeout(function() {
+            closeScanner();
+        }, 800);
+    }
+
+    function onScanError() {}
+
+    function showScannerError(message) {
+        $('#barcodeReader').html(
+            '<div class="d-flex align-items-center justify-content-center h-100">' +
+            '<div class="alert alert-danger m-4 text-center">' +
+            '<i class="fas fa-exclamation-triangle fa-2x mb-2"></i><br>' + message +
+            '<br><button class="btn btn-outline-danger btn-sm mt-3" onclick="$(\'#closeScannerBtn\').click();">Fermer</button>' +
+            '</div></div>'
+        );
+    }
+});
+</script>
 {% endblock %}

@@ -13,7 +13,7 @@
 
         <div class="card mb-4">
             <div class="card-header" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
-                <h5 class="mb-0 text-white"><i class="fas fa-search"></i> Rechercher un album</h5>
+                <h5 class="mb-0 text-white"><i class="fas fa-search"></i><span class="d-none d-md-inline"> Rechercher</span> un album</h5>
             </div>
             <div class="card-body">
                 <form action="{{ path('musique_list') }}" method="get" id="searchForm">
@@ -21,18 +21,16 @@
                         <div class="col-md-12">
                             <div class="form-group mb-3">
                                 <label for="search" class="font-weight-bold text-dark">Que recherchez-vous ?</label>
-                                <div class="input-group input-group-lg">
-                                    <div class="input-group-prepend">
-                                        <span class="input-group-text bg-white border-right-0"><i class="fas fa-music" style="color: #e74c3c;"></i></span>
-                                    </div>
-                                    <input type="text" name="search" id="searchInput" class="form-control border-left-0" placeholder="Artiste, titre ou code-barres...">
-                                    <div class="input-group-append d-md-none">
-                                        <button type="button" class="btn bg-white border-left-0" id="scanBarcodeBtn" title="Scanner un code-barres" style="border-color: #ced4da; color: #6c757d;">
-                                            <i class="fas fa-barcode"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <small class="form-text text-muted">Recherche par artiste, titre ou code-barres. <span class="d-md-none text-danger"><i class="fas fa-camera"></i> Cliquez sur l'icône code-barres pour scanner.</span></small>
+                                {% include 'components/search_input_group.html.twig' with {
+                                    icon: 'fas fa-music',
+                                    accent: '#e74c3c',
+                                    name: 'search',
+                                    input_id: 'searchInput',
+                                    placeholder: 'Artiste, titre ou code-barres...',
+                                    scanner: true,
+                                    scanner_hint: true
+                                } %}
+                                <small class="form-text text-muted d-none d-md-block">Recherche par artiste, titre ou code-barres.</small>
                             </div>
                         </div>
                     </div>
@@ -64,7 +62,7 @@
 
                     <div class="text-center">
                         <button type="submit" class="btn btn-lg text-white px-5" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
-                            <i class="fas fa-search"></i> Rechercher
+                            <i class="fas fa-search"></i><span class="d-none d-md-inline"> Rechercher</span>
                         </button>
                     </div>
                 </form>
@@ -131,12 +129,6 @@
     </div>
 
     <style>
-        @media (min-width: 768px) {
-            #searchInput {
-                border-top-right-radius: 0.3rem !important;
-                border-bottom-right-radius: 0.3rem !important;
-            }
-        }
         #barcodeScannerOverlay {
             display: none;
             position: fixed;
