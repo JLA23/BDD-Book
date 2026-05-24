@@ -9,6 +9,18 @@ use Doctrine\Migrations\AbstractMigration;
 
 final class Version20260518120000 extends AbstractMigration
 {
+    private const TABLES = [
+        'livre',
+        'dvd',
+        'musique',
+        'game',
+        'kiosk_collec',
+        'kiosk_num',
+        'dvd_user_collection',
+        'musique_user_collection',
+        'lien_user_game',
+    ];
+
     public function getDescription(): string
     {
         return 'Chemins locaux stored_path pour images (URL source conservée)';
@@ -16,27 +28,40 @@ final class Version20260518120000 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        $this->addSql('ALTER TABLE livre ADD stored_path VARCHAR(500) DEFAULT NULL');
-        $this->addSql('ALTER TABLE dvd ADD stored_path VARCHAR(500) DEFAULT NULL');
-        $this->addSql('ALTER TABLE musique ADD stored_path VARCHAR(500) DEFAULT NULL');
-        $this->addSql('ALTER TABLE game ADD stored_path VARCHAR(500) DEFAULT NULL');
-        $this->addSql('ALTER TABLE kiosk_collec ADD stored_path VARCHAR(500) DEFAULT NULL');
-        $this->addSql('ALTER TABLE kiosk_num ADD stored_path VARCHAR(500) DEFAULT NULL');
-        $this->addSql('ALTER TABLE dvd_user_collection ADD stored_path VARCHAR(500) DEFAULT NULL');
-        $this->addSql('ALTER TABLE musique_user_collection ADD stored_path VARCHAR(500) DEFAULT NULL');
-        $this->addSql('ALTER TABLE lien_user_game ADD stored_path VARCHAR(500) DEFAULT NULL');
+        $schemaManager = $this->connection->createSchemaManager();
+
+        foreach (self::TABLES as $tableName) {
+            if (!$schemaManager->tablesExist([$tableName])) {
+                continue;
+            }
+
+            $table = $schemaManager->introspectTable($tableName);
+            if ($table->hasColumn('stored_path')) {
+                continue;
+            }
+
+            $this->addSql(sprintf(
+                'ALTER TABLE %s ADD stored_path VARCHAR(500) DEFAULT NULL',
+                $tableName
+            ));
+        }
     }
 
     public function down(Schema $schema): void
     {
-        $this->addSql('ALTER TABLE livre DROP stored_path');
-        $this->addSql('ALTER TABLE dvd DROP stored_path');
-        $this->addSql('ALTER TABLE musique DROP stored_path');
-        $this->addSql('ALTER TABLE game DROP stored_path');
-        $this->addSql('ALTER TABLE kiosk_collec DROP stored_path');
-        $this->addSql('ALTER TABLE kiosk_num DROP stored_path');
-        $this->addSql('ALTER TABLE dvd_user_collection DROP stored_path');
-        $this->addSql('ALTER TABLE musique_user_collection DROP stored_path');
-        $this->addSql('ALTER TABLE lien_user_game DROP stored_path');
+        $schemaManager = $this->connection->createSchemaManager();
+
+        foreach (self::TABLES as $tableName) {
+            if (!$schemaManager->tablesExist([$tableName])) {
+                continue;
+            }
+
+            $table = $schemaManager->introspectTable($tableName);
+            if (!$table->hasColumn('stored_path')) {
+                continue;
+            }
+
+            $this->addSql(sprintf('ALTER TABLE %s DROP stored_path', $tableName));
+        }
     }
 }
