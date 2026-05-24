@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /**
  * Émet sur stdout les INSERT game_console_alias alignés sur ConsoleSlugAliasSeedData.
- * Usage : php scripts/emit-console-alias-sql.php >> migrations/game_entities_migration.sql (après édition manuelle)
+ * Usage : php scripts/emit-console-alias-sql.php >> sql/game_entities_migration.sql (après édition manuelle)
  */
 
 require dirname(__DIR__) . '/vendor/autoload.php';

@@ -184,10 +184,10 @@ mysql -u root -p -e "FLUSH PRIVILEGES;"
 # Vérifier la connexion à la base
 php bin/console doctrine:database:create --if-not-exists
 
-# Mettre à jour le schéma
-php bin/console doctrine:schema:update --dump-sql  # Voir les changements
-php bin/console doctrine:schema:update --force     # Appliquer
+# Mettre à jour le schéma (dev / contrôle uniquement)
+php bin/console doctrine:schema:update --dump-sql --complete  # Voir les changements
+# php bin/console doctrine:schema:update --force              # Dev seulement
 
-# Exécuter les migrations
-php bin/console doctrine:migrations:migrate
+# Production : scripts SQL manuels (voir sql/README.md)
+# mysql -u USER -p NOM_BASE < sql/prod_dvd_musique.sql
 ```
