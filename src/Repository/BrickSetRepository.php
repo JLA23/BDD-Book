@@ -33,6 +33,30 @@ class BrickSetRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
     }
 
+    public function findByEan(string $ean): ?BrickSet
+    {
+        $normalized = preg_replace('/\D/', '', $ean);
+        if ($normalized === '') {
+            return null;
+        }
+
+        $candidates = $this->createQueryBuilder('s')
+            ->where('s.ean IS NOT NULL')
+            ->andWhere('s.ean LIKE :partial OR s.ean = :eanRaw')
+            ->setParameter('partial', '%' . $normalized . '%')
+            ->setParameter('eanRaw', trim($ean))
+            ->getQuery()
+            ->getResult();
+
+        foreach ($candidates as $set) {
+            if (preg_replace('/\D/', '', (string) $set->getEan()) === $normalized) {
+                return $set;
+            }
+        }
+
+        return null;
+    }
+
     public function referenceExists(string $reference): bool
     {
         $result = $this->createQueryBuilder('s')
@@ -53,6 +77,7 @@ class BrickSetRepository extends ServiceEntityRepository
             ->addSelect('c', 'm')
             ->where('s.nom LIKE :search')
             ->orWhere('s.reference LIKE :search')
+            ->orWhere('s.ean LIKE :search')
             ->orWhere('c.nom LIKE :search')
             ->orWhere('m.nom LIKE :search')
             ->setParameter('search', '%' . $search . '%')
@@ -71,7 +96,7 @@ class BrickSetRepository extends ServiceEntityRepository
             ->addSelect('i');
 
         if ($search) {
-            $qb->andWhere('s.nom LIKE :search OR s.reference LIKE :search OR c.nom LIKE :search OR m.nom LIKE :search')
+            $qb->andWhere('s.nom LIKE :search OR s.reference LIKE :search OR s.ean LIKE :search OR c.nom LIKE :search OR m.nom LIKE :search')
                ->setParameter('search', '%' . $search . '%');
         }
 

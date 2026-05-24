@@ -1,0 +1,60 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Ajouter un album{% endblock %}
+
+{% block body %}
+<div class="container mt-4">
+
+    <h1 class="mb-4"><i class="fas fa-plus-circle mr-2" style="color: #e74c3c;"></i>Ajouter un album</h1>
+
+    <div class="row justify-content-center">
+        <div class="col-md-5 mb-4">
+            <div class="card h-100 shadow-sm" style="border-color: #e74c3c;">
+                <div class="card-body text-center d-flex flex-column">
+                    <div class="mb-3">
+                        <i class="fas fa-search fa-3x" style="color: #e74c3c;"></i>
+                    </div>
+                    <h5 class="card-title">Rechercher via API</h5>
+                    <p class="card-text text-muted flex-grow-1">
+                        Rechercher un album par son <strong>titre ou artiste</strong> via l'API Discogs.
+                        Les informations seront récupérées automatiquement.
+                    </p>
+                    {% if apiConfigured %}
+                        <div class="mb-3">
+                            <span class="badge badge-light border">
+                                <i class="fas fa-music mr-1"></i>Discogs
+                            </span>
+                        </div>
+                    {% else %}
+                        <div class="mb-3">
+                            <span class="badge badge-warning">
+                                <i class="fas fa-exclamation-triangle mr-1"></i>API non configurée
+                            </span>
+                        </div>
+                    {% endif %}
+                    <a href="{{ path('musique_search_api') }}" class="btn btn-block mt-auto text-white" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+                        <i class="fas fa-search mr-1"></i> Rechercher via API
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-5 mb-4">
+            <div class="card h-100 shadow-sm border-warning">
+                <div class="card-body text-center d-flex flex-column">
+                    <div class="mb-3">
+                        <i class="fas fa-edit fa-3x text-warning"></i>
+                    </div>
+                    <h5 class="card-title">Saisie manuelle</h5>
+                    <p class="card-text text-muted flex-grow-1">
+                        Remplir manuellement toutes les informations de l'album.
+                    </p>
+                    <a href="{{ path('musique_new') }}" class="btn btn-warning btn-block mt-auto">
+                        <i class="fas fa-edit mr-1"></i> Saisie manuelle
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

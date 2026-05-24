@@ -1,0 +1,94 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}BDD-Hub - Accueil{% endblock %}
+
+{% block body %}
+<div id="acceuilSite">
+    <div class="text-center mb-5">
+        <h1 class="display-4 font-weight-bold text-dark">
+            <i class="fas fa-database"></i> BDD-Hub
+        </h1>
+        <p class="lead text-muted">Base de données de la famille Lefebvre</p>
+    </div>
+
+    <div class="row justify-content-center">
+        <!-- BDD-Books -->
+        <div class="col-md-3 mb-4">
+            <a href="{{ path('books_index') }}" class="card h-100 text-decoration-none shadow-sm" style="cursor: pointer; border-left: 4px solid #007bff;">
+                <div class="card-body text-center py-5">
+                    <div class="mb-3">
+                        <i class="fas fa-book fa-4x text-primary"></i>
+                    </div>
+                    <h4 class="card-title text-dark">BDD-Books</h4>
+                    <p class="card-text text-muted">Livres, BD, Mangas</p>
+                </div>
+            </a>
+        </div>
+
+        <!-- BDD-Magazines -->
+        <div class="col-md-3 mb-4">
+            <a href="{{ path('magazines_list') }}" class="card h-100 text-decoration-none shadow-sm" style="cursor: pointer; border-left: 4px solid #28a745;">
+                <div class="card-body text-center py-5">
+                    <div class="mb-3">
+                        <i class="fas fa-newspaper fa-4x text-success"></i>
+                    </div>
+                    <h4 class="card-title text-dark">BDD-Magazines</h4>
+                    <p class="card-text text-muted">Magazines, Revues</p>
+                </div>
+            </a>
+        </div>
+
+        <!-- BDD-Brick -->
+        <div class="col-md-3 mb-4">
+            <a href="{{ path('brick_index') }}" class="card h-100 text-decoration-none shadow-sm" style="cursor: pointer; border-left: 4px solid #ff6b35;">
+                <div class="card-body text-center py-5">
+                    <div class="mb-3">
+                        <i class="fas fa-cubes fa-4x" style="color: #ff6b35;"></i>
+                    </div>
+                    <h4 class="card-title text-dark">BDD-Brick</h4>
+                    <p class="card-text text-muted">Sets de construction</p>
+                </div>
+            </a>
+        </div>
+
+        <!-- BDD-Games -->
+        <div class="col-md-3 mb-4">
+            <a href="{{ path('game_index') }}" class="card h-100 text-decoration-none shadow-sm" style="cursor: pointer; border-left: 4px solid #6f42c1;">
+                <div class="card-body text-center py-5">
+                    <div class="mb-3">
+                        <i class="fas fa-gamepad fa-4x" style="color: #6f42c1;"></i>
+                    </div>
+                    <h4 class="card-title text-dark">BDD-Games</h4>
+                    <p class="card-text text-muted">Jeux vidéo</p>
+                </div>
+            </a>
+        </div>
+
+        <!-- BDD-DVD -->
+        <div class="col-md-3 mb-4">
+            <a href="{{ path('dvd_index') }}" class="card h-100 text-decoration-none shadow-sm" style="cursor: pointer; border-left: 4px solid #1a5276;">
+                <div class="card-body text-center py-5">
+                    <div class="mb-3">
+                        <i class="fas fa-compact-disc fa-4x" style="color: #1a5276;"></i>
+                    </div>
+                    <h4 class="card-title text-dark">BDD-DVD</h4>
+                    <p class="card-text text-muted">DVD & Blu-ray</p>
+                </div>
+            </a>
+        </div>
+
+        <!-- BDD-Musique -->
+        <div class="col-md-3 mb-4">
+            <a href="{{ path('musique_index') }}" class="card h-100 text-decoration-none shadow-sm" style="cursor: pointer; border-left: 4px solid #e74c3c;">
+                <div class="card-body text-center py-5">
+                    <div class="mb-3">
+                        <i class="fas fa-music fa-4x" style="color: #e74c3c;"></i>
+                    </div>
+                    <h4 class="card-title text-dark">BDD-Musique</h4>
+                    <p class="card-text text-muted">CD, Vinyles, K7</p>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

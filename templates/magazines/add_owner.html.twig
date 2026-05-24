@@ -47,7 +47,10 @@
                 <div class="row" id="usersList">
                     {% for user in users %}
                         {% set isOwner = ownersData[user.id] is defined %}
-                        {% set userComment = isOwner ? ownersData[user.id].commentaire : '' %}
+                        {% set ownerData = isOwner ? ownersData[user.id] : {} %}
+                        {% set userComment = ownerData.commentaire|default('') %}
+                        {% set userPrix = ownerData.prixAchat|default('') %}
+                        {% set userDate = ownerData.dateAchat ? ownerData.dateAchat|date('Y-m-d') : '' %}
                         <div class="col-md-6 mb-3 user-item" data-username="{{ user.username|lower }}" data-name="{{ user.name|lower }} {{ user.lastname|lower }}">
                             <div class="card {% if isOwner %}border-primary{% endif %}">
                                 <div class="card-body">
@@ -62,8 +65,18 @@
                                             <small class="text-muted">{{ user.username }}</small>
                                         </label>
                                     </div>
-                                    <div class="mt-2 comment-field" {% if not isOwner %}style="display: none;"{% endif %}>
-                                        <textarea name="commentaires[{{ user.id }}]" class="form-control form-control-sm" 
+                                    <div class="mt-2 owner-fields" {% if not isOwner %}style="display: none;"{% endif %}>
+                                        <div class="row">
+                                            <div class="col-6 mb-2">
+                                                <label class="small text-muted mb-0">Date d'achat</label>
+                                                <input type="date" name="dates_achat[{{ user.id }}]" class="form-control form-control-sm" value="{{ userDate }}">
+                                            </div>
+                                            <div class="col-6 mb-2">
+                                                <label class="small text-muted mb-0">Prix d'achat (€)</label>
+                                                <input type="number" step="0.01" min="0" name="prix_achat[{{ user.id }}]" class="form-control form-control-sm" value="{{ userPrix }}" placeholder="0.00">
+                                            </div>
+                                        </div>
+                                        <textarea name="commentaires[{{ user.id }}]" class="form-control form-control-sm"
                                                   rows="2" placeholder="Commentaire pour {{ user.name }}...">{{ userComment }}</textarea>
                                     </div>
                                 </div>
@@ -108,7 +121,7 @@
 
         // Afficher/masquer le champ de commentaire quand on coche/décoche
         $('.user-checkbox').on('change', function() {
-            var commentField = $(this).closest('.card-body').find('.comment-field');
+            var commentField = $(this).closest('.card-body').find('.owner-fields');
             var card = $(this).closest('.card');
             
             if ($(this).is(':checked')) {

@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Trait\StoredImagePathTrait;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -12,6 +13,8 @@ use Doctrine\ORM\Mapping as ORM;
  */
 class LienUserGame
 {
+    use StoredImagePathTrait;
+
     /**
      * @var int
      *
@@ -34,11 +37,22 @@ class LienUserGame
     private $game;
 
     /**
-     * @var string Type d'édition: physique ou numérique
-     *
-     * @ORM\Column(name="type_edition", type="string", length=20)
+     * @ORM\ManyToOne(targetEntity="App\Entity\GameConsole")
+     * @ORM\JoinColumn(name="console_id", referencedColumnName="id", nullable=true)
      */
-    private $typeEdition = 'physique';
+    private $consoleEntity;
+
+    /**
+     * @ORM\ManyToOne(targetEntity="App\Entity\GameTypeEdition")
+     * @ORM\JoinColumn(name="type_edition_id", referencedColumnName="id", nullable=true)
+     */
+    private $typeEditionEntity;
+
+    /**
+     * @ORM\ManyToOne(targetEntity="App\Entity\GameStore")
+     * @ORM\JoinColumn(name="store_id", referencedColumnName="id", nullable=true)
+     */
+    private $storeEntity;
 
     /**
      * @var string|null Nom de l'édition (Standard, Collector, GOTY, etc.)
@@ -60,13 +74,6 @@ class LienUserGame
      * @ORM\Column(name="date_achat", type="date", nullable=true)
      */
     private $dateAchat;
-
-    /**
-     * @var string|null Store (Steam, Epic, PSN, Xbox, Nintendo eShop, etc.) - pour édition numérique
-     *
-     * @ORM\Column(name="store", type="string", length=100, nullable=true)
-     */
-    private $store;
 
     /**
      * @var string|null URL ou nom de fichier de l'image personnalisée
@@ -123,23 +130,17 @@ class LienUserGame
 
     public function getTypeEdition(): string
     {
-        return $this->typeEdition;
-    }
-
-    public function setTypeEdition(string $typeEdition): self
-    {
-        $this->typeEdition = $typeEdition;
-        return $this;
+        return $this->typeEditionEntity?->getCode() ?? 'physique';
     }
 
     public function isPhysique(): bool
     {
-        return $this->typeEdition === 'physique';
+        return $this->getTypeEdition() === 'physique';
     }
 
     public function isNumerique(): bool
     {
-        return $this->typeEdition === 'numerique';
+        return $this->getTypeEdition() === 'numerique';
     }
 
     public function getNomEdition(): ?string
@@ -175,17 +176,6 @@ class LienUserGame
         return $this;
     }
 
-    public function getStore(): ?string
-    {
-        return $this->store;
-    }
-
-    public function setStore(?string $store): self
-    {
-        $this->store = $store;
-        return $this;
-    }
-
     public function getImagePerso(): ?string
     {
         return $this->imagePerso;
@@ -195,6 +185,90 @@ class LienUserGame
     {
         $this->imagePerso = $imagePerso;
         return $this;
+    }
+
+    public function getConsoleEntity(): ?GameConsole
+    {
+        return $this->consoleEntity;
+    }
+
+    public function setConsoleEntity(?GameConsole $consoleEntity): self
+    {
+        $this->consoleEntity = $consoleEntity;
+        return $this;
+    }
+
+    public function getTypeEditionEntity(): ?GameTypeEdition
+    {
+        return $this->typeEditionEntity;
+    }
+
+    public function setTypeEditionEntity(?GameTypeEdition $typeEditionEntity): self
+    {
+        $this->typeEditionEntity = $typeEditionEntity;
+        return $this;
+    }
+
+    public function getStoreEntity(): ?GameStore
+    {
+        return $this->storeEntity;
+    }
+
+    public function setStoreEntity(?GameStore $storeEntity): self
+    {
+        $this->storeEntity = $storeEntity;
+        return $this;
+    }
+
+    /**
+     * Retourne le nom de la console (depuis l'entité si dispo, sinon l'ancien champ string)
+     */
+    public function getConsoleDisplay(): ?string
+    {
+        return $this->consoleEntity?->getCode();
+    }
+
+    /**
+     * Retourne l'icône de la console
+     */
+    public function getConsoleIcone(): ?string
+    {
+        return $this->consoleEntity ? $this->consoleEntity->getIcone() : null;
+    }
+
+    /**
+     * Retourne la couleur de la console
+     */
+    public function getConsoleCouleur(): ?string
+    {
+        return $this->consoleEntity ? $this->consoleEntity->getCouleur() : null;
+    }
+
+    /**
+     * Code console pour filtres / badges : FK si présente, sinon valeur brute du champ historique.
+     */
+    public function getResolvedConsoleCode(): ?string
+    {
+        return $this->consoleEntity?->getCode();
+    }
+
+    /**
+     * Libellé pour affichage (nom canonique ou chaîne brute).
+     */
+    public function getConsoleLabelForDisplay(): ?string
+    {
+        return $this->consoleEntity?->getNom();
+    }
+
+    /**
+     * Nom du store pour affichage (édition numérique).
+     */
+    public function getStoreDisplay(): ?string
+    {
+        if (!$this->isNumerique()) {
+            return null;
+        }
+        return $this->storeEntity?->getNom();
     }
 
     public function getCommentaire(): ?string
@@ -221,12 +295,18 @@ class LienUserGame
 
     public function getDisplayImage(): ?string
     {
+        if (!empty($this->storedPath)) {
+            return $this->storedPath;
+        }
+
         if ($this->imagePerso) {
             if (filter_var($this->imagePerso, FILTER_VALIDATE_URL)) {
                 return $this->imagePerso;
             }
+
             return '/uploads/game/user/' . $this->imagePerso;
         }
+
         return null;
     }
 }

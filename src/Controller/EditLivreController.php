@@ -11,6 +11,7 @@ use App\Entity\LienUserLivre;
 use App\Entity\Livre;
 use App\Form\LivreType;
 use App\Service\BookCoverService;
+use App\Service\Media\MediaImageSyncService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -24,7 +25,8 @@ class EditLivreController extends AbstractController
 
     public function __construct(
         EntityManagerInterface $em,
-        BookCoverService $coverService
+        BookCoverService $coverService,
+        private MediaImageSyncService $mediaImageSync,
     ) {
         $this->em = $em;
         $this->coverService = $coverService;
@@ -33,7 +35,7 @@ class EditLivreController extends AbstractController
     /**
      * Éditer un livre (uniquement si propriétaire)
      */
-    #[Route('/livre/{id}/modifier', name: 'livre_modifier', methods: ['GET', 'POST'])]
+    #[Route('/books/{id}/modifier', name: 'livre_modifier', methods: ['GET', 'POST'])]
     public function modifier(int $id, Request $request): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
@@ -164,6 +166,8 @@ class EditLivreController extends AbstractController
         $monnaieAchat = $form->get('monnaieAchat')->getData();
         $lienUser->setMonnaie($monnaieAchat);
 
+        $this->em->flush();
+        $this->mediaImageSync->syncLivreCover($livre);
         $this->em->flush();
 
         $this->addFlash('warning', 'Le livre "' . $livre->getTitre() . '" a été modifié avec succès !');

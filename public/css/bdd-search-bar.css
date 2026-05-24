@@ -1,0 +1,198 @@
+/* Barre de recherche unifiée : icône type (gauche), champ, scan mobile (droite) */
+.bdd-search-group {
+    align-items: stretch;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    flex-wrap: nowrap;
+}
+
+.bdd-search-group > .input-group-prepend {
+    display: flex;
+    flex-shrink: 0;
+}
+
+.bdd-search-group .bdd-search-prepend {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 1.25rem;
+    line-height: 1.5;
+    border: 1px solid #ced4da;
+    border-right: 0;
+    border-radius: 0.3rem 0 0 0.3rem;
+    background: #fff;
+}
+
+.bdd-search-group .bdd-search-type-icon {
+    line-height: 1;
+    color: var(--bdd-search-accent, #6c757d);
+}
+
+.bdd-search-group .bdd-search-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 1%;
+    border: 1px solid #ced4da;
+    border-left: 0;
+    border-radius: 0;
+}
+
+/* Sans scanner : champ fermé à droite */
+.bdd-search-group:not(.bdd-search-group--with-scanner) .bdd-search-input {
+    border-right: 1px solid #ced4da;
+    border-radius: 0 0.3rem 0.3rem 0;
+}
+
+.bdd-search-group > .input-group-append > .bdd-search-scan-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    height: 100%;
+    padding: 0.5rem 0.85rem;
+    font-size: 1.25rem;
+    line-height: 1.5;
+    border: 1px solid #ced4da;
+    border-left: 0;
+    border-radius: 0 0.3rem 0.3rem 0;
+    color: #6c757d;
+    background: #fff;
+}
+
+.bdd-search-group > .input-group-append > .bdd-search-scan-btn:hover {
+    background: #f8f9fa;
+    color: var(--bdd-search-accent, #6c757d);
+}
+
+/* Mobile : scan à droite du champ */
+@media (max-width: 767.98px) {
+    .bdd-search-group--with-scanner .bdd-search-input {
+        border-right: 0;
+    }
+
+    .bdd-search-group--with-scanner > .input-group-append.d-md-none > .bdd-search-scan-btn {
+        border-radius: 0 0.3rem 0.3rem 0;
+    }
+
+    /* Champ + bouton recherche API (append après scan) */
+    .bdd-search-group--with-scanner > .input-group-append.d-md-none + .input-group-append > .btn {
+        border-radius: 0 0.3rem 0.3rem 0;
+    }
+}
+
+/* Desktop : scan masqué, champ fermé à droite */
+@media (min-width: 768px) {
+    .bdd-search-group--with-scanner .bdd-search-input {
+        border-right: 1px solid #ced4da;
+        border-radius: 0;
+    }
+
+    .bdd-search-group--with-scanner:has(> .input-group-append:not(.d-md-none)) .bdd-search-input {
+        border-right: 0;
+        border-radius: 0;
+    }
+
+    .bdd-search-group > .input-group-append:not(.d-md-none) > .btn {
+        border-radius: 0 0.3rem 0.3rem 0;
+    }
+
+    .bdd-search-group:not(.bdd-search-group--with-scanner) .bdd-search-input,
+    .bdd-search-group--with-scanner:not(:has(> .input-group-append:not(.d-md-none))) .bdd-search-input {
+        border-radius: 0 0.3rem 0.3rem 0;
+    }
+}
+
+.input-group-lg.bdd-search-group .bdd-search-prepend,
+.input-group-lg.bdd-search-group > .input-group-append > .bdd-search-scan-btn {
+    padding: 0.5rem 1rem;
+    font-size: 1.25rem;
+}
+
+/* Pages liste / résultats : pas de débordement horizontal */
+@media (max-width: 767.98px) {
+    html,
+    body {
+        overflow-x: hidden;
+        max-width: 100%;
+    }
+
+    .bdd-list-page.container-fluid {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+        max-width: 100%;
+    }
+
+    .bdd-list-page .row {
+        margin-left: -0.375rem;
+        margin-right: -0.375rem;
+    }
+
+    .bdd-list-page .row > [class*="col-"] {
+        padding-left: 0.375rem;
+        padding-right: 0.375rem;
+    }
+
+    .bdd-list-page .card-header .d-flex {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .bdd-list-page .card-header .btn {
+        white-space: nowrap;
+    }
+
+    .bdd-list-page .d-flex.justify-content-between {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+}
+
+/* Scanner plein écran */
+#barcodeScannerOverlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    max-width: 100%;
+    background: #000;
+    z-index: 999999;
+    flex-direction: column;
+}
+
+#barcodeScannerOverlay.active {
+    display: flex !important;
+}
+
+#barcodeScannerOverlay .scanner-header {
+    background: linear-gradient(135deg, var(--bdd-scanner-from, #667eea) 0%, var(--bdd-scanner-to, #764ba2) 100%);
+    color: white;
+    padding: 12px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+}
+
+#barcodeScannerOverlay #barcodeReader {
+    flex: 1;
+    width: 100%;
+    background: #000;
+}
+
+#barcodeScannerOverlay .scanner-footer {
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 12px 15px;
+    text-align: center;
+}
+
+html.scanner-open,
+html.scanner-open body {
+    overflow: hidden !important;
+    height: 100% !important;
+}

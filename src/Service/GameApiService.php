@@ -4,9 +4,11 @@ namespace App\Service;
 
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+
 class GameApiService
 {
     private HttpClientInterface $httpClient;
+    private IgdbConsoleMappingService $igdbConsoleMapping;
     private ?string $twitchClientId;
     private ?string $twitchClientSecret;
     private ?string $deeplApiKey;
@@ -14,12 +16,14 @@ class GameApiService
     private ?int $tokenExpires = null;
 
     public function __construct(
-        HttpClientInterface $httpClient, 
-        ?string $twitchClientId = null, 
+        HttpClientInterface $httpClient,
+        IgdbConsoleMappingService $igdbConsoleMapping,
+        ?string $twitchClientId = null,
         ?string $twitchClientSecret = null,
         ?string $deeplApiKey = null
     ) {
         $this->httpClient = $httpClient;
+        $this->igdbConsoleMapping = $igdbConsoleMapping;
         $this->twitchClientId = $twitchClientId;
         $this->twitchClientSecret = $twitchClientSecret;
         $this->deeplApiKey = $deeplApiKey;
@@ -74,10 +78,12 @@ class GameApiService
 
         try {
             $response = $this->httpClient->request('POST', 'https://api-free.deepl.com/v2/translate', [
-                'body' => [
-                    'auth_key' => $this->deeplApiKey,
-                    'text' => $text,
-                    'source_lang' => 'EN',
+                'headers' => [
+                    'Authorization' => 'DeepL-Auth-Key ' . $this->deeplApiKey,
+                    'Content-Type' => 'application/json',
+                ],
+                'json' => [
+                    'text' => [$text],
                     'target_lang' => 'FR',
                 ],
             ]);
@@ -85,6 +91,8 @@ class GameApiService
             $data = $response->toArray();
             return $data['translations'][0]['text'] ?? $text;
         } catch (\Exception $e) {
+            // Log error for debugging
+            error_log('DeepL translation error: ' . $e->getMessage());
             return $text;
         }
     }
@@ -92,7 +100,7 @@ class GameApiService
     /**
      * Recherche des jeux par titre via IGDB API
      */
-    public function searchGames(string $query, int $limit = 10): array
+    public function searchGames(string $query, int $limit = 10, ?string $platform = null, ?string $year = null): array
     {
         if (!$this->isConfigured()) {
             return [];
@@ -104,23 +112,50 @@ class GameApiService
         }
 
         try {
+            $escapedQuery = str_replace(['\\', '"'], ['\\\\', '\\"'], trim($query));
+            $platformId = $this->igdbConsoleMapping->resolveIgdbPlatformFilterValue($platform) ?? 0;
+            $yearInt = $year !== null && $year !== '' ? (int) $year : 0;
+
+            // Ne pas filtrer les plateformes dans la requête IGDB (search + where platforms
+            // rate souvent des éditions multi-plateformes) : on filtre en PHP sur platforms.id.
+            $fetchLimit = max(1, min($limit, 50));
+            if ($platformId > 0) {
+                $fetchLimit = 50;
+            }
+
+            $queryBody = 'search "' . $escapedQuery . '";';
+            $queryBody .= ' fields name, first_release_date, cover.url, genres.name, platforms.name, platforms.id, rating, aggregated_rating;';
+            $queryBody .= ' limit ' . $fetchLimit . ';';
+
             $response = $this->httpClient->request('POST', 'https://api.igdb.com/v4/games', [
                 'headers' => [
                     'Client-ID' => $this->twitchClientId,
                     'Authorization' => 'Bearer ' . $token,
                 ],
-                'body' => "search \"{$query}\"; 
-                    fields name, first_release_date, cover.url, genres.name, platforms.name, rating, aggregated_rating;
-                    limit {$limit};",
+                'body' => $queryBody,
             ]);
 
             $games = $response->toArray();
+
+            if ($platformId > 0) {
+                $games = array_values(array_filter(
+                    $games,
+                    fn (array $game): bool => $this->gameHasPlatform($game, $platformId)
+                ));
+            }
+            if ($yearInt > 0) {
+                $games = array_values(array_filter(
+                    $games,
+                    fn (array $game): bool => $this->gameMatchesYear($game, $yearInt)
+                ));
+            }
+            $games = \array_slice($games, 0, max(1, min($limit, 50)));
+
             $results = [];
 
             foreach ($games as $game) {
                 $cover = null;
                 if (isset($game['cover']['url'])) {
-                    // Convertir en grande image (t_cover_big)
                     $cover = str_replace('t_thumb', 't_cover_big', $game['cover']['url']);
                     if (!str_starts_with($cover, 'http')) {
                         $cover = 'https:' . $cover;
@@ -132,8 +167,8 @@ class GameApiService
                     'titre' => $game['name'],
                     'annee' => isset($game['first_release_date']) ? (int) date('Y', $game['first_release_date']) : null,
                     'cover' => $cover,
-                    'genres' => implode(', ', array_map(fn($g) => $g['name'], $game['genres'] ?? [])),
-                    'platforms' => array_map(fn($p) => $p['name'], $game['platforms'] ?? []),
+                    'genres' => implode(', ', array_map(static fn ($g) => $g['name'] ?? '', $game['genres'] ?? [])),
+                    'platforms' => $this->extractPlatformLabels($game['platforms'] ?? []),
                     'rating' => isset($game['rating']) ? round($game['rating'] / 10, 1) : null,
                     'metacritic' => isset($game['aggregated_rating']) ? round($game['aggregated_rating']) : null,
                 ];
@@ -143,6 +178,46 @@ class GameApiService
         } catch (\Exception $e) {
             return [];
         }
+    }
+
+    /**
+     * @param list<int|array{id?: int, name?: string}> $platforms
+     *
+     * @return list<string>
+     */
+    private function extractPlatformLabels(array $platforms): array
+    {
+        $labels = [];
+        foreach ($platforms as $platform) {
+            if (is_array($platform) && !empty($platform['name'])) {
+                $labels[] = (string) $platform['name'];
+            }
+        }
+
+        return $labels;
+    }
+
+    private function gameHasPlatform(array $game, int $platformId): bool
+    {
+        foreach ($game['platforms'] ?? [] as $platform) {
+            if (is_array($platform) && isset($platform['id']) && (int) $platform['id'] === $platformId) {
+                return true;
+            }
+            if (is_int($platform) && $platform === $platformId) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function gameMatchesYear(array $game, int $year): bool
+    {
+        if (!isset($game['first_release_date'])) {
+            return false;
+        }
+
+        return (int) date('Y', (int) $game['first_release_date']) === $year;
     }
 
     /**
@@ -168,9 +243,9 @@ class GameApiService
                 'body' => "where id = {$gameId};
                     fields name, first_release_date, summary, storyline, 
                            cover.url, screenshots.url,
-                           genres.name, platforms.name, platforms.abbreviation,
+                           genres.name, platforms.name, platforms.id, platforms.abbreviation,
                            involved_companies.company.name, involved_companies.developer, involved_companies.publisher,
-                           age_ratings.category, age_ratings.rating,
+                           age_ratings.*,
                            websites.url, websites.category,
                            aggregated_rating;",
             ]);
@@ -194,10 +269,53 @@ class GameApiService
                 }
             }
 
-            // Classification PEGI (category 2 = PEGI)
+            // Classification PEGI/ESRB depuis age_ratings
+            // IGDB utilise: organization (1=ESRB, 2=PEGI, etc.) et rating_category
+            // PEGI rating_category: 9=PEGI 3, 10=PEGI 7, 11=PEGI 12, 12=PEGI 16, 13=PEGI 18 (anciens)
+            // Nouveaux: 8=PEGI 3, 9=PEGI 7, 10=PEGI 12, 11=PEGI 16, 12=PEGI 18
             $classification = null;
-            foreach ($game['age_ratings'] ?? [] as $ar) {
-              
+            $ageRatings = $game['age_ratings'] ?? [];
+            
+            if (!empty($ageRatings)) {
+                // Mapping rating_category vers PEGI
+                $pegiMap = [
+                    8 => 'PEGI 3', 9 => 'PEGI 7', 10 => 'PEGI 12', 11 => 'PEGI 16', 12 => 'PEGI 18',
+                    // Anciens IDs possibles
+                    1 => 'PEGI 3', 2 => 'PEGI 7', 3 => 'PEGI 12', 4 => 'PEGI 16', 5 => 'PEGI 18',
+                ];
+                // ESRB rating_category: 6=M (Mature 17+), 5=T (Teen), etc.
+                $esrbToPegi = [
+                    1 => 'PEGI 3',   // RP
+                    2 => 'PEGI 3',   // EC
+                    3 => 'PEGI 3',   // E
+                    4 => 'PEGI 7',   // E10+
+                    5 => 'PEGI 12',  // T
+                    6 => 'PEGI 18',  // M
+                    7 => 'PEGI 18',  // AO
+                ];
+                
+                $esrbFallback = null;
+                foreach ($ageRatings as $ar) {
+                    // organization: 1=ESRB, 2=PEGI
+                    $org = $ar['organization'] ?? ($ar['category'] ?? 0);
+                    $ratingCat = $ar['rating_category'] ?? ($ar['rating'] ?? 0);
+                    
+                    // PEGI (organization 2) - prioritaire
+                    if ($org == 2) {
+                        if (isset($pegiMap[$ratingCat])) {
+                            $classification = $pegiMap[$ratingCat];
+                            break;
+                        }
+                    }
+                    // ESRB (organization 1) - fallback
+                    if ($org == 1 && $esrbFallback === null && isset($esrbToPegi[$ratingCat])) {
+                        $esrbFallback = $esrbToPegi[$ratingCat];
+                    }
+                }
+                
+                if ($classification === null && $esrbFallback !== null) {
+                    $classification = $esrbFallback;
+                }
             }
 
             // Cover
@@ -238,12 +356,16 @@ class GameApiService
                 }
             }
 
-            // Plateformes avec slug
+            // Plateformes : slug + code console aligné sur game_console / formulaires
             $platforms = [];
             foreach ($game['platforms'] ?? [] as $p) {
+                $name = $p['name'] ?? '';
+                $slug = $this->igdbConsoleMapping->normalizeSlug($name);
                 $platforms[] = [
-                    'name' => $p['name'],
-                    'slug' => strtolower($p['abbreviation'] ?? $p['name']),
+                    'name' => $name,
+                    'slug' => $slug,
+                    'consoleCode' => $this->igdbConsoleMapping->slugToConsoleCode($slug),
+                    'igdbPlatformId' => $p['id'] ?? null,
                 ];
             }
 
@@ -267,39 +389,18 @@ class GameApiService
         }
     }
 
-    /**
-     * Convertit une abréviation de plateforme IGDB en code console
-     */
     public function platformToConsole(string $platformSlug): string
     {
-        $slug = strtolower($platformSlug);
-        return match ($slug) {
-            'ps5' => 'PS5',
-            'ps4' => 'PS4',
-            'ps3' => 'PS3',
-            'ps2' => 'PS2',
-            'ps1', 'psx', 'playstation' => 'PS1',
-            'vita', 'psvita' => 'PSVita',
-            'psp' => 'PSP',
-            'series x', 'xsx', 'series x/s' => 'XSX',
-            'xone', 'xbox one' => 'XOne',
-            'x360', 'xbox 360' => 'X360',
-            'xbox' => 'Xbox',
-            'switch', 'nintendo switch' => 'Switch',
-            'wiiu', 'wii u' => 'WiiU',
-            'wii' => 'Wii',
-            'gc', 'gamecube', 'ngc' => 'GameCube',
-            'n64', 'nintendo 64' => 'N64',
-            '3ds', 'nintendo 3ds' => '3DS',
-            'nds', 'ds', 'nintendo ds' => 'DS',
-            'gba', 'game boy advance' => 'GBA',
-            'gb', 'gbc', 'game boy', 'game boy color' => 'GB',
-            'pc', 'win', 'windows' => 'PC',
-            'mac', 'macos' => 'Mac',
-            'linux' => 'Linux',
-            'android' => 'Android',
-            'ios' => 'iOS',
-            default => ucfirst($platformSlug),
-        };
+        return $this->igdbConsoleMapping->slugToConsoleCode($platformSlug);
+    }
+
+    /**
+     * Options du filtre « plateforme » : {@see GameConsole::igdbPlatformId} renseigné en admin.
+     *
+     * @return list<array{igdbId: int, label: string, code: string}>
+     */
+    public function getIgdbPlatformFilterChoices(): array
+    {
+        return $this->igdbConsoleMapping->getSearchFilterChoices();
     }
 }

@@ -38,6 +38,10 @@ services:
         arguments:
             $projectDir: '%kernel.project_dir%'
 
+    App\Service\Media\ImageStorageService:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+
     App\Service\BrickApiService:
         arguments:
             $rebrickableApiKey: '%env(default::REBRICKABLE_API_KEY)%'
@@ -48,3 +52,7 @@ services:
             $twitchClientId: '%env(default::TWITCH_CLIENT_ID)%'
             $twitchClientSecret: '%env(default::TWITCH_CLIENT_SECRET)%'
             $deeplApiKey: '%env(default::DEEPL_API_KEY)%'
+
+    App\Service\DvdApiService:
+        arguments:
+            $apiKey: '%env(default::DVDFR_API_KEY)%'

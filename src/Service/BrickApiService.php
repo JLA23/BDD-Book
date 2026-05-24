@@ -89,6 +89,28 @@ class BrickApiService
     }
 
     /**
+     * Recherche un set par code-barres EAN/UPC (Brickset).
+     */
+    public function searchByEan(string $ean): ?array
+    {
+        if (!$this->isBricksetConfigured()) {
+            return null;
+        }
+
+        $normalized = $this->normalizeBarcodeDigits($ean);
+        if (strlen($normalized) < 8) {
+            return null;
+        }
+
+        $reference = $this->findBricksetReferenceByBarcode($normalized);
+        if (!$reference) {
+            return null;
+        }
+
+        return $this->searchSet($reference);
+    }
+
+    /**
      * Recherche sur Rebrickable
      */
     private function getRebrickableSet(string $setNum): ?array
@@ -115,6 +137,7 @@ class BrickApiService
                 return [
                     'nom' => $data['name'] ?? '',
                     'reference' => $data['set_num'] ?? $setNum,
+                    'ean' => null,
                     'annee' => $data['year'] ?? null,
                     'nbPieces' => $data['num_parts'] ?? null,
                     'image' => $data['set_img_url'] ?? null,
@@ -155,28 +178,7 @@ class BrickApiService
                 $data = $response->toArray();
                 
                 if ($data['status'] === 'success' && !empty($data['sets'][0])) {
-                    $set = $data['sets'][0];
-                    
-                    // Récupérer le prix (EUR = DE de préférence)
-                    $prix = null;
-                    if (!empty($set['LEGOCom']['DE']['retailPrice'])) {
-                        $prix = $set['LEGOCom']['DE']['retailPrice'];
-                    } elseif (!empty($set['LEGOCom']['US']['retailPrice'])) {
-                        $prix = $set['LEGOCom']['US']['retailPrice'];
-                    }
-
-                    return [
-                        'nom' => $set['name'] ?? '',
-                        'reference' => $set['number'] ?? $setNum,
-                        'annee' => $set['year'] ?? null,
-                        'nbPieces' => $set['pieces'] ?? null,
-                        'image' => $set['image']['imageURL'] ?? null,
-                        'theme' => $set['theme'] ?? null,
-                        'subtheme' => $set['subtheme'] ?? null,
-                        'prix' => $prix,
-                        'bricksetId' => $set['setID'] ?? null,
-                        'source' => 'Brickset',
-                    ];
+                    return $this->mapBricksetSet($data['sets'][0], $setNum);
                 }
             }
         } catch (\Exception $e) {
@@ -403,5 +405,103 @@ class BrickApiService
         }
 
         return $result;
+    }
+
+    private function mapBricksetSet(array $set, ?string $fallbackRef = null): array
+    {
+        $prix = null;
+        if (!empty($set['LEGOCom']['DE']['retailPrice'])) {
+            $prix = $set['LEGOCom']['DE']['retailPrice'];
+        } elseif (!empty($set['LEGOCom']['US']['retailPrice'])) {
+            $prix = $set['LEGOCom']['US']['retailPrice'];
+        }
+
+        return [
+            'nom' => $set['name'] ?? '',
+            'reference' => $set['number'] ?? $fallbackRef ?? '',
+            'ean' => $this->extractEanFromBrickset($set['barcode'] ?? null),
+            'annee' => $set['year'] ?? null,
+            'nbPieces' => $set['pieces'] ?? null,
+            'image' => $set['image']['imageURL'] ?? null,
+            'theme' => $set['theme'] ?? null,
+            'subtheme' => $set['subtheme'] ?? null,
+            'prix' => $prix,
+            'bricksetId' => $set['setID'] ?? null,
+            'source' => 'Brickset',
+        ];
+    }
+
+    private function findBricksetReferenceByBarcode(string $normalizedEan): ?string
+    {
+        try {
+            $response = $this->httpClient->request('POST', $this->bricksetUrl . '/getSets', [
+                'headers' => ['Content-Type' => 'application/x-www-form-urlencoded'],
+                'body' => [
+                    'apiKey' => $this->bricksetKey,
+                    'userHash' => '',
+                    'params' => json_encode(['query' => $normalizedEan, 'pageSize' => 50]),
+                ],
+            ]);
+
+            if ($response->getStatusCode() !== 200) {
+                return null;
+            }
+
+            $data = $response->toArray();
+            if (($data['status'] ?? '') !== 'success') {
+                return null;
+            }
+
+            foreach ($data['sets'] ?? [] as $set) {
+                if ($this->bricksetBarcodeMatches($set['barcode'] ?? null, $normalizedEan)) {
+                    return $set['number'] ?? null;
+                }
+            }
+        } catch (\Exception $e) {
+            error_log('Brickset EAN search error: ' . $e->getMessage());
+        }
+
+        return null;
+    }
+
+    private function extractEanFromBrickset($barcode): ?string
+    {
+        if (!is_array($barcode)) {
+            return null;
+        }
+
+        $ean = trim((string) ($barcode['EAN'] ?? ''));
+        if ($ean !== '') {
+            return $ean;
+        }
+
+        $upc = trim((string) ($barcode['UPC'] ?? ''));
+
+        return $upc !== '' ? $upc : null;
+    }
+
+    private function bricksetBarcodeMatches($barcode, string $normalizedEan): bool
+    {
+        if (!is_array($barcode)) {
+            return false;
+        }
+
+        $ean = $this->normalizeBarcodeDigits($barcode['EAN'] ?? '');
+        $upc = $this->normalizeBarcodeDigits($barcode['UPC'] ?? '');
+
+        if ($ean === $normalizedEan || $upc === $normalizedEan) {
+            return true;
+        }
+
+        if (strlen($normalizedEan) === 13 && str_starts_with($normalizedEan, '0') && $upc === substr($normalizedEan, 1)) {
+            return true;
+        }
+
+        return strlen($ean) === 13 && str_starts_with($ean, '0') && $normalizedEan === substr($ean, 1);
+    }
+
+    private function normalizeBarcodeDigits(?string $code): string
+    {
+        return $code !== null && $code !== '' ? preg_replace('/\D/', '', $code) : '';
     }
 }

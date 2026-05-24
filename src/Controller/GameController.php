@@ -7,10 +7,14 @@ use App\Entity\GameImage;
 use App\Entity\LienUserGame;
 use App\Form\GameType;
 use App\Repository\GameRepository;
+use App\Repository\GameConsoleRepository;
 use App\Repository\GameImageRepository;
+use App\Repository\GameStoreRepository;
 use App\Repository\LienUserGameRepository;
 use App\Repository\UserRepository;
 use App\Service\GameApiService;
+use App\Service\Media\MediaImageSyncService;
+use App\Service\LienUserGameReferenceLinker;
 use App\Service\SectionPermissionService;
 use Doctrine\ORM\EntityManagerInterface;
 use Knp\Component\Pager\PaginatorInterface;
@@ -28,16 +32,23 @@ class GameController extends AbstractController
     private EntityManagerInterface $em;
     private GameApiService $gameApi;
     private SectionPermissionService $permissionService;
+    private LienUserGameReferenceLinker $lienReferenceLinker;
 
-    public function __construct(EntityManagerInterface $em, GameApiService $gameApi, SectionPermissionService $permissionService)
-    {
+    public function __construct(
+        EntityManagerInterface $em,
+        GameApiService $gameApi,
+        SectionPermissionService $permissionService,
+        LienUserGameReferenceLinker $lienReferenceLinker,
+        private MediaImageSyncService $mediaImageSync,
+    ) {
         $this->em = $em;
         $this->gameApi = $gameApi;
         $this->permissionService = $permissionService;
+        $this->lienReferenceLinker = $lienReferenceLinker;
     }
 
     #[Route('/', name: 'game_index')]
-    public function index(GameRepository $gameRepo, LienUserGameRepository $lienRepo, UserRepository $userRepo): Response
+    public function index(GameRepository $gameRepo, LienUserGameRepository $lienRepo, UserRepository $userRepo, GameConsoleRepository $consoleRepo): Response
     {
         $users = $userRepo->findAll();
         $usersWithCount = [];
@@ -52,20 +63,32 @@ class GameController extends AbstractController
 
         return $this->render('game/index.html.twig', [
             'totalGames' => $gameRepo->countAll(),
-            'consoles' => $gameRepo->getDistinctConsoles(),
+            'consoles' => $consoleRepo->findAllOrdered(),
             'genres' => $gameRepo->getDistinctGenres(),
             'users' => $usersWithCount,
         ]);
     }
 
     #[Route('/liste', name: 'game_list')]
-    public function list(Request $request, GameRepository $gameRepo, PaginatorInterface $paginator): Response
+    public function list(Request $request, GameRepository $gameRepo, GameConsoleRepository $consoleRepo, PaginatorInterface $paginator, UserRepository $userRepo, LienUserGameRepository $lienRepo): Response
     {
         $search = $request->query->get('search');
         $console = $request->query->get('console');
-        $genre = $request->query->get('genre');
+        $user_id = $request->query->get('user');
+        $year = $request->query->get('year');
 
-        $games = $gameRepo->findBySearch($search, $console, $genre);
+        $games = $gameRepo->findBySearch($search, $console, $user_id, $year);
+
+        $users = $userRepo->findAll();
+        $usersWithCount = [];
+        foreach ($users as $user) {
+            $count = $lienRepo->countByUser($user);
+            // Afficher si l'utilisateur a du contenu OU s'il a la permission d'enregistrer
+            if ($count > 0 || $user->canRegisterInSection('games')) {
+                $user->gamesCount = $count;
+                $usersWithCount[] = $user;
+            }
+        }
 
         $pagination = $paginator->paginate(
             $games,
@@ -73,13 +96,21 @@ class GameController extends AbstractController
             24
         );
 
+        $consoleCatalog = [];
+        foreach ($consoleRepo->findAllOrdered() as $c) {
+            $consoleCatalog[$c->getCode()] = $c;
+        }
+
         return $this->render('game/list.html.twig', [
             'games' => $pagination,
             'search' => $search,
             'console' => $console,
-            'genre' => $genre,
-            'consoles' => $gameRepo->getDistinctConsoles(),
-            'genres' => $gameRepo->getDistinctGenres(),
+            'user' => $user_id,
+            'year' => $year,
+            'consoles' => $consoleRepo->findAllOrdered(),
+            'consoleCatalog' => $consoleCatalog,
+            'users' => $usersWithCount,
+            'years' => $gameRepo->getDistinctYears(),
         ]);
     }
 
@@ -102,11 +133,58 @@ class GameController extends AbstractController
         ]);
     }
 
-    #[Route('/nouveau', name: 'game_new')]
-    public function new(Request $request, GameRepository $gameRepo, SluggerInterface $slugger): Response
+    #[Route('/utilisateur/{id}', name: 'game_user', requirements: ['id' => '\d+'])]
+    public function userCollection(int $id, UserRepository $userRepo, LienUserGameRepository $lienRepo, GameConsoleRepository $consoleRepo): Response
+    {
+        $user = $userRepo->find($id);
+        if (!$user) {
+            throw $this->createNotFoundException('Utilisateur non trouvé');
+        }
+
+        $liens = $lienRepo->findByUser($user);
+
+        $grouped = [];
+        foreach ($liens as $lien) {
+            $gid = $lien->getGame()->getId();
+            if (!isset($grouped[$gid])) {
+                $grouped[$gid] = ['game' => $lien->getGame(), 'editions' => []];
+            }
+            $grouped[$gid]['editions'][] = $lien;
+        }
+
+        $consoleCatalog = [];
+        foreach ($consoleRepo->findAllOrdered() as $c) {
+            $consoleCatalog[$c->getCode()] = $c;
+        }
+
+        return $this->render('game/user_collection.html.twig', [
+            'user' => $user,
+            'grouped' => $grouped,
+            'consoleCatalog' => $consoleCatalog,
+        ]);
+    }
+
+    #[Route('/ajouter', name: 'game_ajouter')]
+    public function ajouter(): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
         $this->permissionService->denyAccessUnlessCanRegister('games');
+
+        return $this->render('game/ajouter_choix.html.twig', [
+            'apiConfigured' => $this->gameApi->isConfigured(),
+        ]);
+    }
+
+    #[Route('/nouveau', name: 'game_new')]
+    public function new(Request $request, GameRepository $gameRepo, SluggerInterface $slugger, GameConsoleRepository $consoleRepo, GameStoreRepository $storeRepo): Response
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+        $this->permissionService->denyAccessUnlessCanRegister('games');
+
+        $collectionRefs = [
+            'gameConsoles' => $consoleRepo->findAllOrdered(),
+            'gameStores' => $storeRepo->findAllOrdered(),
+        ];
 
         $session = $request->getSession();
         $game = new Game();
@@ -120,7 +198,6 @@ class GameController extends AbstractController
         // Pré-remplissage depuis l'API
         if ($request->query->get('prefill')) {
             $game->setTitre($request->query->get('titre', ''));
-            $game->setConsole($request->query->get('console', ''));
             
             if ($request->query->get('annee')) {
                 $game->setAnnee((int) $request->query->get('annee'));
@@ -147,11 +224,29 @@ class GameController extends AbstractController
                 $game->setExternalId($request->query->get('externalId'));
             }
 
-            // Vérifier si le jeu existe déjà
-            $existing = $gameRepo->findByTitreAndConsole($game->getTitre(), $game->getConsole());
+            // Vérifier si le jeu existe déjà (par externalId ou titre + année exact)
+            $existing = null;
+            $titre = trim($game->getTitre() ?? '');
+            $annee = $request->query->get('annee') ? (int) $request->query->get('annee') : null;
+            $externalId = $request->query->get('externalId');
+
+            if ($externalId) {
+                $existing = $gameRepo->findOneBy(['externalId' => $externalId]);
+            }
+
+            if (!$existing && !empty($titre) && $annee) {
+                $existing = $gameRepo->createQueryBuilder('g')
+                    ->where('LOWER(g.titre) = LOWER(:titre)')
+                    ->andWhere('g.annee = :annee')
+                    ->setParameter('titre', $titre)
+                    ->setParameter('annee', $annee)
+                    ->getQuery()
+                    ->getOneOrNullResult();
+            }
+
             if ($existing) {
                 $duplicateWarning = [
-                    'message' => 'Ce jeu existe déjà pour cette plateforme !',
+                    'message' => 'Ce jeu existe déjà dans la base !',
                     'game' => $existing,
                 ];
             }
@@ -163,11 +258,20 @@ class GameController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            // Vérifier doublon
-            $existing = $gameRepo->findByTitreAndConsole($game->getTitre(), $game->getConsole());
-            if ($existing) {
-                $this->addFlash('danger', 'Ce jeu existe déjà pour cette plateforme !');
-                return $this->render('game/form.html.twig', [
+            // Vérifier doublon par titre + année exact (insensible à la casse)
+            $qb = $gameRepo->createQueryBuilder('g')
+                ->where('LOWER(g.titre) = LOWER(:titre)')
+                ->setParameter('titre', trim($game->getTitre()));
+
+            if ($game->getAnnee()) {
+                $qb->andWhere('g.annee = :annee')
+                   ->setParameter('annee', $game->getAnnee());
+            }
+
+            $existing = $qb->getQuery()->getOneOrNullResult();
+            if ($existing && $existing->getId() !== $game->getId()) {
+                $this->addFlash('danger', 'Ce jeu existe déjà dans la base !');
+                return $this->render('game/form.html.twig', array_merge($collectionRefs, [
                     'form' => $form->createView(),
                     'game' => null,
                     'isEdit' => false,
@@ -176,41 +280,29 @@ class GameController extends AbstractController
                         'message' => 'Ce jeu existe déjà !',
                         'game' => $existing,
                     ],
-                ]);
+                ]));
+            }
+
+            // Gérer l'upload de la jaquette
+            $coverUpload = $request->files->get('cover_upload');
+            if ($coverUpload) {
+                $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/games';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+                
+                $extension = $coverUpload->guessExtension() ?? 'jpg';
+                $filename = 'game_' . uniqid() . '.' . $extension;
+                
+                try {
+                    $coverUpload->move($uploadDir, $filename);
+                    $game->setCoverUrl('/uploads/games/' . $filename);
+                } catch (\Exception $e) {
+                    $this->addFlash('warning', 'Erreur lors de l\'upload de la jaquette: ' . $e->getMessage());
+                }
             }
 
             $this->em->persist($game);
-
-            $position = 0;
-            $addedUrls = [];
-
-            // Images par URL
-            $imageUrls = $request->request->all('image_urls') ?? [];
-            foreach ($imageUrls as $url) {
-                if (!empty($url) && filter_var($url, FILTER_VALIDATE_URL) && !in_array($url, $addedUrls)) {
-                    $image = new GameImage();
-                    $image->setUrl($url);
-                    $image->setPosition($position++);
-                    $image->setSource('URL');
-                    $image->setGame($game);
-                    $this->em->persist($image);
-                    $addedUrls[] = $url;
-                }
-            }
-
-            // Images de session (API)
-            $sessionImages = $session->get('game_prefill_images', []);
-            foreach ($sessionImages as $imgData) {
-                if (!empty($imgData['url']) && !in_array($imgData['url'], $addedUrls)) {
-                    $image = new GameImage();
-                    $image->setUrl($imgData['url']);
-                    $image->setPosition($position++);
-                    $image->setSource($imgData['source'] ?? 'API');
-                    $image->setGame($game);
-                    $this->em->persist($image);
-                    $addedUrls[] = $imgData['url'];
-                }
-            }
 
             // Images uploadées
             $uploadedFiles = $request->files->get('uploaded_images', []);
@@ -240,8 +332,10 @@ class GameController extends AbstractController
                 $lien = new LienUserGame();
                 $lien->setUser($this->getUser());
                 $lien->setGame($game);
-                $lien->setTypeEdition($request->request->get('type_edition', 'physique'));
                 $lien->setNomEdition($request->request->get('nom_edition'));
+                if($request->request->get('nom_edition') === '') {
+                    $lien->setNomEdition('Standard');
+                }
                 
                 $dateAchat = $request->request->get('date_achat');
                 if ($dateAchat) {
@@ -253,29 +347,54 @@ class GameController extends AbstractController
                     $lien->setPrixAchat((float) $prixAchat);
                 }
                 
-                if ($request->request->get('type_edition') === 'numerique') {
-                    $lien->setStore($request->request->get('store'));
-                }
-                
                 $lien->setCommentaire($request->request->get('commentaire_lien'));
                 
+                // Image personnalisée de l'édition (fichier ou URL)
+                $imagePerso = $request->files->get('image_perso');
+                $imagePersoUrl = $request->request->get('image_perso_url');
+                
+                if ($imagePerso instanceof UploadedFile && $imagePerso->isValid()) {
+                    $userUploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/game/user';
+                    if (!is_dir($userUploadDir)) {
+                        mkdir($userUploadDir, 0777, true);
+                    }
+                    $originalFilename = pathinfo($imagePerso->getClientOriginalName(), PATHINFO_FILENAME);
+                    $safeFilename = $slugger->slug($originalFilename);
+                    $newFilename = $safeFilename . '-' . uniqid() . '.' . $imagePerso->guessExtension();
+                    $imagePerso->move($userUploadDir, $newFilename);
+                    $lien->setImagePerso($newFilename);
+                } elseif ($imagePersoUrl && filter_var($imagePersoUrl, FILTER_VALIDATE_URL)) {
+                    // Stocker directement l'URL
+                    $lien->setImagePerso($imagePersoUrl);
+                }
+
+                $this->lienReferenceLinker->link(
+                    $lien,
+                    $request->request->get('console'),
+                    (string) $request->request->get('type_edition', 'physique'),
+                    $request->request->get('type_edition') === 'numerique' ? $request->request->get('store') : null
+                );
+
                 $this->em->persist($lien);
             }
 
             $session->remove('game_prefill_images');
             $this->em->flush();
+            $this->mediaImageSync->syncGame($game, $lien ?? null);
+            $this->em->flush();
 
             $this->addFlash('success', 'Jeu créé avec succès' . ($addToCollection === '1' ? ' et ajouté à votre collection' : ''));
-            return $this->redirectToRoute('game_detail', ['id' => $game->getId()]);
+            return $this->redirectToRoute('game_detail', ['id' => $game->getId(), 'from' => 'list']);
         }
 
-        return $this->render('game/form.html.twig', [
+        return $this->render('game/form.html.twig', array_merge($collectionRefs, [
             'form' => $form->createView(),
             'game' => $game,
             'isEdit' => false,
             'prefillImages' => $prefillImages,
             'duplicateWarning' => $duplicateWarning,
-        ]);
+            'prefillConsole' => $request->query->get('console'),
+        ]));
     }
 
     #[Route('/jeu/{id}', name: 'game_detail', requirements: ['id' => '\d+'])]
@@ -287,27 +406,32 @@ class GameController extends AbstractController
         }
 
         $owners = $lienRepo->findByGame($game);
-        $userHasGame = false;
-        $userLink = null;
-        
+        $userGameCount = 0;
+        $userLinks = [];
+
         if ($this->getUser()) {
-            $userLink = $lienRepo->findUserGameLink($this->getUser(), $game);
-            $userHasGame = $userLink !== null;
+            $userLinks = $lienRepo->findBy(['user' => $this->getUser(), 'game' => $game]);
+            $userGameCount = count($userLinks);
         }
 
         return $this->render('game/detail.html.twig', [
             'game' => $game,
             'owners' => $owners,
-            'userHasGame' => $userHasGame,
-            'userLink' => $userLink,
+            'userGameCount' => $userGameCount,
+            'userLinks' => $userLinks,
         ]);
     }
 
     #[Route('/jeu/{id}/modifier', name: 'game_edit', requirements: ['id' => '\d+'])]
-    public function edit(int $id, Request $request, GameRepository $gameRepo): Response
+    public function edit(int $id, Request $request, GameRepository $gameRepo, GameConsoleRepository $consoleRepo, GameStoreRepository $storeRepo): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
         $this->permissionService->denyAccessUnlessCanRegister('games');
+
+        $collectionRefs = [
+            'gameConsoles' => $consoleRepo->findAllOrdered(),
+            'gameStores' => $storeRepo->findAllOrdered(),
+        ];
 
         $game = $gameRepo->find($id);
         if (!$game) {
@@ -318,18 +442,48 @@ class GameController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            // Gérer l'upload de la jaquette
+            $coverUpload = $request->files->get('cover_upload');
+            if ($coverUpload) {
+                $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/games';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+                
+                // Supprimer l'ancienne image si c'est un fichier local
+                $oldCover = $game->getCoverUrl();
+                if ($oldCover && str_starts_with($oldCover, '/uploads/games/')) {
+                    $oldPath = $this->getParameter('kernel.project_dir') . '/public' . $oldCover;
+                    if (file_exists($oldPath)) {
+                        @unlink($oldPath);
+                    }
+                }
+                
+                $extension = $coverUpload->guessExtension() ?? 'jpg';
+                $filename = 'game_' . uniqid() . '.' . $extension;
+                
+                try {
+                    $coverUpload->move($uploadDir, $filename);
+                    $game->setCoverUrl('/uploads/games/' . $filename);
+                } catch (\Exception $e) {
+                    $this->addFlash('warning', 'Erreur lors de l\'upload de la jaquette: ' . $e->getMessage());
+                }
+            }
+            
+            $this->em->flush();
+            $this->mediaImageSync->syncGame($game);
             $this->em->flush();
             $this->addFlash('success', 'Jeu modifié avec succès');
-            return $this->redirectToRoute('game_detail', ['id' => $game->getId()]);
+            return $this->redirectToRoute('game_detail', ['id' => $game->getId(), 'from' => 'list']);
         }
 
-        return $this->render('game/form.html.twig', [
+        return $this->render('game/form.html.twig', array_merge($collectionRefs, [
             'form' => $form->createView(),
             'game' => $game,
             'isEdit' => true,
             'prefillImages' => [],
             'duplicateWarning' => null,
-        ]);
+        ]));
     }
 
     #[Route('/jeu/{id}/supprimer', name: 'game_delete', requirements: ['id' => '\d+'], methods: ['POST'])]
@@ -362,6 +516,61 @@ class GameController extends AbstractController
         return $this->redirectToRoute('game_list');
     }
 
+    #[Route('/jeu/{id}/update-cover', name: 'game_update_cover', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function updateCover(int $id, Request $request, GameRepository $gameRepo): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+
+        $game = $gameRepo->find($id);
+        if (!$game) {
+            return $this->json(['success' => false, 'message' => 'Jeu non trouvé'], 404);
+        }
+
+        // Upload de fichier
+        $coverUpload = $request->files->get('cover_upload');
+        if ($coverUpload) {
+            $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/games';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+            
+            // Supprimer l'ancienne image si c'est un fichier local
+            $oldCover = $game->getCoverUrl();
+            if ($oldCover && str_starts_with($oldCover, '/uploads/games/')) {
+                $oldPath = $this->getParameter('kernel.project_dir') . '/public' . $oldCover;
+                if (file_exists($oldPath)) {
+                    @unlink($oldPath);
+                }
+            }
+            
+            $extension = $coverUpload->guessExtension() ?? 'jpg';
+            $filename = 'game_' . uniqid() . '.' . $extension;
+            
+            try {
+                $coverUpload->move($uploadDir, $filename);
+                $game->setCoverUrl('/uploads/games/' . $filename);
+                $this->em->flush();
+                $this->mediaImageSync->syncGame($game);
+                $this->em->flush();
+                return $this->json(['success' => true]);
+            } catch (\Exception $e) {
+                return $this->json(['success' => false, 'message' => $e->getMessage()], 500);
+            }
+        }
+        
+        // URL manuelle
+        $coverUrl = $request->request->get('cover_url');
+        if ($coverUrl) {
+            $game->setCoverUrl($coverUrl);
+            $this->em->flush();
+            $this->mediaImageSync->syncGame($game);
+            $this->em->flush();
+            return $this->json(['success' => true]);
+        }
+        
+        return $this->json(['success' => false, 'message' => 'Aucune image fournie'], 400);
+    }
+
     #[Route('/recherche-api', name: 'game_search_api')]
     public function searchApi(): Response
     {
@@ -370,6 +579,7 @@ class GameController extends AbstractController
 
         return $this->render('game/search_api.html.twig', [
             'apiConfigured' => $this->gameApi->isConfigured(),
+            'igdb_platform_filters' => $this->gameApi->getIgdbPlatformFilterChoices(),
         ]);
     }
 
@@ -379,6 +589,8 @@ class GameController extends AbstractController
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
 
         $query = $request->query->get('q', '');
+        $platform = $request->query->get('platform');
+        $year = $request->query->get('year');
 
         if (empty($query)) {
             return $this->json(['error' => 'Recherche requise'], 400);
@@ -388,11 +600,62 @@ class GameController extends AbstractController
             return $this->json(['error' => 'API non configurée'], 500);
         }
 
-        $results = $this->gameApi->searchGames($query, 10);
+        $results = $this->gameApi->searchGames($query, 50, $platform, $year);
 
         return $this->json([
             'success' => true,
             'results' => $results,
+        ]);
+    }
+
+    #[Route('/api/check-existing', name: 'game_api_check_existing', methods: ['GET'])]
+    public function apiCheckExisting(Request $request, GameRepository $gameRepo): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+
+        $titre = $request->query->get('titre');
+        $annee = $request->query->get('annee');
+        $console = $request->query->get('console');
+
+        if (empty($titre)) {
+            return $this->json(['error' => 'Titre requis'], 400);
+        }
+
+        $qb = $gameRepo->createQueryBuilder('g')
+            ->where('LOWER(g.titre) = LOWER(:titre)')
+            ->setParameter('titre', $titre);
+
+        if ($annee) {
+            $qb->andWhere('g.annee = :annee')
+               ->setParameter('annee', (int) $annee);
+        }
+
+        $games = $qb->getQuery()->getResult();
+
+        $existing = [];
+        foreach ($games as $game) {
+            $hasConsole = false;
+            if ($console) {
+                foreach ($game->getUserLinks() as $link) {
+                    if ($link->getResolvedConsoleCode() === $console) {
+                        $hasConsole = true;
+                        break;
+                    }
+                }
+            }
+            $existing[] = [
+                'id' => $game->getId(),
+                'titre' => $game->getTitre(),
+                'annee' => $game->getAnnee(),
+                'hasConsole' => $hasConsole,
+                'detailUrl' => $this->generateUrl('game_detail', ['id' => $game->getId()]),
+                'addEditionUrl' => $this->generateUrl('game_add_owner', ['id' => $game->getId()]),
+            ];
+        }
+
+        return $this->json([
+            'exists' => count($existing) > 0,
+            'games' => $existing,
         ]);
     }
 
@@ -415,14 +678,11 @@ class GameController extends AbstractController
             return $this->json(['error' => 'Jeu non trouvé (details null)'], 404);
         }
 
-        // Stocker les screenshots en session
+        // Stocker uniquement la cover en session (pas les screenshots)
         $session = $request->getSession();
         $images = [];
         if (!empty($details['cover'])) {
             $images[] = ['url' => $details['cover'], 'source' => 'API'];
-        }
-        foreach ($details['screenshots'] ?? [] as $screenshot) {
-            $images[] = ['url' => $screenshot, 'source' => 'API'];
         }
         $session->set('game_prefill_images', $images);
 
@@ -433,7 +693,7 @@ class GameController extends AbstractController
     }
 
     #[Route('/jeu/{id}/ajouter-collection', name: 'game_add_owner', requirements: ['id' => '\d+'])]
-    public function addOwner(int $id, Request $request, GameRepository $gameRepo, LienUserGameRepository $lienRepo, SluggerInterface $slugger): Response
+    public function addOwner(int $id, Request $request, GameRepository $gameRepo, LienUserGameRepository $lienRepo, SluggerInterface $slugger, GameConsoleRepository $consoleRepo, GameStoreRepository $storeRepo): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
         $this->permissionService->denyAccessUnlessCanRegister('games');
@@ -447,7 +707,6 @@ class GameController extends AbstractController
             $lien = new LienUserGame();
             $lien->setUser($this->getUser());
             $lien->setGame($game);
-            $lien->setTypeEdition($request->request->get('type_edition', 'physique'));
             $lien->setNomEdition($request->request->get('nom_edition'));
             
             $dateAchat = $request->request->get('date_achat');
@@ -460,14 +719,12 @@ class GameController extends AbstractController
                 $lien->setPrixAchat((float) $prixAchat);
             }
             
-            if ($request->request->get('type_edition') === 'numerique') {
-                $lien->setStore($request->request->get('store'));
-            }
-            
             $lien->setCommentaire($request->request->get('commentaire'));
 
-            // Image personnalisée
+            // Image personnalisée (fichier ou URL)
             $imageFile = $request->files->get('image_perso');
+            $imageUrl = $request->request->get('image_perso_url');
+            
             if ($imageFile instanceof UploadedFile && $imageFile->isValid()) {
                 $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/game/user';
                 if (!is_dir($uploadDir)) {
@@ -478,9 +735,20 @@ class GameController extends AbstractController
                 $newFilename = $safeFilename . '-' . uniqid() . '.' . $imageFile->guessExtension();
                 $imageFile->move($uploadDir, $newFilename);
                 $lien->setImagePerso($newFilename);
+            } elseif ($imageUrl && filter_var($imageUrl, FILTER_VALIDATE_URL)) {
+                $lien->setImagePerso($imageUrl);
             }
-            
+
+            $this->lienReferenceLinker->link(
+                $lien,
+                $request->request->get('console'),
+                (string) $request->request->get('type_edition', 'physique'),
+                $request->request->get('type_edition') === 'numerique' ? $request->request->get('store') : null
+            );
+
             $this->em->persist($lien);
+            $this->em->flush();
+            $this->mediaImageSync->syncGameUserImage($lien);
             $this->em->flush();
 
             $this->addFlash('success', 'Jeu ajouté à votre collection');
@@ -489,11 +757,13 @@ class GameController extends AbstractController
 
         return $this->render('game/add_owner.html.twig', [
             'game' => $game,
+            'gameConsoles' => $consoleRepo->findAllOrdered(),
+            'gameStores' => $storeRepo->findAllOrdered(),
         ]);
     }
 
     #[Route('/jeu/{id}/modifier-collection/{lienId}', name: 'game_edit_owner', requirements: ['id' => '\d+', 'lienId' => '\d+'])]
-    public function editOwner(int $id, int $lienId, Request $request, GameRepository $gameRepo, LienUserGameRepository $lienRepo, SluggerInterface $slugger): Response
+    public function editOwner(int $id, int $lienId, Request $request, GameRepository $gameRepo, LienUserGameRepository $lienRepo, SluggerInterface $slugger, GameConsoleRepository $consoleRepo, GameStoreRepository $storeRepo): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
 
@@ -510,7 +780,6 @@ class GameController extends AbstractController
         $game = $lien->getGame();
 
         if ($request->isMethod('POST')) {
-            $lien->setTypeEdition($request->request->get('type_edition', 'physique'));
             $lien->setNomEdition($request->request->get('nom_edition'));
             
             $dateAchat = $request->request->get('date_achat');
@@ -523,18 +792,14 @@ class GameController extends AbstractController
                 $lien->setPrixAchat((float) $prixAchat);
             }
             
-            if ($request->request->get('type_edition') === 'numerique') {
-                $lien->setStore($request->request->get('store'));
-            } else {
-                $lien->setStore(null);
-            }
-            
             $lien->setCommentaire($request->request->get('commentaire'));
 
-            // Image personnalisée
+            // Image personnalisée (fichier ou URL)
             $imageFile = $request->files->get('image_perso');
+            $imageUrl = $request->request->get('image_perso_url');
+            
             if ($imageFile instanceof UploadedFile && $imageFile->isValid()) {
-                // Supprimer l'ancienne image si existe
+                // Supprimer l'ancienne image si existe (fichier local uniquement)
                 if ($lien->getImagePerso() && !filter_var($lien->getImagePerso(), FILTER_VALIDATE_URL)) {
                     $oldPath = $this->getParameter('kernel.project_dir') . '/public/uploads/game/user/' . $lien->getImagePerso();
                     if (file_exists($oldPath)) {
@@ -551,8 +816,26 @@ class GameController extends AbstractController
                 $newFilename = $safeFilename . '-' . uniqid() . '.' . $imageFile->guessExtension();
                 $imageFile->move($uploadDir, $newFilename);
                 $lien->setImagePerso($newFilename);
+            } elseif ($imageUrl && filter_var($imageUrl, FILTER_VALIDATE_URL)) {
+                // Supprimer l'ancienne image si existe (fichier local uniquement)
+                if ($lien->getImagePerso() && !filter_var($lien->getImagePerso(), FILTER_VALIDATE_URL)) {
+                    $oldPath = $this->getParameter('kernel.project_dir') . '/public/uploads/game/user/' . $lien->getImagePerso();
+                    if (file_exists($oldPath)) {
+                        unlink($oldPath);
+                    }
+                }
+                $lien->setImagePerso($imageUrl);
             }
-            
+
+            $this->lienReferenceLinker->link(
+                $lien,
+                $request->request->get('console'),
+                (string) $request->request->get('type_edition', 'physique'),
+                $request->request->get('type_edition') === 'numerique' ? $request->request->get('store') : null
+            );
+
+            $this->em->flush();
+            $this->mediaImageSync->syncGameUserImage($lien);
             $this->em->flush();
 
             $this->addFlash('success', 'Informations mises à jour');
@@ -562,6 +845,8 @@ class GameController extends AbstractController
         return $this->render('game/edit_owner.html.twig', [
             'game' => $game,
             'lien' => $lien,
+            'gameConsoles' => $consoleRepo->findAllOrdered(),
+            'gameStores' => $storeRepo->findAllOrdered(),
         ]);
     }
 

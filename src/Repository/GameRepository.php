@@ -24,9 +24,12 @@ class GameRepository extends ServiceEntityRepository
             ->getResult();
     }
 
-    public function findBySearch(?string $search = null, ?string $console = null, ?string $genre = null): array
+    public function findBySearch(?string $search = null, ?string $console = null, ?string $user = null, ?string $year = null): array
     {
-        $qb = $this->createQueryBuilder('g');
+        $qb = $this->createQueryBuilder('g')->distinct(true);
+        // Précharger liens + consoles pour les vues liste (badges) sans N+1
+        $qb->leftJoin('g.userLinks', 'link')->addSelect('link')
+            ->leftJoin('link.consoleEntity', 'gc')->addSelect('gc');
 
         if ($search) {
             $qb->andWhere('g.titre LIKE :search OR g.editeur LIKE :search OR g.developpeur LIKE :search')
@@ -34,18 +37,23 @@ class GameRepository extends ServiceEntityRepository
         }
 
         if ($console) {
-            $qb->andWhere('g.console = :console')
+            $qb->andWhere('gc.code = :console')
                ->setParameter('console', $console);
         }
 
-        if ($genre) {
-            $qb->andWhere('g.genre LIKE :genre')
-               ->setParameter('genre', '%' . $genre . '%');
+        if ($user) {
+            $qb->andWhere('link.user = :user')
+               ->setParameter('user', $user);
         }
 
-        return $qb->orderBy('g.titre', 'ASC')
-                  ->getQuery()
-                  ->getResult();
+        if ($year) {
+            $qb->andWhere('g.annee = :year')
+               ->setParameter('year', $year);
+        }
+
+        $qb->orderBy('g.titre', 'ASC');
+
+        return $qb->getQuery()->getResult();
     }
 
     public function findByExternalId(string $externalId): ?Game
@@ -56,24 +64,32 @@ class GameRepository extends ServiceEntityRepository
     public function findByTitreAndConsole(string $titre, string $console): ?Game
     {
         return $this->createQueryBuilder('g')
+            ->join('g.userLinks', 'link')
+            ->leftJoin('link.consoleEntity', 'gc')
             ->where('g.titre = :titre')
-            ->andWhere('g.console = :console')
+            ->andWhere('gc.code = :console')
             ->setParameter('titre', $titre)
             ->setParameter('console', $console)
+            ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();
     }
 
+    /**
+     * Codes console distincts présents dans les collections (FK game_console).
+     *
+     * @return list<string>
+     */
     public function getDistinctConsoles(): array
     {
-        $result = $this->createQueryBuilder('g')
-            ->select('DISTINCT g.console')
-            ->where('g.console IS NOT NULL')
-            ->orderBy('g.console', 'ASC')
-            ->getQuery()
-            ->getResult();
+        $conn = $this->getEntityManager()->getConnection();
+        $sql = 'SELECT DISTINCT gc.code AS code
+                FROM lien_user_game lug
+                INNER JOIN game_console gc ON gc.id = lug.console_id
+                WHERE gc.code IS NOT NULL AND TRIM(gc.code) <> \'\'
+                ORDER BY code ASC';
 
-        return array_column($result, 'console');
+        return array_column($conn->executeQuery($sql)->fetchAllAssociative(), 'code');
     }
 
     public function getDistinctGenres(): array
@@ -81,11 +97,25 @@ class GameRepository extends ServiceEntityRepository
         $result = $this->createQueryBuilder('g')
             ->select('DISTINCT g.genre')
             ->where('g.genre IS NOT NULL')
+            ->andWhere('g.genre != :empty')
+            ->setParameter('empty', '')
             ->orderBy('g.genre', 'ASC')
             ->getQuery()
             ->getResult();
 
         return array_column($result, 'genre');
+    }
+
+    public function getDistinctYears(): array
+    {
+        $result = $this->createQueryBuilder('g')
+            ->select('DISTINCT g.annee')
+            ->where('g.annee IS NOT NULL')
+            ->orderBy('g.annee', 'DESC')
+            ->getQuery()
+            ->getResult();
+
+        return array_column($result, 'annee');
     }
 
     public function countAll(): int

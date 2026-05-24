@@ -1,0 +1,149 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ musique.artiste }} - {{ musique.titre }} - BDD-Musique{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <a href="{{ path('musique_list') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Retour
+                </a>
+                {% if is_granted('IS_AUTHENTICATED_REMEMBERED') and app.user.canRegisterInSection('musique') %}
+                <div>
+                    <a href="{{ path('musique_edit', {id: musique.id}) }}" class="btn btn-outline-primary">
+                        <i class="fas fa-edit"></i> Modifier
+                    </a>
+                    <form method="post" action="{{ path('musique_delete', {id: musique.id}) }}" class="d-inline" onsubmit="return confirm('Confirmer la suppression ?');">
+                        <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ musique.id) }}">
+                        <button type="submit" class="btn btn-outline-danger">
+                            <i class="fas fa-trash"></i> Supprimer
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+                    <h4 class="mb-0 text-white">{{ musique.artiste }} - {{ musique.titre }}</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center">
+                            <img src="{{ musique.mainImage ?: '/images/musique-default.svg' }}" class="img-fluid rounded shadow mb-3" style="max-height: 350px;">
+                            <div>
+                                <span class="badge badge-danger mr-1">
+                                    {{ musique.format == 'vinyle' ? 'Vinyle' : musique.format == 'k7' ? 'K7' : musique.format == 'digital' ? 'Digital' : 'CD' }}
+                                </span>
+                                <span class="badge badge-secondary">
+                                    {{ musique.type == 'single' ? 'Single' : musique.type == 'ep' ? 'EP' : musique.type == 'compilation' ? 'Compilation' : 'Album' }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <p><strong><i class="fas fa-calendar"></i> Année:</strong> {{ musique.annee ?: '-' }}</p>
+                                    <p><strong><i class="fas fa-tag"></i> Label:</strong> {{ musique.label ?: '-' }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong><i class="fas fa-guitar"></i> Genre:</strong> {{ musique.genre ?: '-' }}</p>
+                                    {% if musique.ean %}
+                                    <p><strong><i class="fas fa-barcode"></i> EAN:</strong> {{ musique.ean }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% if musique.description %}
+                            <div class="mb-3">
+                                <h6>Notes</h6>
+                                <p>{{ musique.description|nl2br }}</p>
+                            </div>
+                            {% endif %}
+
+                            {% if musique.tracklist %}
+                            <div class="mb-3">
+                                <h6><i class="fas fa-list-ol"></i> Liste des pistes</h6>
+                                <div class="bg-light p-2 rounded" style="max-height: 200px; overflow-y: auto;">
+                                    <pre class="mb-0 small" style="white-space: pre-wrap;">{{ musique.tracklist }}</pre>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% embed 'components/proprietaires_card.html.twig' with { count: owners|length } %}
+
+
+                {% block header_actions %}
+                    {% if is_granted('IS_AUTHENTICATED_REMEMBERED') and app.user.canRegisterInSection('musique') %}
+                        <a href="{{ path('musique_add_owner', {id: musique.id}) }}" class="btn btn-sm btn-success" onclick="event.stopPropagation();">
+                            <i class="fas fa-user-plus mr-1"></i>
+                            {% if userLinks|length > 0 %}Ajouter un autre exemplaire{% else %}J'ai cet album{% endif %}
+                        </a>
+                    {% endif %}
+
+
+                {% endblock %}
+
+
+                {% block content %}
+{% if owners|length == 0 %}
+                            <div class="p-3 text-center text-muted">
+                                <i class="fas fa-info-circle"></i> Personne ne possède cet album.
+                            </div>
+                        {% else %}
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th><i class="fas fa-user"></i> Utilisateur</th>
+                                            <th><i class="fas fa-calendar"></i> Date d'achat</th>
+                                            <th><i class="fas fa-euro-sign"></i> Prix</th>
+                                            <th><i class="fas fa-comment"></i> Commentaire</th>
+                                            {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+                                                <th class="text-right"><i class="fas fa-cogs"></i> Actions</th>
+                                            {% endif %}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for owner in owners %}
+                                        <tr>
+                                            <td><strong>{{ owner.user.name }} {{ owner.user.lastname }}</strong></td>
+                                            <td>{{ owner.dateAchat ? owner.dateAchat|date('d/m/Y') : '-' }}</td>
+                                            <td>{% include 'components/owner_prix_cell.html.twig' with { prix: owner.prixAchat } %}</td>
+                                            <td>{{ owner.commentaire ? owner.commentaire|u.truncate(50, '...') : '-' }}</td>
+                                            {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+                                                <td class="text-right text-nowrap">
+                                                    {% if owner.user == app.user %}
+                                                        <a href="{{ path('musique_edit_owner', {id: musique.id, lienId: owner.id}) }}" class="btn btn-sm btn-outline-primary" title="Modifier">
+                                                            <i class="fas fa-edit"></i>
+                                                        </a>
+                                                        <form action="{{ path('musique_remove_owner', {id: musique.id, lienId: owner.id}) }}" method="post" class="d-inline" onsubmit="return confirm('Retirer cet album de votre collection ?');">
+                                                            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ owner.id) }}">
+                                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Retirer">
+                                                                <i class="fas fa-user-minus"></i>
+                                                            </button>
+                                                        </form>
+                                                    {% endif %}
+                                                </td>
+                                            {% endif %}
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% endif %}
+
+
+                {% endblock %}
+
+
+            {% endembed %}
+        </div>
+    </div>
+</div>
+{% endblock %}

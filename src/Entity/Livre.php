@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Trait\StoredImagePathTrait;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -13,6 +14,8 @@ use Doctrine\ORM\Mapping as ORM;
  */
 class Livre
 {
+    use StoredImagePathTrait;
+
     /**
      * @var int
      *
@@ -599,12 +602,53 @@ class Livre
      */
     public function getBestImage(): ?string
     {
+        if (!empty($this->storedPath)) {
+            return $this->storedPath;
+        }
+
         if (!empty($this->image2)) {
+            if (str_starts_with($this->image2, '/uploads/')) {
+                return $this->image2;
+            }
+
             return '/uploads/covers/' . $this->image2;
         }
 
         if (!empty($this->image)) {
-            return 'data:image/jpeg;base64,' . base64_encode(stream_get_contents($this->image));
+            // Reset stream pointer to beginning before reading
+            if (is_resource($this->image)) {
+                rewind($this->image);
+                $content = stream_get_contents($this->image);
+                if ($content !== false && !empty($content)) {
+                    return 'data:image/jpeg;base64,' . base64_encode($content);
+                }
+            } elseif (is_string($this->image)) {
+                // Already a string (not a stream)
+                return 'data:image/jpeg;base64,' . base64_encode($this->image);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Get base64 image for list display (without data: prefix)
+     * Used specifically for the list view where images are pre-loaded
+     */
+    public function getBase64ImageForList(): ?string
+    {
+        if (!empty($this->image)) {
+            // Reset stream pointer to beginning before reading
+            if (is_resource($this->image)) {
+                rewind($this->image);
+                $content = stream_get_contents($this->image);
+                if ($content !== false && !empty($content)) {
+                    return base64_encode($content);
+                }
+            } elseif (is_string($this->image)) {
+                // Already a string (not a stream)
+                return base64_encode($this->image);
+            }
         }
 
         return null;

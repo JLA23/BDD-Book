@@ -85,7 +85,7 @@
                     <div class="card-body">
                         {% if edit and currentImage is defined and currentImage %}
                             <div class="mb-3 text-center">
-                                <img src="data:image/jpeg;base64,{{ currentImage }}" 
+                                <img src="{{ currentImage }}" 
                                      class="img-fluid rounded" 
                                      alt="Couverture actuelle"
                                      style="max-height: 200px;">

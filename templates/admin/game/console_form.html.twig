@@ -1,0 +1,75 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Admin — {% if console %}Modifier{% else %}Nouvelle{% endif %} console{% endblock %}
+
+{% block body %}
+<div id="acceuilSite" class="col-lg-8">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 font-weight-bold text-danger">
+            {% if console %}<i class="fas fa-edit"></i> Modifier{% else %}<i class="fas fa-plus"></i> Nouvelle{% endif %} console
+        </h1>
+        <a href="{{ path('admin_game_consoles') }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left"></i> Liste</a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form method="post">
+                <div class="form-group">
+                    <label for="code">Code court <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="code" name="code" maxlength="30" required
+                           value="{{ console ? console.code : '' }}" placeholder="PS5">
+                </div>
+                <div class="form-group">
+                    <label for="nom">Nom affiché <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="nom" name="nom" maxlength="100" required
+                           value="{{ console ? console.nom : '' }}" placeholder="PlayStation 5">
+                </div>
+                <div class="form-group">
+                    <label for="icone">Icône (classes FontAwesome)</label>
+                    <input type="text" class="form-control font-monospace" id="icone" name="icone" maxlength="100"
+                           value="{{ console ? console.icone : '' }}" placeholder="fab fa-playstation">
+                    <small class="text-muted">Ex. <code>fab fa-playstation</code>, <code>fas fa-desktop</code></small>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="couleur">Couleur de fond (badge)</label>
+                        <div class="input-group">
+                            <input type="color" class="form-control" id="couleurPicker" title="Choix couleur"
+                                   value="{{ console and console.couleur ? console.couleur : '#333333' }}" style="max-width:56px;">
+                            <input type="text" class="form-control" id="couleur" name="couleur" maxlength="20"
+                                   value="{{ console ? console.couleur : '' }}" placeholder="#003791">
+                        </div>
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label for="position">Position (tri)</label>
+                        <input type="number" class="form-control" id="position" name="position" value="{{ console ? console.position : 0 }}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="igdb_platform_id">ID plateforme IGDB</label>
+                    <input type="number" class="form-control" id="igdb_platform_id" name="igdb_platform_id" min="1"
+                           value="{{ console and console.igdbPlatformId ? console.igdbPlatformId : '' }}" placeholder="Ex. 167 pour PS5">
+                    <small class="text-muted">Utilisé pour le filtre « plateforme » de la recherche API. Laisser vide si cette console n’est pas dans IGDB ou hors filtre.</small>
+                </div>
+                <div class="custom-control custom-checkbox mb-3">
+                    <input type="checkbox" class="custom-control-input" id="actif" name="actif" value="1" {% if not console or console.actif %}checked{% endif %}>
+                    <label class="custom-control-label" for="actif">Console active</label>
+                </div>
+                <button type="submit" class="btn btn-danger"><i class="fas fa-save"></i> Enregistrer</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var picker = document.getElementById('couleurPicker');
+    var field = document.getElementById('couleur');
+    if (!picker || !field) return;
+    picker.addEventListener('input', function () { field.value = picker.value; });
+    field.addEventListener('input', function () {
+        if (/^#[0-9A-Fa-f]{6}$/.test(field.value.trim())) picker.value = field.value.trim();
+    });
+})();
+</script>
+{% endblock %}

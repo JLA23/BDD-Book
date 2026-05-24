@@ -34,6 +34,16 @@ class LienKioskNumUser
      */
     private $commentaire;
 
+    /**
+     * @ORM\Column(name="prix_achat", type="decimal", precision=10, scale=2, nullable=true)
+     */
+    private $prixAchat;
+
+    /**
+     * @ORM\Column(name="date_achat", type="date", nullable=true)
+     */
+    private $dateAchat;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -94,6 +104,30 @@ class LienKioskNumUser
     public function setCommentaire(?string $commentaire): self
     {
         $this->commentaire = $commentaire;
+
+        return $this;
+    }
+
+    public function getPrixAchat(): ?float
+    {
+        return $this->prixAchat !== null ? (float) $this->prixAchat : null;
+    }
+
+    public function setPrixAchat(?float $prixAchat): self
+    {
+        $this->prixAchat = $prixAchat;
+
+        return $this;
+    }
+
+    public function getDateAchat(): ?\DateTimeInterface
+    {
+        return $this->dateAchat;
+    }
+
+    public function setDateAchat(?\DateTimeInterface $dateAchat): self
+    {
+        $this->dateAchat = $dateAchat;
 
         return $this;
     }

@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Trait\StoredImagePathTrait;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -14,6 +15,8 @@ use Doctrine\ORM\Mapping as ORM;
  */
 class Game
 {
+    use StoredImagePathTrait;
+
     /**
      * @var int
      *
@@ -29,13 +32,6 @@ class Game
      * @ORM\Column(name="titre", type="string", length=255)
      */
     private $titre;
-
-    /**
-     * @var string
-     *
-     * @ORM\Column(name="console", type="string", length=100)
-     */
-    private $console;
 
     /**
      * @var int|null
@@ -131,17 +127,6 @@ class Game
     public function setTitre(string $titre): self
     {
         $this->titre = $titre;
-        return $this;
-    }
-
-    public function getConsole(): ?string
-    {
-        return $this->console;
-    }
-
-    public function setConsole(string $console): self
-    {
-        $this->console = $console;
         return $this;
     }
 
@@ -281,12 +266,18 @@ class Game
 
     public function getMainImage(): ?string
     {
+        if (!empty($this->storedPath)) {
+            return $this->storedPath;
+        }
+
         if ($this->coverUrl) {
             return $this->coverUrl;
         }
+
         foreach ($this->images as $image) {
-            return $image->getUrl() ?: '/uploads/game/' . $image->getFilename();
+            return $image->getDisplayUrl();
         }
+
         return null;
     }
 

@@ -7,22 +7,43 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use App\Entity\Livre;
 use App\Service\BookCoverService;
+use App\Service\Media\MediaImageSyncService;
 use Symfony\Component\HttpFoundation\Request;
 use Knp\Component\Pager\PaginatorInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Repository\UserRepository;
+use App\Entity\LienUserLivre;
 
-
+#[Route('/books')]
 class LivresController extends AbstractController
 {
     private BookCoverService $bookCoverService;
     private EntityManagerInterface $em;
 
-    public function __construct(BookCoverService $bookCoverService, EntityManagerInterface $em)
-    {
+    public function __construct(
+        BookCoverService $bookCoverService,
+        EntityManagerInterface $em,
+        private MediaImageSyncService $mediaImageSync,
+    ) {
         $this->bookCoverService = $bookCoverService;
         $this->em = $em;
     }
-    #[Route('/listelivre', name: 'listesLivres')]
+
+    #[Route('/', name: 'books_index')]
+    public function index(UserRepository $userRepo): Response
+    {
+        $users = $userRepo->findAll();
+        return $this->render('pages/index.html.twig', ['users' => $users]);
+    }
+
+    #[Route('/listeUser', name: 'listeUser')]
+    public function listeUser(UserRepository $userRepository): Response
+    {
+        $users = $userRepository->findAll();
+        return $this->render('pages/listUser.html.twig', ['users' => $users]);
+    }
+
+    #[Route('/liste', name: 'listesLivres')]
     public function listesLivres(Request $request, PaginatorInterface $paginator)
     {
         $detect = new \Mobile_Detect;
@@ -48,8 +69,15 @@ class LivresController extends AbstractController
                 // Privilégier image2 (fichier téléchargé) si disponible, sinon image (BLOB)
                 if ($livre->getImage2()) {
                     $images[$livre->getId()] = '/uploads/covers/' . $livre->getImage2();
-                } elseif ($livre->getImage()) {
-                    $images[$livre->getId()] = base64_encode(stream_get_contents($livre->getImage()));
+                } else {
+                    // Recharger l'entité pour obtenir un stream frais
+                    $freshLivre = $em->getRepository(Livre::class)->find($livre->getId());
+                    if ($freshLivre && $freshLivre->getImage()) {
+                        $base64Image = $freshLivre->getBase64ImageForList();
+                        if ($base64Image !== null) {
+                            $images[$livre->getId()] = $base64Image;
+                        }
+                    }
                 }
             }
         }
@@ -58,7 +86,7 @@ class LivresController extends AbstractController
 
     }
 
-    #[Route('/livre/{id}', name: 'livreDetail')]
+    #[Route('/{id}', name: 'livreDetail', requirements: ['id' => '\d+'])]
     public function livreDetail(string $id, Request $request)
     {
         $detect = new \Mobile_Detect;
@@ -70,7 +98,7 @@ class LivresController extends AbstractController
 
 }
 
-    #[Route('/recherche', name: 'searchBook')]
+    #[Route('/recherche', name: 'books_search')]
     public function searchBook(Request $request, PaginatorInterface $paginator)
     {
         $em = $this->em;
@@ -160,7 +188,7 @@ class LivresController extends AbstractController
         return $this->redirectToRoute('index');
     }
 
-    #[Route('/listelivreUser/{id}', name: 'listelivreUser')]
+    #[Route('/utilisateur/{id}', name: 'books_user', requirements: ['id' => '\d+'])]
     public function listesLivresbyUser(string $id, Request $request, PaginatorInterface $paginator)
     {
         $em = $this->em;
@@ -191,7 +219,7 @@ class LivresController extends AbstractController
 
     }
 
-    #[Route('/livre/{id}/rechercher-couverture', name: 'livre_search_cover', requirements: ['id' => '\d+'])]
+    #[Route('/{id}/rechercher-couverture', name: 'livre_search_cover', requirements: ['id' => '\d+'])]
     public function searchCover(int $id): JsonResponse
     {
         $livre = $this->em->getRepository(Livre::class)->find($id);
@@ -234,7 +262,7 @@ class LivresController extends AbstractController
         ]);
     }
 
-    #[Route('/livre/{id}/upload-cover', name: 'livre_upload_cover', methods: ['POST'], requirements: ['id' => '\d+'])]
+    #[Route('/{id}/upload-cover', name: 'livre_upload_cover', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function uploadCover(int $id, Request $request): JsonResponse
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
@@ -302,7 +330,7 @@ class LivresController extends AbstractController
         }
     }
 
-    #[Route('/livre/{id}/supprimer-url-couverture', name: 'livre_remove_cover_url', methods: ['POST'], requirements: ['id' => '\d+'])]
+    #[Route('/{id}/supprimer-url-couverture', name: 'livre_remove_cover_url', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function removeCoverUrl(int $id): JsonResponse
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
@@ -332,7 +360,7 @@ class LivresController extends AbstractController
         ]);
     }
 
-    #[Route('/livre/{id}/scrape-covers', name: 'livre_scrape_covers')]
+    #[Route('/{id}/scrape-covers', name: 'livre_scrape_covers', requirements: ['id' => '\d+'])]
     public function scrapeCovers(string $id): JsonResponse
     {
         $livre = $this->em->getRepository(Livre::class)->findOneById($id);
@@ -357,7 +385,7 @@ class LivresController extends AbstractController
         ]);
     }
 
-    #[Route('/livre/{id}/update-cover-url', name: 'livre_update_cover_url', methods: ['POST'])]
+    #[Route('/{id}/update-cover-url', name: 'livre_update_cover_url', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function updateCoverUrl(string $id, Request $request): Response
     {
         $livre = $this->em->getRepository(Livre::class)->findOneById($id);
@@ -476,7 +504,9 @@ class LivresController extends AbstractController
 
         // Mettre à jour le livre
         $livre->setImage2($filename);
-        $this->em->flush();    
+        $this->em->flush();
+        $this->mediaImageSync->syncLivreCover($livre);
+        $this->em->flush();
     }
 
 }

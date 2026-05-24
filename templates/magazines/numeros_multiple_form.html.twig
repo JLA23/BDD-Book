@@ -21,8 +21,8 @@
         <div class="card-body">
             <div class="alert alert-info">
                 <i class="fas fa-info-circle"></i> 
-                <strong>Note :</strong> Remplissez les informations pour chaque numéro. Seul le champ "Numéro" est obligatoire. 
-                Vous pouvez ajouter une image de couverture et sélectionner les propriétaires pour chaque numéro.
+                <strong>Note :</strong> Remplissez les informations pour chaque numéro. Seul le champ « Numéro » est obligatoire.
+                Vous êtes propriétaire par défaut de chaque numéro enregistré ; renseignez vos informations d'achat ci-dessous.
             </div>
         </div>
     </div>
@@ -46,8 +46,8 @@
                         </div>
                         <div class="col-md-3">
                             <div class="form-group">
-                                <label class="font-weight-bold">Date de parution (mois/année)</label>
-                                <input type="text" name="numeros[0][dateParution]" class="form-control" placeholder="AAAA-MM">
+                                <label class="font-weight-bold">Date de parution</label>
+                                <input type="month" name="numeros[0][dateParution]" class="form-control">
                             </div>
                         </div>
                         <div class="col-md-3">
@@ -83,25 +83,15 @@
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
+                        <div class="col-md-12 col-lg-6">
+                            <div class="form-group mb-0">
                                 <label class="font-weight-bold">Image de couverture</label>
                                 <input type="file" name="numeros[0][image]" class="form-control-file" accept="image/*">
                                 <small class="text-muted">JPEG, PNG, GIF, WEBP - Max 5 Mo</small>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="font-weight-bold">Propriétaires</label>
-                                <select name="numeros[0][users][]" class="form-control select-users" multiple size="4">
-                                    {% for user in users %}
-                                        <option value="{{ user.id }}">{{ user.name }} {{ user.lastname }} ({{ user.username }})</option>
-                                    {% endfor %}
-                                </select>
-                                <small class="text-muted">Maintenez Ctrl/Cmd pour sélectionner plusieurs utilisateurs</small>
-                            </div>
-                        </div>
                     </div>
+                    {% include 'magazines/_numero_owners_fields.html.twig' with { index: 0 } %}
                 </div>
             </div>
         </div>
@@ -131,112 +121,64 @@
     <script>
     $(document).ready(function() {
         var index = 1;
-        
+        function reindexNumeroItem($item, newIndex, resetFields) {
+            $item.attr('data-index', newIndex);
+            $item.find('.numero-index').text(newIndex + 1);
+
+            $item.find('[name]').each(function() {
+                var name = $(this).attr('name');
+                if (name) {
+                    $(this).attr('name', name.replace(/numeros\[\d+\]/, 'numeros[' + newIndex + ']'));
+                }
+            });
+
+            $item.find('[id]').each(function() {
+                var id = $(this).attr('id');
+                if (id) {
+                    $(this).attr('id', id.replace(/^num\d+_/, 'num' + newIndex + '_'));
+                }
+            });
+
+            $item.find('label[for]').each(function() {
+                var f = $(this).attr('for');
+                if (f) {
+                    $(this).attr('for', f.replace(/^num\d+_/, 'num' + newIndex + '_'));
+                }
+            });
+
+            if (resetFields) {
+                $item.find('input[type="text"], input[type="number"], input[type="month"], textarea').not('.ma-date-achat').val('');
+                $item.find('input.ma-date-achat').val(new Date().toISOString().slice(0, 10));
+                $item.find('select').prop('selectedIndex', 0);
+                $item.find('input[type="file"]').val('');
+            }
+        }
+
         $('#add-numero').on('click', function() {
-            var template = `
-                <div class="card mb-4 shadow-sm numero-item" data-index="${index}">
-                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="fas fa-newspaper"></i> Numéro <span class="numero-index">${index + 1}</span></h5>
-                        <button type="button" class="btn btn-sm btn-danger remove-numero">
-                            <i class="fas fa-times"></i> Supprimer
-                        </button>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-2">
-                                <div class="form-group">
-                                    <label class="font-weight-bold">Numéro *</label>
-                                    <input type="number" name="numeros[${index}][num]" class="form-control" required placeholder="Ex: 42">
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label class="font-weight-bold">Date de parution (mois/année)</label>
-                                    <input type="text" name="numeros[${index}][dateParution]" class="form-control" placeholder="AAAA-MM">
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label class="font-weight-bold">Code EAN</label>
-                                    <input type="text" name="numeros[${index}][EAN]" class="form-control" placeholder="Ex: 9782123456789">
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="form-group">
-                                    <label class="font-weight-bold">Prix</label>
-                                    <input type="number" step="0.01" name="numeros[${index}][prix]" class="form-control" placeholder="Ex: 5.99">
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="form-group">
-                                    <label class="font-weight-bold">Monnaie</label>
-                                    <select name="numeros[${index}][monnaie]" class="form-control">
-                                        <option value="">-</option>
-                                        <option value="1">EUR (€)</option>
-                                        <option value="2">USD ($)</option>
-                                        <option value="3">GBP (£)</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-12">
-                                <div class="form-group">
-                                    <label class="font-weight-bold">Résumé</label>
-                                    <textarea name="numeros[${index}][description]" class="form-control" rows="3" placeholder="Résumé du contenu de ce numéro..."></textarea>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="font-weight-bold">Image de couverture</label>
-                                    <input type="file" name="numeros[${index}][image]" class="form-control-file" accept="image/*">
-                                    <small class="text-muted">JPEG, PNG, GIF, WEBP - Max 5 Mo</small>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="font-weight-bold">Propriétaires</label>
-                                    <select name="numeros[${index}][users][]" class="form-control select-users" multiple size="4">
-                                        {% for user in users %}
-                                            <option value="{{ user.id }}">{{ user.name }} {{ user.lastname }} ({{ user.username }})</option>
-                                        {% endfor %}
-                                    </select>
-                                    <small class="text-muted">Maintenez Ctrl/Cmd pour sélectionner plusieurs utilisateurs</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            $('#numeros-container').append(template);
+            var $clone = $('.numero-item').first().clone();
+            reindexNumeroItem($clone, index, true);
+            $('#numeros-container').append($clone);
             index++;
-            
             updateRemoveButtons();
         });
-        
+
         $(document).on('click', '.remove-numero', function() {
             $(this).closest('.numero-item').remove();
             updateRemoveButtons();
-            updateIndexes();
+            $('.numero-item').each(function(i) {
+                reindexNumeroItem($(this), i, false);
+            });
+            index = $('.numero-item').length;
         });
-        
+
         function updateRemoveButtons() {
-            var items = $('.numero-item');
-            if (items.length > 1) {
+            if ($('.numero-item').length > 1) {
                 $('.remove-numero').show();
             } else {
                 $('.remove-numero').hide();
             }
         }
-        
-        function updateIndexes() {
-            $('.numero-item').each(function(i) {
-                $(this).find('.numero-index').text(i + 1);
-            });
-        }
+
     });
     </script>
 {% endblock %}

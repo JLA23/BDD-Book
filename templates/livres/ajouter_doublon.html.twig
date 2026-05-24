@@ -1,12 +1,12 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Livre déjà existant ?{% endblock %}
+{% block title %}BDD-Book - Livre déjà existant ?{% endblock %}
 
 {% block body %}
 <div class="container mt-4">
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ path('index') }}">Accueil</a></li>
+            <li class="breadcrumb-item"><a href="{{ path('books_index') }}">BDD-Books</a></li>
             <li class="breadcrumb-item"><a href="{{ path('livre_ajouter') }}">Ajouter un livre</a></li>
             <li class="breadcrumb-item active">Doublon détecté</li>
         </ol>

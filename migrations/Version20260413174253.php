@@ -14,18 +14,36 @@ final class Version20260413174253 extends AbstractMigration
 {
     public function getDescription(): string
     {
-        return '';
+        return 'Retrait colonnes lien_user_brick_set si encore présentes.';
     }
 
     public function up(Schema $schema): void
     {
-        // this up() migration is auto-generated, please modify it to your needs
+        $schemaManager = $this->connection->createSchemaManager();
+        if (!$schemaManager->tablesExist(['lien_user_brick_set'])) {
+            return;
+        }
+
+        $table = $schemaManager->introspectTable('lien_user_brick_set');
+        if (!$table->hasColumn('est_monte')) {
+            return;
+        }
+
         $this->addSql('ALTER TABLE lien_user_brick_set DROP est_monte, DROP est_complet');
     }
 
     public function down(Schema $schema): void
     {
-        // this down() migration is auto-generated, please modify it to your needs
+        $schemaManager = $this->connection->createSchemaManager();
+        if (!$schemaManager->tablesExist(['lien_user_brick_set'])) {
+            return;
+        }
+
+        $table = $schemaManager->introspectTable('lien_user_brick_set');
+        if ($table->hasColumn('est_monte')) {
+            return;
+        }
+
         $this->addSql('ALTER TABLE lien_user_brick_set ADD est_monte TINYINT(1) NOT NULL, ADD est_complet TINYINT(1) NOT NULL');
     }
 }

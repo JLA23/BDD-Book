@@ -117,12 +117,14 @@ class GameImage
 
     public function getDisplayUrl(): string
     {
-        if ($this->url) {
-            return $this->url;
-        }
         if ($this->filename) {
             return '/uploads/game/' . $this->filename;
         }
+
+        if ($this->url) {
+            return $this->url;
+        }
+
         return '/images/no-image.png';
     }
 }

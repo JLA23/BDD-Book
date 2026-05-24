@@ -17,6 +17,7 @@ use App\Repository\BrickSetRepository;
 use App\Repository\LienUserBrickSetRepository;
 use App\Repository\UserRepository;
 use App\Service\BrickApiService;
+use App\Service\Media\MediaImageSyncService;
 use App\Service\SectionPermissionService;
 use Doctrine\ORM\EntityManagerInterface;
 use Knp\Component\Pager\PaginatorInterface;
@@ -35,8 +36,12 @@ class BrickController extends AbstractController
     private BrickApiService $brickApi;
     private SectionPermissionService $permissionService;
 
-    public function __construct(EntityManagerInterface $em, BrickApiService $brickApi, SectionPermissionService $permissionService)
-    {
+    public function __construct(
+        EntityManagerInterface $em,
+        BrickApiService $brickApi,
+        SectionPermissionService $permissionService,
+        private MediaImageSyncService $mediaImageSync,
+    ) {
         $this->em = $em;
         $this->brickApi = $brickApi;
         $this->permissionService = $permissionService;
@@ -156,6 +161,18 @@ class BrickController extends AbstractController
         ]);
     }
 
+    #[Route('/ajouter', name: 'brick_ajouter')]
+    public function ajouter(): Response
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+        $this->permissionService->denyAccessUnlessCanRegister('brick');
+
+        return $this->render('brick/ajouter_choix.html.twig', [
+            'rebrickableConfigured' => $this->brickApi->isRebrickableConfigured(),
+            'bricksetConfigured' => $this->brickApi->isBricksetConfigured(),
+        ]);
+    }
+
     #[Route('/nouveau', name: 'brick_new')]
     public function new(Request $request, BrickCollectionRepository $collectionRepo, BrickMarqueRepository $marqueRepo, BrickSetRepository $setRepo, LienUserBrickSetRepository $lienRepo, SluggerInterface $slugger): Response
     {
@@ -185,6 +202,9 @@ class BrickController extends AbstractController
             }
             if ($request->query->get('prix')) {
                 $set->setPrix((float) $request->query->get('prix'));
+            }
+            if ($request->query->get('ean')) {
+                $set->setEan($request->query->get('ean'));
             }
 
             // Vérifier si la référence existe déjà
@@ -257,14 +277,21 @@ class BrickController extends AbstractController
             $position = 0;
             $addedUrls = [];
 
-            // Ajouter les images par URL soumises via le formulaire
+            // Indexer les sources depuis la session pour préserver l'origine
+            $sessionImages = $session->get('brick_prefill_images', []);
+            $sourceMap = [];
+            foreach ($sessionImages as $imgData) {
+                $sourceMap[$imgData['url']] = $imgData['source'] ?? 'API';
+            }
+
+            // Ajouter les images par URL soumises via le formulaire (dans l'ordre du drag & drop)
             $imageUrls = $request->request->all('image_urls') ?? [];
             foreach ($imageUrls as $url) {
                 if (!empty($url) && filter_var($url, FILTER_VALIDATE_URL) && !in_array($url, $addedUrls)) {
                     $image = new BrickImage();
                     $image->setUrl($url);
                     $image->setPosition($position++);
-                    $image->setSource('URL');
+                    $image->setSource($sourceMap[$url] ?? 'URL');
                     $image->setBrickSet($set);
                     $this->em->persist($image);
                     $addedUrls[] = $url;
@@ -272,7 +299,6 @@ class BrickController extends AbstractController
             }
 
             // Ajouter les images de la session (API) si pas déjà ajoutées
-            $sessionImages = $session->get('brick_prefill_images', []);
             foreach ($sessionImages as $imgData) {
                 if (!empty($imgData['url']) && !in_array($imgData['url'], $addedUrls)) {
                     $image = new BrickImage();
@@ -334,9 +360,11 @@ class BrickController extends AbstractController
 
             $session->remove('brick_prefill_images');
             $this->em->flush();
+            $this->mediaImageSync->syncBrickSetImages($set);
+            $this->em->flush();
 
             $this->addFlash('success', 'Set créé avec succès' . ($addToCollection === '1' ? ' et ajouté à votre collection' : ''));
-            return $this->redirectToRoute('brick_detail', ['id' => $set->getId()]);
+            return $this->redirectToRoute('brick_detail', ['id' => $set->getId(), 'from' => 'list']);
         }
 
         return $this->render('brick/form.html.twig', [
@@ -367,7 +395,7 @@ class BrickController extends AbstractController
             $this->em->flush();
 
             $this->addFlash('success', 'Set modifié avec succès');
-            return $this->redirectToRoute('brick_detail', ['id' => $set->getId()]);
+            return $this->redirectToRoute('brick_detail', ['id' => $set->getId(), 'from' => 'list']);
         }
 
         return $this->render('brick/form.html.twig', [
@@ -430,25 +458,58 @@ class BrickController extends AbstractController
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
 
-        $reference = $request->query->get('reference', '');
+        $ean = trim((string) $request->query->get('ean', ''));
+        $reference = trim((string) $request->query->get('reference', ''));
 
-        if (empty($reference)) {
-            return $this->json(['error' => 'Référence requise'], 400);
+        if ($ean === '' && $reference === '') {
+            return $this->json(['error' => 'Référence ou code-barres requis'], 400);
         }
 
         if (!$this->brickApi->isConfigured()) {
             return $this->json(['error' => 'Aucune API configurée'], 500);
         }
 
+        if ($ean !== '') {
+            if (!$this->brickApi->isBricksetConfigured()) {
+                return $this->json(['error' => 'La recherche par code-barres nécessite une clé Brickset (BRICKSET_API_KEY)'], 400);
+            }
+
+            $existingSet = $setRepo->findByEan($ean);
+            if ($existingSet) {
+                return $this->json([
+                    'success' => true,
+                    'exists' => true,
+                    'duplicate' => [
+                        'id' => $existingSet->getId(),
+                        'nom' => $existingSet->getNom(),
+                        'reference' => $existingSet->getReference(),
+                    ],
+                ]);
+            }
+
+            $result = $this->brickApi->searchByEan($ean);
+            if ($result) {
+                return $this->json([
+                    'success' => true,
+                    'set' => $result,
+                    'images' => $result['images'] ?? [],
+                ]);
+            }
+
+            return $this->json([
+                'success' => true,
+                'results' => [],
+            ]);
+        }
+
         // Vérifier si existe déjà en base (avec et sans suffixe -1)
         $refWithSuffix = preg_match('/-\d+$/', $reference) ? $reference : $reference . '-1';
         $refWithoutSuffix = preg_replace('/-\d+$/', '', $reference);
-        
-        $existingSet = $setRepo->findByReference($reference) 
+
+        $existingSet = $setRepo->findByReference($reference)
             ?? $setRepo->findByReference($refWithSuffix)
             ?? $setRepo->findByReference($refWithoutSuffix);
-        
-        // Si le set existe, retourner immédiatement sans appeler l'API
+
         if ($existingSet) {
             return $this->json([
                 'success' => true,
@@ -461,7 +522,6 @@ class BrickController extends AbstractController
             ]);
         }
 
-        // Rechercher via les APIs seulement si le set n'existe pas
         $result = $this->brickApi->searchSet($reference);
 
         if ($result) {
@@ -472,7 +532,6 @@ class BrickController extends AbstractController
             ]);
         }
 
-        // Sinon, rechercher par mot-clé
         $results = $this->brickApi->searchSets($reference, 10);
 
         return $this->json([
@@ -502,11 +561,17 @@ class BrickController extends AbstractController
 
         $data = json_decode($request->getContent(), true);
         $indexToRemove = $data['index'] ?? null;
+        $urlToRemove = $data['url'] ?? null;
 
         $session = $request->getSession();
         $images = $session->get('brick_prefill_images', []);
 
-        if ($indexToRemove !== null && isset($images[$indexToRemove])) {
+        if ($urlToRemove) {
+            $images = array_values(array_filter($images, function ($img) use ($urlToRemove) {
+                return ($img['url'] ?? '') !== $urlToRemove;
+            }));
+            $session->set('brick_prefill_images', $images);
+        } elseif ($indexToRemove !== null && isset($images[$indexToRemove])) {
             array_splice($images, $indexToRemove, 1);
             $session->set('brick_prefill_images', $images);
         }
@@ -532,6 +597,36 @@ class BrickController extends AbstractController
         $session->set('brick_prefill_images', $images);
 
         return $this->json(['success' => true, 'count' => count($images), 'images' => $images]);
+    }
+
+    #[Route('/api/reorder-pending-images', name: 'brick_api_reorder_pending_images', methods: ['POST'])]
+    public function apiReorderPendingImages(Request $request): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_REMEMBERED');
+
+        $data = json_decode($request->getContent(), true);
+        $urls = $data['urls'] ?? [];
+
+        $session = $request->getSession();
+        $images = $session->get('brick_prefill_images', []);
+
+        // Construire un index par URL
+        $imageMap = [];
+        foreach ($images as $img) {
+            $imageMap[$img['url']] = $img;
+        }
+
+        // Réordonner selon les URLs reçues
+        $reordered = [];
+        foreach ($urls as $url) {
+            if (isset($imageMap[$url])) {
+                $reordered[] = $imageMap[$url];
+            }
+        }
+
+        $session->set('brick_prefill_images', $reordered);
+
+        return $this->json(['success' => true, 'count' => count($reordered)]);
     }
 
     #[Route('/set/{id}/images', name: 'brick_images', requirements: ['id' => '\d+'])]
@@ -584,6 +679,8 @@ class BrickController extends AbstractController
                 }
             }
 
+            $this->em->flush();
+            $this->mediaImageSync->syncBrickSetImages($set);
             $this->em->flush();
             $this->addFlash('success', 'Images ajoutées avec succès');
 

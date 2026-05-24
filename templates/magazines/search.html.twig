@@ -18,15 +18,16 @@
         <div class="card-body">
             <form action="{{ path('magazines_search') }}" method="get" class="mb-3" id="searchForm">
                 <div class="row">
-                    <div class="col-md-5 mb-2">
-                        <div class="input-group">
-                            <div class="input-group-prepend">
-                                <span class="input-group-text bg-white border-right-0"><i class="fas fa-book-open text-primary"></i></span>
-                            </div>
-                            <input type="text" name="q" class="form-control border-left-0" id="search"
-                                   value="{{ searchQuery }}" 
-                                   placeholder="Nom du magazine ou éditeur...">
-                        </div>
+                    <div class="col-12 col-md-5 mb-2">
+                        {% include 'components/search_input_group.html.twig' with {
+                            icon: 'fas fa-newspaper',
+                            accent: '#667eea',
+                            name: 'q',
+                            input_id: 'search',
+                            placeholder: 'Nom du magazine ou éditeur...',
+                            value: searchQuery,
+                            size: ''
+                        } %}
                     </div>
                     <div class="col-md-4 mb-2">
                         <select name="user" class="form-control">
@@ -42,7 +43,7 @@
                     </div>
                     <div class="col-md-3 mb-2">
                         <button type="submit" class="btn btn-primary btn-block">
-                            <i class="fas fa-search"></i> Rechercher
+                            <i class="fas fa-search"></i><span class="d-none d-md-inline"> Rechercher</span>
                         </button>
                     </div>
                 </div>

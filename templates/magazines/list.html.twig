@@ -13,7 +13,7 @@
         
         <div class="card mb-4">
             <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                <h5 class="mb-0 text-white"><i class="fas fa-search"></i> Rechercher un magazine</h5>
+                <h5 class="mb-0 text-white"><i class="fas fa-search"></i><span class="d-none d-md-inline"> Rechercher</span> un magazine</h5>
             </div>
             <div class="card-body">
                 <form action="{{ path('magazines_search')}}" class="form-horizontal" id="searchForm">
@@ -21,12 +21,13 @@
                         <div class="col-md-8">
                             <div class="form-group mb-3">
                                 <label for="search" class="font-weight-bold text-dark">Que recherchez-vous ?</label>
-                                <div class="input-group input-group-lg">
-                                    <div class="input-group-prepend">
-                                        <span class="input-group-text bg-white border-right-0"><i class="fas fa-book-open text-primary"></i></span>
-                                    </div>
-                                    <input class='form-control border-left-0' name='q' placeholder="Nom du magazine ou éditeur..." type="text" id="search" style="border-top-right-radius: 0.3rem !important; border-bottom-right-radius: 0.3rem !important;"/>
-                                </div>
+                                {% include 'components/search_input_group.html.twig' with {
+                                    icon: 'fas fa-newspaper',
+                                    accent: '#667eea',
+                                    name: 'q',
+                                    input_id: 'search',
+                                    placeholder: 'Nom du magazine ou éditeur...'
+                                } %}
                                 <small class="form-text text-muted">Recherche par nom de magazine ou éditeur.</small>
                             </div>
                         </div>
@@ -47,7 +48,7 @@
                     
                     <div class="text-center">
                         <button id="searchButton" type="submit" class="btn btn-lg text-white px-5" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                            <i class="fas fa-search"></i> Rechercher
+                            <i class="fas fa-search"></i><span class="d-none d-md-inline"> Rechercher</span>
                         </button>
                     </div>
                 </form>

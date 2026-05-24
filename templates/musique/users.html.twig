@@ -1,0 +1,38 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Collections - BDD-Musique{% endblock %}
+
+{% block body %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 style="color: #e74c3c;"><i class="fas fa-users"></i> Collections par utilisateur</h2>
+        <a href="{{ path('musique_index') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Retour
+        </a>
+    </div>
+
+    <div class="row">
+        {% for user in users %}
+        <div class="col-md-4 col-sm-6 mb-3">
+            <a href="{{ path('musique_user', {id: user.id}) }}" class="text-decoration-none">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="user-avatar mr-3">
+                            {% if user.logo %}
+                                <img src="{{ asset('uploads/avatars/' ~ user.logo) }}" alt="{{ user.username }}" class="user-avatar-img">
+                            {% else %}
+                                <span class="user-avatar-initials-large">{{ user.name|first|upper }}{{ user.lastname|first|upper }}</span>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <h6 class="mb-1 text-dark">{{ user.name }} {{ user.lastname }}</h6>
+                            <span class="badge badge-danger">{{ user.musiqueCount|default(0) }} albums</span>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

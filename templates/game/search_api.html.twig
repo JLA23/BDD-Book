@@ -27,15 +27,48 @@
                     <h5 class="mb-0 text-white"><i class="fas fa-gamepad"></i> Rechercher un jeu</h5>
                 </div>
                 <div class="card-body">
-                    <div class="input-group">
-                        <input type="text" id="searchQuery" class="form-control form-control-lg" placeholder="Titre du jeu (ex: Zelda, God of War, Elden Ring...)">
-                        <div class="input-group-append">
-                            <button class="btn btn-lg" id="searchBtn" style="background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%); color: white;">
-                                <i class="fas fa-search"></i> Rechercher
-                            </button>
+                    <div class="mb-3">
+                    {% embed 'components/search_input_group.html.twig' with {
+                        icon: 'fas fa-gamepad',
+                        accent: '#6f42c1',
+                        input_id: 'searchQuery',
+                        placeholder: 'Titre du jeu (ex: Zelda, God of War, Elden Ring...)'
+                    } %}
+                        {% block append %}
+                            {% include 'components/search_submit_append.html.twig' with {
+                                button_id: 'searchBtn',
+                                button_style: 'background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%); color: white;'
+                            } %}
+                        {% endblock %}
+                    {% endembed %}
+                    </div>
+                    {% if igdb_platform_filters|length == 0 %}
+                    <div class="alert alert-warning small">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Aucune console n’a d’ID plateforme IGDB. Exécutez
+                        <code>php bin/console app:sync-game-console-igdb-ids</code>
+                        sur le serveur, ou renseignez l’ID dans l’admin Jeux → Consoles.
+                    </div>
+                    {% endif %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="small"><strong>Console / Plateforme (optionnel)</strong></label>
+                            <select id="platformFilter" class="form-control form-control-sm mb-2" {% if igdb_platform_filters|length == 0 %}disabled{% endif %}>
+                                <option value="">Toutes les plateformes</option>
+                                {% for pf in igdb_platform_filters %}
+                                    <option value="{{ pf.igdbId }}" data-console-code="{{ pf.code }}">{{ pf.label }} ({{ pf.code }}){% if pf.fromDefault|default(false) %} *{% endif %}</option>
+                                {% endfor %}
+                            </select>
+                            {% if igdb_platform_filters|length > 0 %}
+                            <small class="text-muted d-block">Les consoles marquées * utilisent l’ID IGDB par défaut (non encore enregistré en base).</small>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="small"><strong>Année (optionnel)</strong></label>
+                            <input type="number" id="yearFilter" class="form-control form-control-sm mb-2" placeholder="Ex: 2023" min="1970" max="{{ 'now'|date('Y') }}">
                         </div>
                     </div>
-                    <small class="text-muted">Recherche via l'API IGDB (Twitch)</small>
+                    <small class="text-muted">Recherche via l'API IGDB (Twitch) - Jusqu'à 50 résultats</small>
                 </div>
             </div>
 
@@ -74,11 +107,13 @@
                             </div>
                         </div>
                         
+                        <div id="existingGameAlert" class="mt-3" style="display: none;"></div>
+                        
                         <hr>
                         <h5>Sélectionner la plateforme</h5>
                         <div id="platformSelect" class="mb-3"></div>
                         
-                        <div class="text-center">
+                        <div class="text-center" id="actionButtons">
                             <button class="btn btn-lg btn-success" id="addGameBtn">
                                 <i class="fas fa-plus"></i> Ajouter ce jeu
                             </button>
@@ -105,26 +140,33 @@ $('#searchQuery').keypress(function(e) {
 $('#searchBtn').click(function() {
     var query = $('#searchQuery').val().trim();
     if (!query) { alert('Veuillez saisir un titre'); return; }
-    
+
+    var platform = $('#platformFilter').val();
+    var year = $('#yearFilter').val();
+
     $('#loadingSpinner').show();
     $('#searchResults').hide();
     $('#gameDetails').hide();
-    
+
+    var data = { q: query };
+    if (platform) data.platform = platform;
+    if (year) data.year = year;
+
     $.ajax({
         url: '{{ path("game_api_search") }}',
-        data: { q: query },
+        data: data,
         success: function(response) {
             $('#loadingSpinner').hide();
-            
+
             if (response.results && response.results.length > 0) {
                 var html = '<div class="row">';
                 response.results.forEach(function(game) {
                     html += '<div class="col-md-4 col-lg-3 mb-4">';
                     html += '<div class="card h-100 shadow-sm hover-card" style="cursor: pointer;" onclick="loadGameDetails(' + game.id + ')">';
                     if (game.cover) {
-                        html += '<img src="' + game.cover + '" class="card-img-top" style="height: 180px; object-fit: cover;">';
+                        html += '<div class="text-center p-2" style="background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);"><img src="' + game.cover + '" class="img-fluid" style="max-height: 180px; object-fit: contain;"></div>';
                     } else {
-                        html += '<div class="d-flex align-items-center justify-content-center bg-light" style="height: 180px;"><i class="fas fa-gamepad fa-3x text-muted"></i></div>';
+                        html += '<div class="d-flex align-items-center justify-content-center" style="height: 180px; background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);"><i class="fas fa-gamepad fa-3x text-muted"></i></div>';
                     }
                     html += '<div class="card-body p-2">';
                     html += '<h6 class="card-title mb-1 text-truncate">' + game.titre + '</h6>';
@@ -184,13 +226,17 @@ function loadGameDetails(gameId) {
                     
                     currentGame.platforms.forEach(function(p, i) {
                         var checked = i === 0 ? 'checked' : '';
+                        var code = p.consoleCode || p.slug || '';
                         platformsHtml += '<div class="custom-control custom-radio custom-control-inline">';
-                        platformsHtml += '<input type="radio" id="platform' + i + '" name="platform" class="custom-control-input" value="' + p.slug + '" ' + checked + '>';
+                        platformsHtml += '<input type="radio" id="platform' + i + '" name="platform" class="custom-control-input" value="' + String(code).replace(/"/g, '&quot;') + '" ' + checked + '>';
                         platformsHtml += '<label class="custom-control-label" for="platform' + i + '">' + p.name + '</label>';
                         platformsHtml += '</div>';
                     });
                 }
                 $('#platformSelect').html(platformsHtml);
+                
+                // Vérifier si le jeu existe déjà
+                checkExistingGame();
                 
                 $('#gameDetails').show();
             }
@@ -210,14 +256,59 @@ function loadGameDetails(gameId) {
     });
 }
 
-$('#addGameBtn').click(function() {
+function checkExistingGame() {
     if (!currentGame) return;
     
-    var platformSlug = $('input[name="platform"]:checked').val();
-    var platformName = $('input[name="platform"]:checked').next('label').text();
+    var consoleCode = $('input[name="platform"]:checked').val() || '';
     
-    // Convertir le slug en code console
-    var consoleCode = platformToConsole(platformSlug);
+    $.ajax({
+        url: '{{ path("game_api_check_existing") }}',
+        data: {
+            titre: currentGame.titre,
+            annee: currentGame.annee || '',
+            console: consoleCode
+        },
+        success: function(response) {
+            var alertHtml = '';
+            var btnHtml = '';
+            
+            if (response.exists && response.games.length > 0) {
+                var game = response.games[0];
+                alertHtml = '<div class="alert alert-warning">' +
+                    '<i class="fas fa-exclamation-triangle"></i> <strong>Ce jeu existe déjà dans la base !</strong><br>' +
+                    '<a href="' + game.detailUrl + '" class="alert-link" target="_blank">' + game.titre + (game.annee ? ' (' + game.annee + ')' : '') + '</a>';
+                if (game.hasConsole) {
+                    alertHtml += ' <span class="badge badge-danger">Déjà enregistrée sur cette console</span>';
+                }
+                alertHtml += '</div>';
+                
+                btnHtml += '<a href="' + game.addEditionUrl + '" class="btn btn-lg btn-primary mr-2">' +
+                    '<i class="fas fa-plus"></i> Ajouter une édition sur la fiche' +
+                    '</a>';
+                btnHtml += '<button class="btn btn-lg btn-success" id="addGameBtnNew">' +
+                    '<i class="fas fa-file"></i> Créer une nouvelle fiche' +
+                    '</button>';
+            } else {
+                btnHtml = '<button class="btn btn-lg btn-success" id="addGameBtnNew">' +
+                    '<i class="fas fa-plus"></i> Ajouter ce jeu' +
+                    '</button>';
+            }
+            
+            $('#existingGameAlert').html(alertHtml).toggle(alertHtml !== '');
+            $('#actionButtons').html(btnHtml);
+            
+            // Bind le nouveau bouton
+            $('#addGameBtnNew').off('click').on('click', function() {
+                addNewGame();
+            });
+        }
+    });
+}
+
+function addNewGame() {
+    if (!currentGame) return;
+    
+    var consoleCode = $('input[name="platform"]:checked').val() || '';
     
     var params = new URLSearchParams({
         prefill: '1',
@@ -234,38 +325,19 @@ $('#addGameBtn').click(function() {
     });
     
     window.location.href = '{{ path("game_new") }}?' + params.toString();
+}
+
+// Quand on change de plateforme, re-vérifier l'existence
+$(document).on('change', 'input[name="platform"]', function() {
+    if (currentGame) {
+        checkExistingGame();
+    }
 });
 
-function platformToConsole(slug) {
-    var mapping = {
-        'playstation5': 'PS5',
-        'playstation4': 'PS4',
-        'playstation3': 'PS3',
-        'playstation2': 'PS2',
-        'playstation1': 'PS1',
-        'ps-vita': 'PSVita',
-        'psp': 'PSP',
-        'xbox-series-x': 'XSX',
-        'xbox-one': 'XOne',
-        'xbox360': 'X360',
-        'xbox-old': 'Xbox',
-        'nintendo-switch': 'Switch',
-        'wii-u': 'WiiU',
-        'wii': 'Wii',
-        'gamecube': 'GameCube',
-        'nintendo-64': 'N64',
-        'nintendo-3ds': '3DS',
-        'nintendo-ds': 'DS',
-        'game-boy-advance': 'GBA',
-        'game-boy': 'GB',
-        'pc': 'PC',
-        'macos': 'Mac',
-        'linux': 'Linux',
-        'android': 'Android',
-        'ios': 'iOS'
-    };
-    return mapping[slug] || 'Autre';
-}
+$('#addGameBtn').click(function() {
+    addNewGame();
+});
+
 </script>
 
 <style>
