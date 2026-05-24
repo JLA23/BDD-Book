@@ -22,10 +22,14 @@ final class Version20260502110000 extends AbstractMigration
         }
 
         $gameConsole = $schemaManager->introspectTable('game_console');
-        if (!$gameConsole->hasColumn('igdb_platform_id')) {
-            $this->addSql('ALTER TABLE game_console ADD igdb_platform_id INT DEFAULT NULL');
-            $this->addSql('CREATE UNIQUE INDEX UNIQ_GAME_CONSOLE_IGDB_PLATFORM ON game_console (igdb_platform_id)');
+        if ($gameConsole->hasColumn('igdb_platform_id')) {
+            $this->write('Skipping Version20260502110000: igdb_platform_id already present (see Version20260506120000 for corrections).');
+
+            return;
         }
+
+        $this->addSql('ALTER TABLE game_console ADD igdb_platform_id INT DEFAULT NULL');
+        $this->addSql('CREATE UNIQUE INDEX UNIQ_GAME_CONSOLE_IGDB_PLATFORM ON game_console (igdb_platform_id)');
 
         $map = [
             'PS5' => 167,
