@@ -161,7 +161,7 @@ ALTER TABLE lien_user_game
 -- Option A (recommandé) : après déploiement du code :
 --   php bin/console app:seed-console-slug-aliases --env=prod
 --
--- Option B : copier depuis migrations/game_entities_migration.sql
+-- Option B : copier depuis sql/game_entities_migration.sql
 --   tout ce qui est entre le commentaire « -- 6. Alias (slugs IGDB »
 --   et la ligne « -- 7. Types d'édition » (uniquement les INSERT ...).
 -- ------------------------------------------------------------
@@ -206,5 +206,5 @@ WHERE lug.store IS NOT NULL AND lug.store <> '' AND lug.store_id IS NULL
 
 -- ------------------------------------------------------------
 -- ÉTAPE 9 — Supprimer les colonnes chaîne (après FK OK)
--- Exécuter : migrations/drop_lien_user_game_legacy_columns.sql
+-- Exécuter : sql/drop_lien_user_game_legacy_columns.sql
 -- ------------------------------------------------------------

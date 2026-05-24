@@ -61,41 +61,48 @@ composer install --no-dev --optimize-autoloader
 npm ci
 npm run build
 
-# Migrations Doctrine (voir section 3)
-php bin/console doctrine:migrations:migrate --no-interaction
+# Scripts SQL (voir section 3 — adapter selon l’état de la prod)
+# mysql -u USER -p NOM_BASE < sql/prod_dvd_musique.sql
 
-# Cache Symfony
 php bin/console cache:clear --env=prod
 php bin/console cache:warmup --env=prod
 ```
 
 ---
 
-## 3. Migrations base de données
+## 3. Base de données (scripts SQL)
 
-À appliquer **dans l’ordre chronologique** si la production ne les a pas encore :
+Les évolutions de schéma sont dans le dossier **`sql/`** (plus de migrations Doctrine PHP).
 
-| Version | Description |
-|---------|-------------|
-| `DoctrineMigrations\Version20260501103000` | Crée `game_console_alias` (mapping libellé → console) |
-| `DoctrineMigrations\Version20260502110000` | Ajoute `game_console.igdb_platform_id` |
-| `DoctrineMigrations\Version20260503143000` | Supprime colonnes string sur `lien_user_game` (remplacées par FK) |
-| `DoctrineMigrations\Version20260504120000` | Ajoute `dvd.ean` |
-| `DoctrineMigrations\Version20260505120000` | Ajoute `dvd.edition` |
-| `DoctrineMigrations\Version20260506120000` | Corrige `game_console.igdb_platform_id` (IGDB) |
-| `DoctrineMigrations\Version20260517120000` | Ajoute `brick_set.ean` |
-| `DoctrineMigrations\Version20260517180000` | Ajoute `prix_achat` et `date_achat` sur `lien_kiosk_num_user` |
-| `DoctrineMigrations\Version20260518120000` | Colonne `stored_path` (images locales, URL source conservée) |
+**Avant exécution :** sauvegarde BDD (`mysqldump`).
 
-Tables concernées par `stored_path` : `livre`, `dvd`, `musique`, `game`, `kiosk_collec`, `kiosk_num`, `dvd_user_collection`, `musique_user_collection`, `lien_user_game`.
+### Ordre recommandé
+
+| Ordre | Script | Description |
+|-------|--------|-------------|
+| 1 | `sql/prod_dvd_musique.sql` | Tables `dvd`, `musique`, collections utilisateur |
+| 2 | `sql/prod_jeux_etapes_simple.sql` | Consoles, stores, FK jeux (si pas déjà fait) |
+| 3 | `sql/drop_lien_user_game_legacy_columns.sql` | Suppression colonnes texte sur `lien_user_game` |
+| 4 | `sql/prod_complement.sql` | `stored_path`, magazines propriétaires, `brick_set.ean`, IGDB |
+
+Référence détaillée jeux : `sql/game_entities_migration.sql`. Index complet : `sql/README.md`.
+
+### Exécution
+
+```bash
+mysql -u USER -p NOM_BASE < sql/prod_dvd_musique.sql
+mysql -u USER -p NOM_BASE < sql/prod_complement.sql
+```
+
+Les erreurs *duplicate column* / *already exists* indiquent en général que l’étape est déjà appliquée — continuer ou passer au script suivant.
 
 ### Vérification
 
 ```bash
-php bin/console doctrine:migrations:status
-php bin/console doctrine:migrations:migrate --no-interaction
-php bin/console doctrine:migrations:list
+php bin/console doctrine:schema:update --dump-sql --complete
 ```
+
+La sortie doit être vide. **Ne pas** lancer `--force` en production sans relire le diff.
 
 ---
 
@@ -213,7 +220,7 @@ php bin/console cache:warmup --env=prod
    ```
 3. Les fichiers ajoutés dans `public/uploads/` peuvent rester (sans impact si le code est rollback).
 
-**Attention :** la migration `Version20260503143000` supprime des colonnes sur `lien_user_game` — rollback BDD indispensable en cas de retour arrière sur cette version.
+**Attention :** le script `sql/drop_lien_user_game_legacy_columns.sql` supprime des colonnes sur `lien_user_game` — rollback BDD indispensable en cas de retour arrière.
 
 ---
 
@@ -229,7 +236,7 @@ php bin/console cache:warmup --env=prod
 
 ## 9. Points d’attention
 
-1. **Commit obligatoire** avant MEP : migrations et nouveaux fichiers doivent être sur le dépôt distant.
+1. **Commit obligatoire** avant MEP : scripts SQL et nouveaux fichiers doivent être sur le dépôt distant.
 2. **`npm run build`** : requis si `public/build/` n’est pas versionné (Webpack Encore).
 3. **Commande images** : peut être longue et solliciter le réseau ; prévoir exécution hors pic ou par `--type`.
 4. **Variables d’environnement** (`.env.local` en prod) : vérifier selon usage :
@@ -238,7 +245,7 @@ php bin/console cache:warmup --env=prod
    - `REBRICKABLE_API_KEY`, `BRICKSET_API_KEY` (briques)
    - `PUPPETEER_SERVICE_URL`, `PUPPETEER_API_KEY` (couvertures livres, si utilisé)
 5. **Droits `public/uploads/`** : écriture obligatoire pour le stockage d’images.
-6. **Migration jeux `20260503143000`** : irréversible sans sauvegarde BDD.
+6. **Script jeux `drop_lien_user_game_legacy_columns.sql`** : irréversible sans sauvegarde BDD.
 
 ---
 
@@ -249,9 +256,8 @@ php bin/console cache:warmup --env=prod
 git status
 git log -5 --oneline
 
-# Migrations
-php bin/console doctrine:migrations:status
-php bin/console doctrine:migrations:migrate --no-interaction
+# Schéma BDD (scripts SQL dans sql/)
+php bin/console doctrine:schema:update --dump-sql --complete
 
 # Cache prod
 php bin/console cache:clear --env=prod
