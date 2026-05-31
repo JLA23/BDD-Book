@@ -92,21 +92,60 @@ CREATE TABLE IF NOT EXISTS musique_user_collection (
 
 
 -- ------------------------------------------------------------
--- ÉTAPE 4 — Clés étrangères
--- Erreur « Duplicate foreign key constraint name » → déjà OK, ignorer.
+-- ÉTAPE 4 — Clés étrangères (ré-exécutable)
 -- ------------------------------------------------------------
 
-ALTER TABLE dvd_user_collection
-    ADD CONSTRAINT FK_555F09DAA76ED395 FOREIGN KEY (user_id) REFERENCES user (id);
+SET @fk_exists := (
+    SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+    WHERE CONSTRAINT_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'dvd_user_collection'
+      AND CONSTRAINT_NAME = 'FK_555F09DAA76ED395'
+);
+SET @sql := IF(@fk_exists = 0,
+    'ALTER TABLE dvd_user_collection ADD CONSTRAINT FK_555F09DAA76ED395 FOREIGN KEY (user_id) REFERENCES user (id)',
+    'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
-ALTER TABLE dvd_user_collection
-    ADD CONSTRAINT FK_555F09DA797185F6 FOREIGN KEY (dvd_id) REFERENCES dvd (id) ON DELETE CASCADE;
+SET @fk_exists := (
+    SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+    WHERE CONSTRAINT_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'dvd_user_collection'
+      AND CONSTRAINT_NAME = 'FK_555F09DA797185F6'
+);
+SET @sql := IF(@fk_exists = 0,
+    'ALTER TABLE dvd_user_collection ADD CONSTRAINT FK_555F09DA797185F6 FOREIGN KEY (dvd_id) REFERENCES dvd (id) ON DELETE CASCADE',
+    'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
-ALTER TABLE musique_user_collection
-    ADD CONSTRAINT FK_562B0E3A76ED395 FOREIGN KEY (user_id) REFERENCES user (id);
+SET @fk_exists := (
+    SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+    WHERE CONSTRAINT_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'musique_user_collection'
+      AND CONSTRAINT_NAME = 'FK_562B0E3A76ED395'
+);
+SET @sql := IF(@fk_exists = 0,
+    'ALTER TABLE musique_user_collection ADD CONSTRAINT FK_562B0E3A76ED395 FOREIGN KEY (user_id) REFERENCES user (id)',
+    'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
-ALTER TABLE musique_user_collection
-    ADD CONSTRAINT FK_562B0E325E254A1 FOREIGN KEY (musique_id) REFERENCES musique (id) ON DELETE CASCADE;
+SET @fk_exists := (
+    SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+    WHERE CONSTRAINT_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'musique_user_collection'
+      AND CONSTRAINT_NAME = 'FK_562B0E325E254A1'
+);
+SET @sql := IF(@fk_exists = 0,
+    'ALTER TABLE musique_user_collection ADD CONSTRAINT FK_562B0E325E254A1 FOREIGN KEY (musique_id) REFERENCES musique (id) ON DELETE CASCADE',
+    'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 
 -- ------------------------------------------------------------

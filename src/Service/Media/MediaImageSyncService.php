@@ -45,7 +45,8 @@ class MediaImageSyncService
                 $source,
                 ImageMediaType::BOOK,
                 'livre-' . $livre->getId(),
-                $livre->getStoredPath()
+                $livre->getStoredPath(),
+                true
             );
             if ($path) {
                 $livre->setStoredPath($path);

@@ -596,22 +596,22 @@ class Livre
 
     /**
      * Get best image URL or base64 encoded blob
-     * Priority: image2 (downloaded file) > image (blob)
+     * Priority: image2 (couverture scrapée/uploadée) > stored_path > image (blob)
      *
      * @return string|null Returns URL if available, otherwise base64 encoded blob
      */
     public function getBestImage(): ?string
     {
-        if (!empty($this->storedPath)) {
-            return $this->storedPath;
-        }
-
         if (!empty($this->image2)) {
             if (str_starts_with($this->image2, '/uploads/')) {
                 return $this->image2;
             }
 
             return '/uploads/covers/' . $this->image2;
+        }
+
+        if (!empty($this->storedPath)) {
+            return $this->storedPath;
         }
 
         if (!empty($this->image)) {
