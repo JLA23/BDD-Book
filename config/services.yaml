@@ -4,6 +4,9 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices/configuration.html#application-related-configuration
 parameters:
+    # Défaut : scraping HTML DVDFr (API historique souvent indisponible).
+    # Activer avec DVDFR_USE_API=1 dans .env / .env.local
+    env(DVDFR_USE_API): '0'
 
 services:
     # default configuration for services in *this* file
@@ -56,3 +59,4 @@ services:
     App\Service\DvdApiService:
         arguments:
             $apiKey: '%env(default::DVDFR_API_KEY)%'
+            $useApi: '%env(bool:DVDFR_USE_API)%'

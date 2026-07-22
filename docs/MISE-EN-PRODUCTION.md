@@ -240,7 +240,7 @@ php bin/console cache:warmup --env=prod
 2. **`npm run build`** : requis si `public/build/` n’est pas versionné (Webpack Encore).
 3. **Commande images** : peut être longue et solliciter le réseau ; prévoir exécution hors pic ou par `--type`.
 4. **Variables d’environnement** (`.env.local` en prod) : vérifier selon usage :
-   - `DVDFR_API_KEY`
+   - `DVDFR_USE_API` (`0` = scraping HTML DVDFr, `1` = API XML), `DVDFR_API_KEY` (optionnelle si API)
    - `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET` (IGDB / jeux)
    - `REBRICKABLE_API_KEY`, `BRICKSET_API_KEY` (briques)
    - `PUPPETEER_SERVICE_URL`, `PUPPETEER_API_KEY` (couvertures livres, si utilisé)

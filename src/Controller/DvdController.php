@@ -410,6 +410,7 @@ class DvdController extends AbstractController
         $this->permissionService->denyAccessUnlessCanRegister('dvd');
 
         return $this->render('dvd/search_api.html.twig', [
+            'usesApi' => $this->dvdApi->usesApi(),
             'hasSignedApiKey' => $this->dvdApi->hasSignedApiKey(),
         ]);
     }

@@ -1,13 +1,13 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Recherche API - BDD-DVD{% endblock %}
+{% block title %}Recherche DVDFr - BDD-DVD{% endblock %}
 
 {% block body %}
 <div class="container-fluid px-4">
     <div class="row justify-content-center">
         <div class="col-lg-10">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2 style="color: #1a5276;"><i class="fas fa-search"></i> Recherche via API</h2>
+                <h2 style="color: #1a5276;"><i class="fas fa-search"></i> Recherche DVDFr</h2>
                 <a href="{{ path('dvd_index') }}" class="btn btn-outline-secondary">
                     <i class="fas fa-arrow-left"></i> Retour
                 </a>
@@ -15,11 +15,16 @@
 
             <div class="alert alert-info">
                 <i class="fas fa-info-circle"></i>
-                Recherche via l’<a href="https://www.dvdfr.com/api/documentation.php" target="_blank" rel="noopener">API DVDFr</a> (titre ou code-barres EAN, sans clé).
-                {% if hasSignedApiKey %}
-                    <span class="d-block small mt-1 mb-0">Clé API configurée : appels fiche signés activés.</span>
+                {% if usesApi %}
+                    Recherche via l’<a href="https://www.dvdfr.com/api/documentation.php" target="_blank" rel="noopener">API DVDFr</a> (titre ou code-barres EAN).
+                    {% if hasSignedApiKey %}
+                        <span class="d-block small mt-1 mb-0">Clé API configurée : appels fiche signés activés.</span>
+                    {% else %}
+                        <span class="d-block small mt-1 mb-0">Une clé <code>DVDFR_API_KEY</code> est optionnelle (appels signés / quotas étendus).</span>
+                    {% endif %}
                 {% else %}
-                    <span class="d-block small mt-1 mb-0">Une clé <code>DVDFR_API_KEY</code> est optionnelle (appels signés / quotas étendus).</span>
+                    Recherche sur <a href="https://www.dvdfr.com/" target="_blank" rel="noopener">DVDFr</a> (titre ou code-barres EAN) via le site web.
+                    <span class="d-block small mt-1 mb-0">Mode scraping actif (<code>DVDFR_USE_API=0</code>). Pour réactiver l’API : <code>DVDFR_USE_API=1</code>.</span>
                 {% endif %}
             </div>
 
