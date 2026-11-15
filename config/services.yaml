@@ -7,6 +7,8 @@ parameters:
     # Défaut : scraping HTML DVDFr (API historique souvent indisponible).
     # Activer avec DVDFR_USE_API=1 dans .env / .env.local
     env(DVDFR_USE_API): '0'
+    # Byparr / FlareSolverr. Vide = pas de contournement Cloudflare.
+    env(DVDFR_SOLVER_URL): ''
 
 services:
     # default configuration for services in *this* file
@@ -60,3 +62,4 @@ services:
         arguments:
             $apiKey: '%env(default::DVDFR_API_KEY)%'
             $useApi: '%env(bool:DVDFR_USE_API)%'
+            $solverUrl: '%env(DVDFR_SOLVER_URL)%'

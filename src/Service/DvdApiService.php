@@ -26,6 +26,7 @@ class DvdApiService
         private HttpClientInterface $httpClient,
         private ?string $apiKey = null,
         private bool $useApi = false,
+        private ?string $solverUrl = null,
     ) {
     }
 
@@ -205,7 +206,10 @@ class DvdApiService
                 'timeout' => 15,
             ]);
 
-            $body = $response->getContent();
+            $body = $response->getContent(false);
+            if ($body === '' || str_starts_with(trim($body), '<html') || $this->isCloudflareChallenge($body)) {
+                $body = $this->requestViaSolver($this->buildUrl($url, $query)) ?? '';
+            }
             if ($body === '' || str_starts_with(trim($body), '<html')) {
                 return null;
             }
@@ -319,6 +323,7 @@ class DvdApiService
             $href = html_entity_decode($match[1][0], ENT_QUOTES | ENT_HTML5, 'UTF-8');
             $ean = $match[2][0];
             $titre = trim(html_entity_decode(strip_tags($match[3][0]), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+            $titre = trim(preg_replace('/\s+/u', ' ', $titre) ?? $titre);
             if ($titre === '' || $ean === '') {
                 continue;
             }
@@ -524,18 +529,71 @@ class DvdApiService
                 $options['query'] = $query;
             }
 
+            $fullUrl = $this->buildUrl($url, $query);
             $response = $this->httpClient->request('GET', $url, $options);
             $status = $response->getStatusCode();
-            if ($status < 200 || $status >= 400) {
+            $body = ($status >= 200 && $status < 400) ? $response->getContent(false) : '';
+            if ($body !== '' && !$this->isCloudflareChallenge($body)) {
+                return $body;
+            }
+
+            return $this->requestViaSolver($fullUrl);
+        } catch (\Throwable) {
+            return $this->requestViaSolver($this->buildUrl($url, $query));
+        }
+    }
+
+    /**
+     * DVDFr passe par Cloudflare. Byparr (API compatible FlareSolverr) récupère le HTML.
+     */
+    private function requestViaSolver(string $url): ?string
+    {
+        $solverUrl = trim((string) $this->solverUrl);
+        if ($solverUrl === '') {
+            return null;
+        }
+
+        try {
+            $response = $this->httpClient->request('POST', rtrim($solverUrl, '/') . '/v1', [
+                'json' => [
+                    'cmd' => 'request.get',
+                    'url' => $url,
+                    'maxTimeout' => 60000,
+                ],
+                'timeout' => 70,
+            ]);
+            if ($response->getStatusCode() !== 200) {
                 return null;
             }
 
-            $body = $response->getContent();
+            $data = $response->toArray(false);
+            $body = $data['solution']['response'] ?? null;
+            if (!is_string($body) || $body === '' || $this->isCloudflareChallenge($body)) {
+                return null;
+            }
 
-            return $body !== '' ? $body : null;
-        } catch (\Throwable) {
+            return $body;
+        } catch (\Throwable $e) {
+            error_log('DVDFr solver error: ' . $e->getMessage());
+
             return null;
         }
+    }
+
+    private function isCloudflareChallenge(string $body): bool
+    {
+        return str_contains($body, 'Just a moment')
+            || str_contains($body, 'cf-turnstile-response')
+            || str_contains($body, 'Vérification de sécurité');
+    }
+
+    private function buildUrl(string $url, array $query): string
+    {
+        if ($query === []) {
+            return $url;
+        }
+
+        return $url . (str_contains($url, '?') ? '&' : '?') . http_build_query($query);
     }
 
     // -------------------------------------------------------------------------

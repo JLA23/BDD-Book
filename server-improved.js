@@ -243,7 +243,7 @@ async function searchAmazonByIsbn(browser, isbn, mode, createOptimizedPage) {
     try {
         console.log(`🔍 [Amazon] Recherche ${mode}...`);
         await page.goto(`https://www.amazon.fr/s?k=${isbn}`, { waitUntil: 'domcontentloaded', timeout: 12000 });
-        await new Promise(r => setTimeout(r, 1000));
+        await page.waitForSelector('div[data-component-type="s-search-result"] a.a-link-normal[href*="/dp/"]', { timeout: 8000 }).catch(() => {});
         
         const amazonLink = await page.evaluate(() => {
             const selectors = [
@@ -339,7 +339,11 @@ async function searchBedethequeByIsbn(browser, isbn, mode, createOptimizedPage) 
             await page.waitForNavigation({ timeout: 8000 }).catch(() => {});
 
             const bdLink = await page.evaluate(() => {
-                const link = document.querySelector('a[href*="bedetheque.com/BD-"]');
+                const current = window.location.href;
+                if (/bedetheque\.com\/BD-[^#]+\.html/.test(current)) {
+                    return current.split('#')[0];
+                }
+                const link = document.querySelector('a[href*="/BD-"][href$=".html"]');
                 return link ? link.href : null;
             });
 
@@ -355,6 +359,8 @@ async function searchBedethequeByIsbn(browser, isbn, mode, createOptimizedPage) 
                             const imgEl = bandeauImage.querySelector('img[itemprop="image"]');
                             if (imgEl && imgEl.src) return imgEl.src;
                         }
+                        const imgEl = document.querySelector('img[itemprop="image"]');
+                        if (imgEl && imgEl.src) return imgEl.src;
                         const currentUrl = window.location.href;
                         const albumIdMatch = currentUrl.match(/-(\d+)\.html$/);
                         if (albumIdMatch) {
@@ -368,6 +374,7 @@ async function searchBedethequeByIsbn(browser, isbn, mode, createOptimizedPage) 
                         console.log(`✅ [Bedetheque] Image trouvée`);
                         return { url: imageUrl, source: 'Bedetheque', quality: 'high' };
                     }
+                    return null;
                 } else {
                     const data = await scrapeBedetequeInfo(page, isbn);
                     await page.close();
@@ -377,6 +384,7 @@ async function searchBedethequeByIsbn(browser, isbn, mode, createOptimizedPage) 
                         console.log(`✅ [Bedetheque] "${data.titre}"`);
                         return data;
                     }
+                    return null;
                 }
             } else {
                 console.log(`⚠️ [Bedetheque] Aucun résultat pour cet ISBN`);
@@ -398,7 +406,8 @@ async function searchDecitreByIsbn(browser, isbn, mode, createOptimizedPage) {
         await page.goto(`https://www.decitre.fr/rechercher/result?q=${isbn}`, { waitUntil: 'domcontentloaded', timeout: 10000 });
         await new Promise(r => setTimeout(r, 1000));
 
-        const productLink = await page.evaluate(() => {
+        let productLink = await page.evaluate((isbnVal) => {
+            const isProductHref = (href) => /\/livres\/[^/]*\d{10,13}\.html/.test(href || '');
             const selectors = [
                 '.product-list-item a.product-link',
                 '.product-item a[href*="/livres/"]',
@@ -406,10 +415,28 @@ async function searchDecitreByIsbn(browser, isbn, mode, createOptimizedPage) {
             ];
             for (const sel of selectors) {
                 const link = document.querySelector(sel);
-                if (link && link.href) return link.href;
+                if (link && link.href && isProductHref(link.getAttribute('href') || link.href)) return link.href;
             }
-            return null;
-        });
+            const links = [...document.querySelectorAll('a[href*="/livres/"]')];
+            const byIsbn = links.find(a => (a.getAttribute('href') || '').includes(isbnVal));
+            if (byIsbn) return byIsbn.href;
+            const byPattern = links.find(a => isProductHref(a.getAttribute('href')));
+            return byPattern ? byPattern.href : null;
+        }, isbn);
+
+        // La recherche catalogue répond « 0 résultat » pour les livres qui ne sont plus commandables,
+        // alors que /livres/{isbn}.html redirige encore vers la fiche.
+        if (!productLink) {
+            const isbnDigits = String(isbn).replace(/[^0-9X]/gi, '');
+            await page.goto(`https://www.decitre.fr/livres/${isbnDigits}.html`, { waitUntil: 'domcontentloaded', timeout: 10000 });
+            const isProduct = await page.evaluate((isbnVal) => {
+                return location.pathname.includes(isbnVal) && !!document.querySelector('h1.title');
+            }, isbnDigits);
+            if (isProduct) {
+                productLink = page.url().split('#')[0];
+                console.log(`📖 [Decitre] Fiche directe par ISBN`);
+            }
+        }
 
         if (productLink) {
             console.log(`📖 [Decitre] Produit trouvé`);
@@ -1213,8 +1240,47 @@ async function scrapeBedetequeInfo(page, searchedIsbn) {
     return await page.evaluate((searchedIsbn) => {
         const data = { titre: null, tome: null, auteurs: [], editeur: null, collection: null, isbn: null, annee: null, pages: null, resume: null, image: null, categories: ['BD'], source: 'Bedetheque' };
 
+        const textOf = (el) => el ? (el.getAttribute('content') || el.textContent || '').trim() : '';
+
+        // Fiche actuelle : microdata itemprop, sans l'ancien bandeau .album.panier
+        const legacyBandeau = document.querySelector('div.bandeau-info.album.panier');
+        const nameMeta = document.querySelector('meta[itemprop="name"]');
+        if (!legacyBandeau && nameMeta && textOf(nameMeta)) {
+            data.titre = textOf(nameMeta);
+            const altMeta = document.querySelector('meta[itemprop="alternativeheadline"]');
+            const altContent = textOf(altMeta);
+            if (altContent && !/^Tome\s*\d+$/i.test(altContent)) {
+                data.titre += ' - ' + altContent;
+            }
+            document.querySelectorAll('[itemprop="author"]').forEach(el => {
+                const name = textOf(el);
+                if (name && name.length > 1 && !data.auteurs.includes(name)) data.auteurs.push(name);
+            });
+            const publisher = document.querySelector('[itemprop="publisher"]');
+            if (publisher) data.editeur = textOf(publisher);
+            const isbnEl = document.querySelector('[itemprop="isbn"]');
+            if (isbnEl) data.isbn = textOf(isbnEl).replace(/-/g, '');
+            const dateEl = document.querySelector('meta[itemprop="datePublished"]');
+            const dateValue = dateEl ? (dateEl.getAttribute('content') || '') : '';
+            if (/^\d{4}/.test(dateValue)) data.annee = parseInt(dateValue.slice(0, 4), 10);
+            const pagesEl = document.querySelector('[itemprop="numberOfPages"]');
+            if (pagesEl) {
+                const pages = parseInt(textOf(pagesEl), 10);
+                if (!isNaN(pages)) data.pages = pages;
+            }
+            const descEl = document.querySelector('[itemprop="description"]');
+            if (descEl) data.resume = textOf(descEl);
+            const imgEl = document.querySelector('img[itemprop="image"]');
+            if (imgEl && imgEl.src) data.image = imgEl.src;
+            if (!data.image) {
+                const albumIdMatch = window.location.href.match(/-(\d+)\.html$/);
+                if (albumIdMatch) data.image = `https://www.bedetheque.com/media/Couvertures/Couv_${albumIdMatch[1]}.jpg`;
+            }
+            return data;
+        }
+
         // Titre : dans div.bandeau-info.album.panier, meta itemprop="name" + alternativeheadline
-        const bandeauInfo = document.querySelector('div.bandeau-info.album.panier');
+        const bandeauInfo = legacyBandeau;
         if (bandeauInfo) {
             const nameMeta = bandeauInfo.querySelector('meta[itemprop="name"]');
             const altMeta = bandeauInfo.querySelector('meta[itemprop="alternativeheadline"]');
