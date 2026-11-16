@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS musique (
     type VARCHAR(30) DEFAULT NULL COMMENT 'album, single, compilation, ep',
     annee INT DEFAULT NULL,
     label VARCHAR(255) DEFAULT NULL,
-    genre VARCHAR(100) DEFAULT NULL,
+    genre VARCHAR(500) DEFAULT NULL,
     description LONGTEXT DEFAULT NULL,
     cover_url VARCHAR(500) DEFAULT NULL,
     external_id VARCHAR(100) DEFAULT NULL,
@@ -54,6 +54,10 @@ CREATE TABLE IF NOT EXISTS musique (
     stored_path VARCHAR(500) DEFAULT NULL,
     PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Bases déjà créées : élargit genre (genres + styles Discogs dépassent 100 caractères).
+-- Ré-exécutable : MODIFY vers la même définition ne change rien.
+ALTER TABLE musique MODIFY genre VARCHAR(500) DEFAULT NULL;
 
 
 -- ------------------------------------------------------------

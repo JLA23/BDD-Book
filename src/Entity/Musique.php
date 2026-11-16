@@ -71,7 +71,7 @@ class Musique
     /**
      * @var string|null
      *
-     * @ORM\Column(name="genre", type="string", length=100, nullable=true)
+     * @ORM\Column(name="genre", type="string", length=500, nullable=true)
      */
     private $genre;
 
