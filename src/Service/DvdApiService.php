@@ -27,6 +27,7 @@ class DvdApiService
         private ?string $apiKey = null,
         private bool $useApi = false,
         private ?string $solverUrl = null,
+        private ?ShopCatalogService $shops = null,
     ) {
     }
 
@@ -70,9 +71,11 @@ class DvdApiService
             return [];
         }
 
-        return $this->useApi
+        $results = $this->useApi
             ? $this->searchByGencodeViaApi($gencode, $format, $limit)
             : $this->searchViaScraping($gencode, $format, $limit);
+
+        return $this->appendShopDvds($results, $gencode, $format, $limit);
     }
 
     /**
@@ -80,9 +83,36 @@ class DvdApiService
      */
     public function getDetails(string $dvdId): ?array
     {
+        if ($this->shops !== null && (str_starts_with($dvdId, 'leclerc:') || str_starts_with($dvdId, 'fnac:'))) {
+            return $this->shops->findDvdDetails($dvdId);
+        }
+
         return $this->useApi
             ? $this->getDetailsViaApi($dvdId)
             : $this->getDetailsViaScraping($dvdId);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $results
+     * @return list<array<string, mixed>>
+     */
+    private function appendShopDvds(array $results, string $gencode, ?string $format, int $limit): array
+    {
+        if ($this->shops === null) {
+            return array_slice($results, 0, $limit);
+        }
+
+        foreach ($this->shops->findDvdsByEan($gencode) as $dvd) {
+            if ($format !== null && !$this->matchesFormatFilter((string) $dvd['format'], $format)) {
+                continue;
+            }
+            $results[] = $dvd;
+            if (count($results) >= $limit) {
+                break;
+            }
+        }
+
+        return array_slice($results, 0, $limit);
     }
 
     // -------------------------------------------------------------------------

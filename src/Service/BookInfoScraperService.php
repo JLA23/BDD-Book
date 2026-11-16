@@ -10,8 +10,10 @@ class BookInfoScraperService
     private string $puppeteerUrl;
     private string $puppeteerApiKey;
 
-    public function __construct(?HttpClientInterface $httpClient = null)
-    {
+    public function __construct(
+        private ShopCatalogService $shops,
+        ?HttpClientInterface $httpClient = null,
+    ) {
         $this->httpClient = $httpClient;
         $this->puppeteerUrl = $_ENV['PUPPETEER_SERVICE_URL'] ?? 'http://localhost:3000';
         $this->puppeteerApiKey = $_ENV['PUPPETEER_API_KEY'] ?? 'votre-cle-secrete';
@@ -126,10 +128,15 @@ class BookInfoScraperService
 
         $results = [];
 
-        // Recherche via Puppeteer (Amazon, Bedetheque)
+        // Recherche via Puppeteer (Amazon, Bedetheque, Decitre)
         $puppeteerResults = $this->callPuppeteerSearch($isbn);
         if (!empty($puppeteerResults)) {
             $results = array_merge($results, $puppeteerResults);
+        }
+
+        $shopResults = $this->shops->findBooksByIsbn($isbn);
+        if (!empty($shopResults)) {
+            $results = array_merge($results, $shopResults);
         }
 
         return $results;
@@ -349,11 +356,15 @@ class BookInfoScraperService
     }
 
     /**
-     * Scrape les informations d'un livre depuis une URL via Puppeteer
-     * Sites supportés : Amazon, Bedetheque, Decitre, Excalibur Comics
+     * Scrape les informations d'un livre depuis une URL.
+     * E.Leclerc et Fnac sont lus ici. Les autres sites passent par Puppeteer.
      */
     public function scrapeFromUrl(string $url): ?array
     {
+        if (stripos($url, 'e.leclerc') !== false || stripos($url, 'fnac.com') !== false) {
+            return $this->shops->findBookByUrl($url);
+        }
+
         return $this->callPuppeteer('/scrape/info', ['url' => $url]);
     }
 
@@ -367,6 +378,8 @@ class BookInfoScraperService
             ['name' => 'Bedetheque', 'domain' => 'bedetheque.com', 'icon' => 'fas fa-book-open'],
             ['name' => 'Decitre', 'domain' => 'decitre.fr', 'icon' => 'fas fa-book'],
             ['name' => 'Excalibur Comics', 'domain' => 'excaliburcomics.fr', 'icon' => 'fas fa-mask'],
+            ['name' => 'E.Leclerc', 'domain' => 'e.leclerc', 'icon' => 'fas fa-store'],
+            ['name' => 'Fnac', 'domain' => 'fnac.com', 'icon' => 'fas fa-shopping-bag'],
         ];
     }
 
@@ -375,7 +388,7 @@ class BookInfoScraperService
      */
     public function isUrlSupported(string $url): bool
     {
-        $supportedDomains = ['amazon.fr', 'amazon.com', 'bedetheque.com', 'bdgest.com', 'decitre.fr', 'excaliburcomics.fr', 'excalibur'];
+        $supportedDomains = ['amazon.fr', 'amazon.com', 'bedetheque.com', 'bdgest.com', 'decitre.fr', 'excaliburcomics.fr', 'excalibur', 'e.leclerc', 'fnac.com'];
         foreach ($supportedDomains as $domain) {
             if (stripos($url, $domain) !== false) {
                 return true;
@@ -393,6 +406,8 @@ class BookInfoScraperService
         if (stripos($url, 'bedetheque') !== false || stripos($url, 'bdgest') !== false) return 'Bedetheque';
         if (stripos($url, 'decitre') !== false) return 'Decitre';
         if (stripos($url, 'excalibur') !== false) return 'Excalibur Comics';
+        if (stripos($url, 'e.leclerc') !== false) return 'E.Leclerc';
+        if (stripos($url, 'fnac.com') !== false) return 'Fnac';
         return 'Inconnu';
     }
 

@@ -124,7 +124,7 @@ class AjoutLivreController extends AbstractController
 
         if ($request->isMethod('POST') && !empty($url)) {
             if (!$this->scraperService->isUrlSupported($url)) {
-                $error = 'Ce site n\'est pas supporté. Sites acceptés : Amazon, Fnac, Babelio, Bedetheque.';
+                $error = 'Ce site n\'est pas supporté. Sites acceptés : Amazon, Bédéthèque, Decitre, Excalibur, E.Leclerc, Fnac.';
             } else {
                 $data = $this->scraperService->scrapeFromUrl($url);
                 if (!$data) {

@@ -58,8 +58,13 @@ services:
             $twitchClientSecret: '%env(default::TWITCH_CLIENT_SECRET)%'
             $deeplApiKey: '%env(default::DEEPL_API_KEY)%'
 
+    App\Service\RemotePageClient:
+        arguments:
+            $solverUrl: '%env(DVDFR_SOLVER_URL)%'
+
     App\Service\DvdApiService:
         arguments:
             $apiKey: '%env(default::DVDFR_API_KEY)%'
             $useApi: '%env(bool:DVDFR_USE_API)%'
             $solverUrl: '%env(DVDFR_SOLVER_URL)%'
+            $shops: '@App\Service\ShopCatalogService'
